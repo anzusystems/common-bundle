@@ -1,0 +1,416 @@
+<?php
+
+declare(strict_types=1);
+
+namespace AnzuSystems\CommonBundle\DependencyInjection;
+
+use AnzuSystems\CommonBundle\AnzuSystemsCommonBundle;
+use AnzuSystems\CommonBundle\Controller\DebugController;
+use AnzuSystems\CommonBundle\Controller\HealthCheckController;
+use AnzuSystems\CommonBundle\Controller\LogController;
+use AnzuSystems\CommonBundle\DataFixtures\Interfaces\FixturesInterface;
+use AnzuSystems\CommonBundle\Doctrine\Query\AST\DateTime\Year;
+use AnzuSystems\CommonBundle\Doctrine\Query\AST\Numeric\Rand;
+use AnzuSystems\CommonBundle\Doctrine\Query\AST\String\Field;
+use AnzuSystems\CommonBundle\Domain\User\CurrentAnzuUserProvider;
+use AnzuSystems\CommonBundle\Event\Listener\ExceptionListener;
+use AnzuSystems\CommonBundle\Event\Subscriber\AuditLogSubscriber;
+use AnzuSystems\CommonBundle\Event\Subscriber\CommandLockSubscriber;
+use AnzuSystems\CommonBundle\Exception\Handler\AccessDeniedExceptionHandler;
+use AnzuSystems\CommonBundle\Exception\Handler\AppReadOnlyModeExceptionHandler;
+use AnzuSystems\CommonBundle\Exception\Handler\DefaultExceptionHandler;
+use AnzuSystems\CommonBundle\Exception\Handler\ExceptionHandlerInterface;
+use AnzuSystems\CommonBundle\Exception\Handler\NotFoundExceptionHandler;
+use AnzuSystems\CommonBundle\Exception\Handler\ValidationExceptionHandler;
+use AnzuSystems\CommonBundle\HealthCheck\HealthChecker;
+use AnzuSystems\CommonBundle\HealthCheck\Module\DataMountModule;
+use AnzuSystems\CommonBundle\HealthCheck\Module\ForwardIpModule;
+use AnzuSystems\CommonBundle\HealthCheck\Module\ModuleInterface;
+use AnzuSystems\CommonBundle\HealthCheck\Module\MongoModule;
+use AnzuSystems\CommonBundle\HealthCheck\Module\MysqlModule;
+use AnzuSystems\CommonBundle\HealthCheck\Module\OpCacheModule;
+use AnzuSystems\CommonBundle\HealthCheck\Module\RedisModule;
+use AnzuSystems\CommonBundle\Log\Factory\LogContextFactory;
+use AnzuSystems\CommonBundle\Log\LogFacade;
+use AnzuSystems\CommonBundle\Log\Repository\AppLogRepository;
+use AnzuSystems\CommonBundle\Log\Repository\AuditLogRepository;
+use AnzuSystems\CommonBundle\Messenger\Message\AppLogMessage;
+use AnzuSystems\CommonBundle\Messenger\Message\AuditLogMessage;
+use AnzuSystems\CommonBundle\Serializer\Exception\SerializerExceptionHandler;
+use AnzuSystems\CommonBundle\Serializer\Handler\Handlers\GeolocationHandler;
+use AnzuSystems\CommonBundle\Serializer\Handler\Handlers\ValueObjectHandler;
+use AnzuSystems\CommonBundle\Serializer\Service\BsonConverter;
+use AnzuSystems\CommonBundle\Util\ResourceLocker;
+use AnzuSystems\SerializerBundle\Metadata\MetadataRegistry;
+use AnzuSystems\SerializerBundle\Serializer;
+use Doctrine\DBAL\Driver\Connection;
+use Exception;
+use MongoDB;
+use Symfony\Component\Config\FileLocator;
+use Symfony\Component\Config\Loader\LoaderInterface;
+use Symfony\Component\DependencyInjection\Argument\IteratorArgument;
+use Symfony\Component\DependencyInjection\ContainerBuilder;
+use Symfony\Component\DependencyInjection\ContainerInterface;
+use Symfony\Component\DependencyInjection\Definition;
+use Symfony\Component\DependencyInjection\Extension\Extension;
+use Symfony\Component\DependencyInjection\Extension\PrependExtensionInterface;
+use Symfony\Component\DependencyInjection\Loader\PhpFileLoader;
+use Symfony\Component\DependencyInjection\Reference;
+
+final class AnzuSystemsCommonExtension extends Extension implements PrependExtensionInterface
+{
+    private array $processedConfig;
+
+    public function prepend(ContainerBuilder $container): void
+    {
+        $this->processedConfig = $this->processConfiguration(
+            new Configuration(),
+            $container->getExtensionConfig($this->getAlias())
+        );
+
+        $container->prependExtensionConfig('doctrine', [
+            'orm' => [
+                'dql' => [
+                    'datetime_functions' => [
+                        'year' => Year::class,
+                    ],
+                    'numeric_functions' => [
+                        'rand' => Rand::class,
+                    ],
+                    'string_functions' => [
+                        'field' => Field::class,
+                    ],
+                ],
+            ],
+        ]);
+
+        $logs = $this->processedConfig['logs'];
+        if (false === $logs['enabled']) {
+            return;
+        }
+
+        $container->prependExtensionConfig('monolog', [
+            'channels' => ['app', 'audit', 'app_sync', 'audit_sync'],
+            'handlers' => [
+                'app' => [
+                    'type' => 'service',
+                    'channels' => 'app',
+                    'id' => 'anzu_systems_common.logs.app_log_messenger_handler',
+                ],
+                'audit' => [
+                    'type' => 'service',
+                    'channels' => 'audit',
+                    'id' => 'anzu_systems_common.logs.audit_log_messenger_handler',
+                ],
+                'app_sync' => [
+                    'type' => 'mongo',
+                    'channels' => 'app_sync',
+                    'level' => 'debug',
+                    'mongo' => [
+                        'id' => 'anzu_systems_common.logs.app_log_client',
+                        'database' => $logs['app']['mongo']['database'],
+                        'collection' => $logs['app']['mongo']['collection'],
+                    ],
+                ],
+                'audit_sync' => [
+                    'type' => 'mongo',
+                    'channels' => 'audit_sync',
+                    'level' => 'debug',
+                    'mongo' => [
+                        'id' => 'anzu_systems_common.logs.audit_log_client',
+                        'database' => $logs['audit']['mongo']['database'],
+                        'collection' => $logs['audit']['mongo']['collection'],
+                    ],
+                ],
+            ],
+        ]);
+
+        $messengerTransport = $logs['messenger_transport'];
+        $container->prependExtensionConfig('framework', [
+            'messenger' => [
+                'transports' => [
+                    $messengerTransport['name'] => [
+                        'dsn' => $messengerTransport['dsn'],
+                    ],
+                ],
+                'routing' => [
+                    AppLogMessage::class => $messengerTransport['name'],
+                    AuditLogMessage::class => $messengerTransport['name'],
+                ],
+            ],
+        ]);
+    }
+
+    /**
+     * @throws Exception
+     */
+    public function load(array $configs, ContainerBuilder $container): void
+    {
+        $loader = new PhpFileLoader($container, new FileLocator(__DIR__ . '/../Resources/config'));
+        $loader->load('services.php');
+
+        $this->loadSettings($container);
+        $this->loadHealthCheck($container);
+        $this->loadErrors($container);
+        $this->loadLogs($loader, $container);
+        $this->loadAnzuSerializer($container);
+    }
+
+    private function loadSettings(ContainerBuilder $container): void
+    {
+        $settings = $this->processedConfig['settings'];
+
+        $container->setParameter('app_cache_proxy_enabled', $settings['app_cache_proxy_enabled']);
+
+        $container
+            ->getDefinition(ResourceLocker::class)
+            ->replaceArgument('$appRedis', new Reference($settings['app_redis']));
+
+        $container
+            ->getDefinition(CommandLockSubscriber::class)
+            ->replaceArgument('$appRedis', new Reference($settings['app_redis']))
+            ->replaceArgument('$unlockedCommands', $settings['unlocked_commands']);
+
+        $container
+            ->getDefinition(CurrentAnzuUserProvider::class)
+            ->replaceArgument('$userEntityClass', $settings['user_entity_class']);
+
+        $definition = $this->createControllerDefinition(DebugController::class);
+        $container->setDefinition(DebugController::class, $definition);
+
+        $container
+            ->registerForAutoconfiguration(FixturesInterface::class)
+            ->addTag(AnzuSystemsCommonBundle::TAG_DATA_FIXTURE);
+    }
+
+    private function loadErrors(ContainerBuilder $container): void
+    {
+        $errors = $this->processedConfig['errors'];
+        if (false === $errors['enabled']) {
+            return;
+        }
+
+        $handlers = $errors['exception_handlers'];
+
+        /** @psalm-var callable(class-string<ExceptionHandlerInterface>):bool $hasHandler */
+        $hasHandler = static fn (string $handler): bool => in_array($handler, $handlers, true);
+
+        if (DefaultExceptionHandler::class === $errors['default_exception_handler']) {
+            $definition = new Definition(DefaultExceptionHandler::class);
+            $container->setDefinition(DefaultExceptionHandler::class, $definition);
+        }
+
+        if ($hasHandler(AccessDeniedExceptionHandler::class)) {
+            $definition = new Definition(AccessDeniedExceptionHandler::class);
+            $definition->addTag(AnzuSystemsCommonBundle::TAG_EXCEPTION_HANDLER);
+            $container->setDefinition(AccessDeniedExceptionHandler::class, $definition);
+        }
+
+        if ($hasHandler(AppReadOnlyModeExceptionHandler::class)) {
+            $definition = new Definition(AppReadOnlyModeExceptionHandler::class);
+            $definition->addTag(AnzuSystemsCommonBundle::TAG_EXCEPTION_HANDLER);
+            $container->setDefinition(AppReadOnlyModeExceptionHandler::class, $definition);
+        }
+
+        if ($hasHandler(NotFoundExceptionHandler::class)) {
+            $definition = new Definition(NotFoundExceptionHandler::class);
+            $definition->addTag(AnzuSystemsCommonBundle::TAG_EXCEPTION_HANDLER);
+            $container->setDefinition(NotFoundExceptionHandler::class, $definition);
+        }
+
+        if ($hasHandler(ValidationExceptionHandler::class)) {
+            $definition = new Definition(ValidationExceptionHandler::class);
+            $definition->addTag(AnzuSystemsCommonBundle::TAG_EXCEPTION_HANDLER);
+            $container->setDefinition(ValidationExceptionHandler::class, $definition);
+        }
+
+        if ($hasHandler(SerializerExceptionHandler::class)) {
+            $definition = new Definition(SerializerExceptionHandler::class);
+            $definition->addTag(AnzuSystemsCommonBundle::TAG_EXCEPTION_HANDLER);
+            $container->setDefinition(SerializerExceptionHandler::class, $definition);
+        }
+
+        $container
+            ->getDefinition(ExceptionListener::class)
+            ->replaceArgument('$defaultExceptionHandler', new Reference($errors['default_exception_handler']))
+            ->replaceArgument('$onlyUriMatch', $errors['only_uri_match'])
+        ;
+
+        $container
+            ->registerForAutoconfiguration(ExceptionHandlerInterface::class)
+            ->addTag(AnzuSystemsCommonBundle::TAG_EXCEPTION_HANDLER)
+        ;
+    }
+
+    private function loadHealthCheck(ContainerBuilder $container): void
+    {
+        $healthCheck = $this->processedConfig['health_check'];
+        $modules = $healthCheck['modules'];
+        if (false === $healthCheck['enabled']) {
+            return;
+        }
+
+        /** @psalm-var callable(class-string<ModuleInterface>):bool $hasModule */
+        $hasModule = static fn (string $module): bool => in_array($module, $modules, true);
+
+        if ($hasModule(RedisModule::class)) {
+            $definition = new Definition(RedisModule::class);
+            $definition->setArgument('$appRedis', new Reference($this->processedConfig['settings']['app_redis']));
+            $definition->addTag(AnzuSystemsCommonBundle::TAG_HEALTH_CHECK_MODULE);
+            $container->setDefinition(RedisModule::class, $definition);
+        }
+
+        if ($hasModule(MysqlModule::class)) {
+            $definition = new Definition(MysqlModule::class);
+            $definition->setArgument('$connection', new Reference(Connection::class));
+            $definition->setArgument('$tableName', $healthCheck['mysql_table_name']);
+            $definition->addTag(AnzuSystemsCommonBundle::TAG_HEALTH_CHECK_MODULE);
+            $container->setDefinition(MysqlModule::class, $definition);
+        }
+
+        if ($hasModule(OpCacheModule::class)) {
+            $definition = new Definition(OpCacheModule::class);
+            $definition->addTag(AnzuSystemsCommonBundle::TAG_HEALTH_CHECK_MODULE);
+            $container->setDefinition(OpCacheModule::class, $definition);
+        }
+
+        if ($hasModule(ForwardIpModule::class)) {
+            $definition = new Definition(ForwardIpModule::class);
+            $definition->setArgument('$requestStack', new Reference('request_stack'));
+            $definition->addTag(AnzuSystemsCommonBundle::TAG_HEALTH_CHECK_MODULE);
+            $container->setDefinition(ForwardIpModule::class, $definition);
+        }
+
+        if ($hasModule(DataMountModule::class)) {
+            $definition = new Definition(DataMountModule::class);
+            $definition->addTag(AnzuSystemsCommonBundle::TAG_HEALTH_CHECK_MODULE);
+            $container->setDefinition(DataMountModule::class, $definition);
+        }
+
+        if ($hasModule(MongoModule::class)) {
+            $collections = array_map(
+                static fn (string $collection) => new Reference($collection),
+                $healthCheck['mongo_collections']
+            );
+            $definition = new Definition(MongoModule::class);
+            $definition->setArgument('$collections', new IteratorArgument($collections));
+            $definition->addTag(AnzuSystemsCommonBundle::TAG_HEALTH_CHECK_MODULE);
+            $container->setDefinition(MongoModule::class, $definition);
+        }
+
+        $healthCheckerDefinition = new Definition(HealthChecker::class);
+        $healthCheckerDefinition->setArgument('$requestStack', new Reference('request_stack'));
+        $healthCheckerDefinition->setArgument('$logger', new Reference('monolog.logger'));
+        $healthCheckerDefinition->setArgument(
+            '$serializer',
+            new Reference(
+                Serializer::class,
+                invalidBehavior: ContainerInterface::NULL_ON_INVALID_REFERENCE
+            )
+        );
+        $container->setDefinition(HealthChecker::class, $healthCheckerDefinition);
+
+        $definition = $this->createControllerDefinition(HealthCheckController::class, [
+            '$healthChecker' => new Reference(HealthChecker::class),
+        ]);
+        $container->setDefinition(HealthCheckController::class, $definition);
+    }
+
+    private function loadLogs(LoaderInterface $loader, ContainerBuilder $container): void
+    {
+        $logs = $this->processedConfig['logs'];
+        if (false === $logs['enabled']) {
+            return;
+        }
+
+        $loader->load('logs.php');
+
+        $container
+            ->getDefinition(AuditLogSubscriber::class)
+            ->replaceArgument('$loggedMethods', $logs['audit']['logged_methods']);
+
+        $container
+            ->getDefinition(ExceptionListener::class)
+            ->replaceArgument('$logContextFactory', new Reference(LogContextFactory::class))
+            ->replaceArgument('$ignoredExceptions', $logs['app']['ignored_exceptions'])
+        ;
+
+        $appLogMongo = $logs['app']['mongo'];
+        $appLogClientDefinition = new Definition(MongoDB\Client::class);
+        $appLogClientDefinition->setArgument('$uri', $appLogMongo['uri']);
+        $appLogClientDefinition->setArgument('$uriOptions', [
+            'username' => $appLogMongo['username'],
+            'password' => $appLogMongo['password'],
+            'ssl' => $appLogMongo['ssl'],
+        ]);
+        $container->setDefinition('anzu_systems_common.logs.app_log_client', $appLogClientDefinition);
+        $container->registerAliasForArgument('anzu_systems_common.logs.app_log_client', MongoDB\Client::class, '$appLogClient');
+
+        $auditLogMongo = $logs['audit']['mongo'];
+        $auditLogClientDefinition = new Definition(MongoDB\Client::class);
+        $auditLogClientDefinition->setArgument('$uri', $auditLogMongo['uri']);
+        $auditLogClientDefinition->setArgument('$uriOptions', [
+            'username' => $auditLogMongo['username'],
+            'password' => $auditLogMongo['password'],
+            'ssl' => $auditLogMongo['ssl'],
+        ]);
+        $container->setDefinition('anzu_systems_common.logs.audit_log_client', $auditLogClientDefinition);
+        $container->registerAliasForArgument('anzu_systems_common.logs.audit_log_client', MongoDB\Client::class, '$auditLogClient');
+
+        $appLogCollectionDefinition = new Definition(MongoDB\Collection::class);
+        $appLogCollectionDefinition->setFactory([new Reference('anzu_systems_common.logs.app_log_client'), 'selectCollection']);
+        $appLogCollectionDefinition->setArgument('$databaseName', $appLogMongo['database']);
+        $appLogCollectionDefinition->setArgument('$collectionName', $appLogMongo['collection']);
+        $container->setDefinition('anzu_mongo_app_log_collection', $appLogCollectionDefinition);
+        $container->registerAliasForArgument('anzu_mongo_app_log_collection', MongoDB\Collection::class, '$appLogCollection');
+
+        $auditLogCollectionDefinition = new Definition(MongoDB\Collection::class);
+        $auditLogCollectionDefinition->setFactory([new Reference('anzu_systems_common.logs.audit_log_client'), 'selectCollection']);
+        $auditLogCollectionDefinition->setArgument('$databaseName', $auditLogMongo['database']);
+        $auditLogCollectionDefinition->setArgument('$collectionName', $auditLogMongo['collection']);
+        $container->setDefinition('anzu_mongo_audit_log_collection', $auditLogCollectionDefinition);
+        $container->registerAliasForArgument('anzu_mongo_audit_log_collection', MongoDB\Collection::class, '$auditLogCollection');
+
+        $definition = $this->createControllerDefinition(LogController::class, [
+            '$auditLogRepo' => new Reference(AuditLogRepository::class),
+            '$appLogRepo' => new Reference(AppLogRepository::class),
+            '$logFacade' => new Reference(LogFacade::class),
+        ]);
+        $container->setDefinition(LogController::class, $definition);
+    }
+
+    private function loadAnzuSerializer(ContainerBuilder $container): void
+    {
+        $container->setDefinition(
+            ValueObjectHandler::class,
+            (new Definition(ValueObjectHandler::class))
+                ->addTag(AnzuSystemsCommonBundle::TAG_SERIALIZER_HANDLER)
+        );
+        $container->setDefinition(
+            GeolocationHandler::class,
+            (new Definition(GeolocationHandler::class))
+                ->addTag(AnzuSystemsCommonBundle::TAG_SERIALIZER_HANDLER)
+        );
+
+        $container->setDefinition(
+            BsonConverter::class,
+            (new Definition(BsonConverter::class))
+                ->setArgument('$metadataRegistry', new Reference(MetadataRegistry::class))
+        );
+    }
+
+    private function createControllerDefinition(string $class, array $arguments = []): Definition
+    {
+        $definition = new Definition($class);
+        foreach ($arguments as $name => $argument) {
+            $definition->setArgument($name, $argument);
+        }
+        $definition->addMethodCall('setContainer', [new Reference('service_container')]);
+        $definition->addMethodCall('setSerializer', [new Reference(Serializer::class)]);
+        $definition->addMethodCall('setResourceLocker', [new Reference(ResourceLocker::class)]);
+        $definition->addTag('controller.service_arguments');
+        $definition->addTag('container.service_subscriber');
+
+        return $definition;
+    }
+}

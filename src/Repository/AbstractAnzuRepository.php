@@ -1,0 +1,145 @@
+<?php
+
+declare(strict_types=1);
+
+namespace AnzuSystems\CommonBundle\Repository;
+
+use AnzuSystems\CommonBundle\ApiFilter\ApiInfiniteResponseList;
+use AnzuSystems\CommonBundle\ApiFilter\ApiParams;
+use AnzuSystems\CommonBundle\ApiFilter\ApiQuery;
+use AnzuSystems\CommonBundle\ApiFilter\ApiResponseList;
+use AnzuSystems\CommonBundle\ApiFilter\CustomFilterInterface;
+use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
+use Doctrine\Common\Collections\ArrayCollection;
+use Doctrine\ORM\Exception\ORMException;
+use Doctrine\Persistence\ManagerRegistry;
+use JetBrains\PhpStorm\Deprecated;
+
+/**
+ * @template T of object
+ *
+ * @template-extends ServiceEntityRepository<T>
+ */
+abstract class AbstractAnzuRepository extends ServiceEntityRepository implements AnzuRepositoryInterface
+{
+    public function __construct(ManagerRegistry $registry)
+    {
+        parent::__construct($registry, $this->getEntityClass());
+    }
+
+    /**
+     * @return ArrayCollection<int|string, T>
+     */
+    public function getAllById(int | string ...$ids): ArrayCollection
+    {
+        return new ArrayCollection(
+            $this->createQueryBuilder('entity')
+                ->where('entity.id IN (:ids)')
+                ->setParameter('ids', $ids)
+                ->orderBy('FIELD(entity.id, :ids)')
+                ->getQuery()
+                ->getResult()
+        );
+    }
+
+    /**
+     * @return ArrayCollection<int|string, T>
+     */
+    public function getAllByIdIndexed(int | string ...$id): ArrayCollection
+    {
+        return new ArrayCollection(
+            $this->createQueryBuilder('entity', 'entity.id')
+                ->where('entity.id IN (:ids)')
+                ->setParameter('ids', $id)
+                ->orderBy('FIELD(entity.id, :ids)')
+                ->getQuery()
+                ->getResult()
+        );
+    }
+
+    /**
+     * @param list<CustomFilterInterface> $customFilters
+     *
+     * @throws ORMException
+     */
+    public function findByApiParams(
+        ApiParams $apiParams,
+        #[Deprecated] ?CustomFilterInterface $customFilter = null,
+        array $customFilters = [],
+    ): ApiResponseList {
+        if ($customFilter instanceof CustomFilterInterface && empty($customFilters)) {
+            $customFilters = [$customFilter];
+        }
+
+        $apiQuery = new ApiQuery(
+            entityManager: $this->getEntityManager(),
+            metadata: $this->getClassMetadata(),
+            apiParams: $apiParams,
+            customFilters: $customFilters
+        );
+
+        $data = $apiQuery->getData();
+        $itemsCount = count($data);
+        $totalCount = $apiQuery->getTotalCount();
+        if ($apiParams->getLimit() > $itemsCount) {
+            $totalCount = $itemsCount + $apiParams->getOffset();
+        }
+
+        return (new ApiResponseList())
+            ->setBigTable($apiParams->isBigTable())
+            ->setTotalCount($totalCount)
+            ->setData($data)
+        ;
+    }
+
+    /**
+     * @param list<CustomFilterInterface> $customFilters
+     * @param ?CustomFilterInterface $customFilter Deprecated
+     *
+     * @throws ORMException
+     */
+    public function findByApiParamsWithInfiniteListing(
+        ApiParams $apiParams,
+        #[Deprecated] ?CustomFilterInterface $customFilter = null,
+        array $customFilters = [],
+    ): ApiInfiniteResponseList {
+        if ($customFilter instanceof CustomFilterInterface && empty($customFilters)) {
+            $customFilters = [$customFilter];
+        }
+
+        $apiQuery = new ApiQuery(
+            entityManager: $this->getEntityManager(),
+            metadata: $this->getClassMetadata(),
+            apiParams: $apiParams,
+            fetchOneAdditionalRecord: true,
+            customFilters: $customFilters,
+        );
+        $data = $apiQuery->getData();
+        $totalCount = $apiParams->getLimit() + $apiParams->getOffset() + 1;
+        if (empty($data)) {
+            $totalCount = 0;
+        }
+
+        return (new ApiInfiniteResponseList())
+            ->setHasNextPage(
+                count($data) > $apiParams->getLimit()
+            )
+            ->setData(
+                array_slice($data, 0, $apiParams->getLimit())
+            )
+            ->setTotalCount($totalCount)
+        ;
+    }
+
+    public function exists(int | string $id): bool
+    {
+        return (bool) $this->count([
+            'id' => $id,
+        ]);
+    }
+
+    /**
+     * @return class-string<T>
+     */
+    abstract protected function getEntityClass(): string;
+}
