@@ -83,7 +83,8 @@ jobs:
 
       - name: Run PHPUnit tests
         env:
-          DB_COMMONBUNDLE_URL: mysql://root:admin@127.0.0.1:3306/commonbundle?serverVersion=8.0
-          ANZU_MONGODB_APP_LOG_URI: mongodb://127.0.0.1:27017
-          ANZU_MONGODB_AUDIT_LOG_URI: mongodb://127.0.0.1:27017
+          ANZU_MONGODB_APP_LOG_URI: 'mongodb://127.0.0.1:27017'
+          ANZU_MONGODB_AUDIT_LOG_URI: 'mongodb://127.0.0.1:27017'
+          DB_COMMONBUNDLE_URL: 'mysql://root:admin@127.0.0.1:3306/commonbundle?serverVersion=8.0'
+          REDIS_HOST: '127.0.0.1'
         run: vendor/bin/phpunit
