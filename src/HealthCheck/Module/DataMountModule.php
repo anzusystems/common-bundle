@@ -15,7 +15,7 @@ final class DataMountModule implements ModuleInterface
 
     public function isHealthy(): bool
     {
-        $filename = AnzuApp::getDataDir() . 'DataMountModule.php/' . AnzuApp::getContextId();
+        $filename = AnzuApp::getDataDir() . '/' . AnzuApp::getContextId();
         $healthy = (bool) file_put_contents($filename, AnzuApp::getContextId());
         if ($healthy) {
             $healthy = unlink($filename);

@@ -1,0 +1,62 @@
+services:
+  app:
+    build:
+      args:
+        - DOCKER_USER=${DOCKER_USER:-user}
+        - DOCKER_USER_ID=${DOCKER_USER_ID:-1000}
+        - DOCKER_GROUP_ID=${DOCKER_GROUP_ID:-1000}
+      context: .
+    env_file:
+      - .env.docker.dist
+      - .env.docker.local
+    volumes:
+      - ".:/var/www/html:cached"
+      - "./tests/coverage:/opt/phpstorm-coverage:cached"
+    hostname: common-bundle
+
+  mysql:
+    image: mysql:8
+    command:
+      - --default-authentication-plugin=mysql_native_password
+      - --disable-log-bin
+    env_file:
+      - .env.docker.dist
+      - .env.docker.local
+    volumes:
+      - mysql_data:/var/lib/mysql:cached
+    ports:
+      - ${MYSQL_DOCKER_PORT:-3406}:3306
+    hostname: mysql
+
+  redis:
+    image: redis:6
+    volumes:
+      - redis_data:/data:cached
+    ports:
+      - ${REDIS_DOCKER_PORT:-6409}:6379
+    hostname: redis
+
+  mongo:
+    image: mongo:5
+    command: --logappend ${MONGO_NOTABLESCAN:-}
+    env_file:
+      - .env.docker.dist
+      - .env.docker.local
+    volumes:
+      - mongo_data:/data/db:cached
+    ports:
+      - ${MONGO_DOCKER_PORT:-27407}:27017
+    hostname: mongo
+
+volumes:
+  mysql_data:
+    driver: local
+
+  redis_data:
+    driver: local
+
+  mongo_data:
+    driver: local
+
+networks:
+  default:
