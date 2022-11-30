@@ -76,7 +76,7 @@ final class CommandLockSubscriber implements EventSubscriberInterface
 
     private function getPidFilename(): string
     {
-        return AnzuApp::getPidDir() . 'CommandLockSubscriber.php/' . $this->lockName . '.pid';
+        return AnzuApp::getPidDir() . '/' . $this->lockName . '.pid';
     }
 
     private function setLockName(Command $command, InputInterface $input): void
