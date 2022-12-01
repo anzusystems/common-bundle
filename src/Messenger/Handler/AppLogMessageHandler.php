@@ -6,9 +6,8 @@ namespace AnzuSystems\CommonBundle\Messenger\Handler;
 
 use AnzuSystems\CommonBundle\Messenger\Message\AppLogMessage;
 use Symfony\Bridge\Monolog\Logger;
-use Symfony\Component\Messenger\Handler\MessageHandlerInterface;
 
-final class AppLogMessageHandler implements MessageHandlerInterface
+final class AppLogMessageHandler
 {
     public function __construct(
         private readonly Logger $appSyncLogger,
