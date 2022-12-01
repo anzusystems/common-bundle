@@ -6,9 +6,8 @@ namespace AnzuSystems\CommonBundle\Messenger\Handler;
 
 use AnzuSystems\CommonBundle\Messenger\Message\AuditLogMessage;
 use Symfony\Bridge\Monolog\Logger;
-use Symfony\Component\Messenger\Handler\MessageHandlerInterface;
 
-final class AuditLogMessageHandler implements MessageHandlerInterface
+final class AuditLogMessageHandler
 {
     public function __construct(
         private readonly Logger $auditSyncLogger,
