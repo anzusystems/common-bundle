@@ -9,10 +9,9 @@ jobs:
   build:
     strategy:
       matrix:
-        php-version:
-          - '8.1'
-        platform:
-          - ubuntu-latest
+        include:
+          - php-version: 8.1
+            docker-image: 'anzusystems/php:1.0.0-php81-cli'
 
     services:
       mysql:
@@ -34,20 +33,12 @@ jobs:
           MONGO_INITDB_ROOT_USERNAME: root
           MONGO_INITDB_ROOT_PASSWORD: admin
 
-    name: PHP ${{ matrix.php-version }} on ${{ matrix.platform }}
-    runs-on: ${{ matrix.platform }}
+    name: PHP ${{ matrix.php-version }}
+    runs-on: ubuntu-latest
+    container: ${{ matrix.docker-image }}
     steps:
       - name: Checkout
         uses: actions/checkout@v3
-
-      - name: Setup PHP
-        uses: shivammathur/setup-php@v2
-        with:
-          php-version: ${{ matrix.php-version }}
-          extensions: "mongodb-1.15.0,opcache,pdo_mysql,redis-5.3.7,zip"
-          ini-values: date.timezone=UTC,memory_limit=-1
-          coverage: pcov
-          tools: pecl
 
       - name: Validate composer.json
         run: composer validate
@@ -65,15 +56,7 @@ jobs:
         run: composer install --prefer-dist --no-progress --no-ansi --no-interaction --no-scripts
 
       - name: Run Security check
-        env:
-          PHP_SECURITY_CHECKER_VERSION: '2.0.5'
-        run: |
-          wget -q \
-            https://github.com/fabpot/local-php-security-checker/releases/download/v${PHP_SECURITY_CHECKER_VERSION}/local-php-security-checker_${PHP_SECURITY_CHECKER_VERSION}_linux_amd64 \
-            -O local-php-security-checker
-          chmod +x local-php-security-checker
-          ./local-php-security-checker --path=composer.lock
-          rm -f local-php-security-checker
+        run: local-php-security-checker --path=composer.lock
 
       - name: Run ECS style check
         run: vendor/bin/ecs check -vv
@@ -83,8 +66,8 @@ jobs:
 
       - name: Run PHPUnit tests
         env:
-          ANZU_MONGODB_APP_LOG_URI: 'mongodb://127.0.0.1:27017'
-          ANZU_MONGODB_AUDIT_LOG_URI: 'mongodb://127.0.0.1:27017'
-          DB_COMMONBUNDLE_URL: 'mysql://root:admin@127.0.0.1:3306/commonbundle?serverVersion=8.0'
-          REDIS_HOST: '127.0.0.1'
+          ANZU_MONGODB_APP_LOG_URI: 'mongodb://mongo:27017'
+          ANZU_MONGODB_AUDIT_LOG_URI: 'mongodb://mongo:27017'
+          DB_COMMONBUNDLE_URL: 'mysql://root:admin@mysql:3306/commonbundle?serverVersion=8.0'
+          REDIS_HOST: 'redis'
         run: vendor/bin/phpunit
