@@ -1,4 +1,4 @@
-name: AnzuSystems Common Bundle by Petitpress.sk CI
+name: CI for AnzuSystems Common Bundle by Petit Press a.s. (www.sme.sk)
 
 on:
   pull_request:
