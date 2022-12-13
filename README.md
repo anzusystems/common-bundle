@@ -1,4 +1,4 @@
-AnzuSystems Common Bundle by Petitpress.sk
+AnzuSystems Common Bundle by Petit Press a.s. (www.sme.sk)
 =====
 
 Provides common functionality among Anzusystems' projects.
@@ -169,7 +169,7 @@ anzu_common:
 # Documentation
 
 Besides AnzuSystems' own
-[serializer-bundle](https://github.com/anzusystems/serializer-bundle) and 
+[serializer-bundle](https://github.com/anzusystems/serializer-bundle) and
 [contracts](https://github.com/anzusystems/contracts),
 common-bundle provides many functionalities, you can read about them in following categories:
 
