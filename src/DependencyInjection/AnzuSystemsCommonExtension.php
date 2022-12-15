@@ -8,6 +8,7 @@ use AnzuSystems\CommonBundle\AnzuSystemsCommonBundle;
 use AnzuSystems\CommonBundle\Controller\DebugController;
 use AnzuSystems\CommonBundle\Controller\HealthCheckController;
 use AnzuSystems\CommonBundle\Controller\LogController;
+use AnzuSystems\CommonBundle\Controller\PermissionController;
 use AnzuSystems\CommonBundle\DataFixtures\Interfaces\FixturesInterface;
 use AnzuSystems\CommonBundle\Doctrine\Query\AST\DateTime\Year;
 use AnzuSystems\CommonBundle\Doctrine\Query\AST\Numeric\Rand;
@@ -36,6 +37,7 @@ use AnzuSystems\CommonBundle\Log\Repository\AppLogRepository;
 use AnzuSystems\CommonBundle\Log\Repository\AuditLogRepository;
 use AnzuSystems\CommonBundle\Messenger\Message\AppLogMessage;
 use AnzuSystems\CommonBundle\Messenger\Message\AuditLogMessage;
+use AnzuSystems\CommonBundle\Security\PermissionConfig;
 use AnzuSystems\CommonBundle\Serializer\Exception\SerializerExceptionHandler;
 use AnzuSystems\CommonBundle\Serializer\Handler\Handlers\GeolocationHandler;
 use AnzuSystems\CommonBundle\Serializer\Handler\Handlers\ValueObjectHandler;
@@ -154,6 +156,27 @@ final class AnzuSystemsCommonExtension extends Extension implements PrependExten
         $this->loadErrors($container);
         $this->loadLogs($loader, $container);
         $this->loadAnzuSerializer($container);
+        $this->loadPermissions($container);
+    }
+
+    private function loadPermissions(ContainerBuilder $container): void
+    {
+        $permissions = $this->processedConfig['permissions'];
+        if (false === $permissions['enabled']) {
+            return;
+        }
+
+        $container->setDefinition(
+            PermissionConfig::class,
+            (new Definition(PermissionConfig::class))
+                ->setArgument('$config', $permissions['config'])
+        );
+        $container->setDefinition(
+            PermissionController::class,
+            $this->createControllerDefinition(PermissionController::class, [
+                '$permissionConfig' => new Reference(PermissionConfig::class),
+            ])
+        );
     }
 
     private function loadSettings(ContainerBuilder $container): void

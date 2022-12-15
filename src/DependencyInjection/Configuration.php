@@ -16,6 +16,7 @@ use AnzuSystems\CommonBundle\HealthCheck\Module\MongoModule;
 use AnzuSystems\CommonBundle\HealthCheck\Module\MysqlModule;
 use AnzuSystems\CommonBundle\HealthCheck\Module\OpCacheModule;
 use AnzuSystems\CommonBundle\HealthCheck\Module\RedisModule;
+use AnzuSystems\CommonBundle\Security\Grant;
 use AnzuSystems\CommonBundle\Serializer\Exception\SerializerExceptionHandler;
 use Symfony\Bundle\FrameworkBundle\Command\AssetsInstallCommand;
 use Symfony\Bundle\FrameworkBundle\Command\CacheWarmupCommand;
@@ -59,10 +60,43 @@ final class Configuration implements ConfigurationInterface
                 ->append($this->addErrorsSection())
                 ->append($this->addLogSection())
                 ->append($this->addHealthCheckSection())
+                ->append($this->addPermissionsSection())
             ->end()
         ;
 
         return $treeBuilder;
+    }
+
+    private function addPermissionsSection(): NodeDefinition
+    {
+        return (new TreeBuilder('permissions'))->getRootNode()
+            ->addDefaultsIfNotSet()
+            ->canBeDisabled()
+            ->children()
+                ->arrayNode('config')
+                    ->arrayPrototype()
+                        ->children()
+                            ->arrayNode('grants')
+                                ->defaultValue(Grant::AVAILABLE_GRANTS)
+                                ->validate()
+                                    ->ifTrue(static function (array $grants): bool {
+                                        foreach ($grants as $grant) {
+                                            if (false === in_array($grant, Grant::AVAILABLE_GRANTS, true)) {
+                                                return true;
+                                            }
+                                        }
+                                        return false;
+                                    })
+                                    ->thenInvalid('Invalid grant "%s". Valid grant values are: ' . implode('|', Grant::AVAILABLE_GRANTS))
+                                ->end()
+                                ->prototype('integer')->end()
+                            ->end()
+                            ->arrayNode('trans')->ignoreExtraKeys(false)->end()
+                        ->end()
+                    ->end()
+                ->end()
+            ->end()
+        ;
     }
 
     private function addSettingsSection(): NodeDefinition
