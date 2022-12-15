@@ -77,7 +77,7 @@ final class Configuration implements ConfigurationInterface
                     ->arrayPrototype()
                         ->children()
                             ->arrayNode('grants')
-                                ->defaultValue(Grant::AVAILABLE_GRANTS)
+                                ->defaultValue([Grant::DENY, Grant::ALLOW])
                                 ->validate()
                                     ->ifTrue(static function (array $grants): bool {
                                         foreach ($grants as $grant) {
