@@ -16,7 +16,7 @@ use AnzuSystems\CommonBundle\HealthCheck\Module\MongoModule;
 use AnzuSystems\CommonBundle\HealthCheck\Module\MysqlModule;
 use AnzuSystems\CommonBundle\HealthCheck\Module\OpCacheModule;
 use AnzuSystems\CommonBundle\HealthCheck\Module\RedisModule;
-use AnzuSystems\CommonBundle\Security\Grant;
+use AnzuSystems\Contracts\Security\Grant;
 use AnzuSystems\CommonBundle\Serializer\Exception\SerializerExceptionHandler;
 use Symfony\Bundle\FrameworkBundle\Command\AssetsInstallCommand;
 use Symfony\Bundle\FrameworkBundle\Command\CacheWarmupCommand;
