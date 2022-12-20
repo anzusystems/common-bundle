@@ -35,7 +35,10 @@ final class Field extends FunctionNode
         $field = $parser->ArithmeticPrimary();
         $this->field = $field;
 
-        /** @psalm-suppress PossiblyNullArrayAccess */
+        /**
+         * @psalm-suppress PossiblyNullReference
+         * @psalm-suppress PossiblyNullArrayAccess
+         */
         while (Lexer::T_CLOSE_PARENTHESIS !== $parser->getLexer()->lookahead['type']) {
             $parser->match(Lexer::T_COMMA);
             /** @var Node $node */

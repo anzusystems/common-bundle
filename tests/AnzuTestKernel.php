@@ -8,7 +8,6 @@ use AnzuSystems\CommonBundle\AnzuSystemsCommonBundle;
 use AnzuSystems\CommonBundle\Kernel\AnzuKernel;
 use AnzuSystems\SerializerBundle\AnzuSystemsSerializerBundle;
 use Doctrine\Bundle\DoctrineBundle\DoctrineBundle;
-use Sensio\Bundle\FrameworkExtraBundle\SensioFrameworkExtraBundle;
 use Symfony\Bundle\FrameworkBundle\FrameworkBundle;
 use Symfony\Bundle\MonologBundle\MonologBundle;
 use Symfony\Bundle\SecurityBundle\SecurityBundle;
@@ -24,7 +23,6 @@ final class AnzuTestKernel extends AnzuKernel
         yield new DoctrineBundle();
         yield new AnzuSystemsSerializerBundle();
         yield new MonologBundle();
-        yield new SensioFrameworkExtraBundle();
         yield new AnzuSystemsCommonBundle();
     }
 

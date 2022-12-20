@@ -36,6 +36,11 @@ use AnzuSystems\CommonBundle\Log\Repository\AppLogRepository;
 use AnzuSystems\CommonBundle\Log\Repository\AuditLogRepository;
 use AnzuSystems\CommonBundle\Messenger\Message\AppLogMessage;
 use AnzuSystems\CommonBundle\Messenger\Message\AuditLogMessage;
+use AnzuSystems\CommonBundle\Request\ParamConverter\ApiFilterParamConverter;
+use AnzuSystems\CommonBundle\Request\ParamConverter\EnumParamConverter;
+use AnzuSystems\CommonBundle\Request\ParamConverter\ValueObjectParamConverter;
+use AnzuSystems\CommonBundle\Request\ValueResolver\ApiFilterParamValueResolver;
+use AnzuSystems\CommonBundle\Request\ValueResolver\ValueObjectValueResolver;
 use AnzuSystems\CommonBundle\Serializer\Exception\SerializerExceptionHandler;
 use AnzuSystems\CommonBundle\Serializer\Handler\Handlers\GeolocationHandler;
 use AnzuSystems\CommonBundle\Serializer\Handler\Handlers\ValueObjectHandler;
@@ -46,6 +51,7 @@ use AnzuSystems\SerializerBundle\Serializer;
 use Doctrine\DBAL\Driver\Connection;
 use Exception;
 use MongoDB;
+use Sensio\Bundle\FrameworkExtraBundle\Request\ParamConverter\ParamConverterInterface;
 use Symfony\Component\Config\FileLocator;
 use Symfony\Component\Config\Loader\LoaderInterface;
 use Symfony\Component\DependencyInjection\Argument\IteratorArgument;
@@ -56,6 +62,7 @@ use Symfony\Component\DependencyInjection\Extension\Extension;
 use Symfony\Component\DependencyInjection\Extension\PrependExtensionInterface;
 use Symfony\Component\DependencyInjection\Loader\PhpFileLoader;
 use Symfony\Component\DependencyInjection\Reference;
+use Symfony\Component\HttpKernel\Controller\ValueResolverInterface;
 
 final class AnzuSystemsCommonExtension extends Extension implements PrependExtensionInterface
 {
@@ -154,6 +161,7 @@ final class AnzuSystemsCommonExtension extends Extension implements PrependExten
         $this->loadErrors($container);
         $this->loadLogs($loader, $container);
         $this->loadAnzuSerializer($container);
+        $this->loadValueResolvers($container);
     }
 
     private function loadSettings(ContainerBuilder $container): void
@@ -397,6 +405,39 @@ final class AnzuSystemsCommonExtension extends Extension implements PrependExten
             (new Definition(BsonConverter::class))
                 ->setArgument('$metadataRegistry', new Reference(MetadataRegistry::class))
         );
+    }
+
+    /**
+     * @psalm-suppress UndefinedClass
+     * @psalm-suppress MissingDependency
+     */
+    private function loadValueResolvers(ContainerBuilder $container): void
+    {
+        if (interface_exists(ValueResolverInterface::class)) {
+            $container
+                ->register(ApiFilterParamValueResolver::class)
+                ->addTag('controller.argument_value_resolver', ['priority' => 150])
+            ;
+            $container
+                ->register(ValueObjectValueResolver::class)
+                ->addTag('controller.argument_value_resolver', ['priority' => 150])
+            ;
+        }
+
+        if (interface_exists(ParamConverterInterface::class)) {
+            $container
+                ->register(ApiFilterParamConverter::class)
+                ->addTag('request.param_converter', ['priority' => false, 'converter' => ApiFilterParamConverter::class])
+            ;
+            $container
+                ->register(ValueObjectParamConverter::class)
+                ->addTag('request.param_converter', ['priority' => false, 'converter' => ValueObjectParamConverter::class])
+            ;
+            $container
+                ->register(EnumParamConverter::class)
+                ->addTag('request.param_converter', ['priority' => false, 'converter' => EnumParamConverter::class])
+            ;
+        }
     }
 
     private function createControllerDefinition(string $class, array $arguments = []): Definition

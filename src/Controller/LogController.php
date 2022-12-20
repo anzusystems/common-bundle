@@ -14,11 +14,9 @@ use AnzuSystems\CommonBundle\Model\OpenApi\Parameter\OAParameterPath;
 use AnzuSystems\CommonBundle\Model\OpenApi\Request\OARequest;
 use AnzuSystems\CommonBundle\Model\OpenApi\Response\OAResponse;
 use AnzuSystems\CommonBundle\Model\OpenApi\Response\OAResponseCreated;
-use AnzuSystems\CommonBundle\Request\ParamConverter\ApiFilterParamConverter;
+use AnzuSystems\SerializerBundle\Attributes\SerializeParam;
 use AnzuSystems\SerializerBundle\Exception\SerializerException;
-use AnzuSystems\SerializerBundle\Request\ParamConverter\SerializerParamConverter;
 use OpenApi\Attributes as OA;
-use Sensio\Bundle\FrameworkExtraBundle\Configuration\ParamConverter;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
@@ -36,7 +34,6 @@ final class LogController extends AbstractAnzuApiController
     /**
      * Get list of audit logs.
      */
-    #[ParamConverter('apiParams', converter: ApiFilterParamConverter::class)]
     #[OAResponse([Log::class])]
     public function getAuditLogs(ApiParams $apiParams): JsonResponse
     {
@@ -48,7 +45,6 @@ final class LogController extends AbstractAnzuApiController
     /**
      * Get list of app logs.
      */
-    #[ParamConverter('apiParams', converter: ApiFilterParamConverter::class)]
     #[OAResponse([Log::class])]
     public function getAppLogs(ApiParams $apiParams): JsonResponse
     {
@@ -90,9 +86,8 @@ final class LogController extends AbstractAnzuApiController
      *
      * @throws SerializerException
      */
-    #[ParamConverter('logDto', converter: SerializerParamConverter::class)]
     #[OARequest(LogDto::class), OAResponseCreated(Log::class)]
-    public function create(Request $request, LogDto $logDto): JsonResponse
+    public function create(Request $request, #[SerializeParam] LogDto $logDto): JsonResponse
     {
         return $this->createdResponse(
             $this->logFacade->create($request, $logDto)

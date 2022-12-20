@@ -9,6 +9,9 @@ use Sensio\Bundle\FrameworkExtraBundle\Configuration\ParamConverter;
 use Sensio\Bundle\FrameworkExtraBundle\Request\ParamConverter\ParamConverterInterface;
 use Symfony\Component\HttpFoundation\Request;
 
+/**
+ * @deprecated Use ApiFilterParamValueResolver::class instead.
+ */
 final class ApiFilterParamConverter implements ParamConverterInterface
 {
     public function apply(Request $request, ParamConverter $configuration): bool
