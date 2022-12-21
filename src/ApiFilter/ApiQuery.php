@@ -102,23 +102,23 @@ class ApiQuery
                         }
                         break;
                     case ApiParams::FILTER_STARTS_WITH:
-                        $this->dqb->andWhere("t.${field} LIKE :${paramName}");
+                        $this->dqb->andWhere("t.{$field} LIKE :{$paramName}");
                         $this->dqb->setParameter($paramName, trim($value) . '%');
 
                         break;
                     case ApiParams::FILTER_ENDS_WITH:
-                        $this->dqb->andWhere("t.${field} LIKE :${paramName}");
+                        $this->dqb->andWhere("t.{$field} LIKE :{$paramName}");
                         $this->dqb->setParameter($paramName, '%' . trim($value));
 
                         break;
                     case ApiParams::FILTER_CONTAINS:
-                        $this->dqb->andWhere("t.${field} LIKE :${paramName}");
+                        $this->dqb->andWhere("t.{$field} LIKE :{$paramName}");
                         $this->dqb->setParameter($paramName, '%' . trim($value) . '%');
 
                         break;
                     case ApiParams::FILTER_MEMBER_OF:
                         foreach ($this->getFilterValue($filterVariant, $field, $value) as $member) {
-                            $this->dqb->andWhere(":${paramName} MEMBER OF t.${field}");
+                            $this->dqb->andWhere(":{$paramName} MEMBER OF t.{$field}");
                             $this->dqb->setParameter($paramName, $member);
                         }
 
