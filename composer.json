@@ -17,7 +17,7 @@
     "ext-redis": "*",
     "ext-zend-opcache": "*",
     "anzusystems/contracts": "^1.0",
-    "anzusystems/serializer-bundle": "dev-value_resolver",
+    "anzusystems/serializer-bundle": "dev-value_resolver as 1.1",
     "doctrine/orm": ">=2.10",
     "mongodb/mongodb": "^1.9",
     "monolog/monolog": "^2.7",
