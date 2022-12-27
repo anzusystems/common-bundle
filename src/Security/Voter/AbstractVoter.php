@@ -6,7 +6,7 @@ namespace AnzuSystems\CommonBundle\Security\Voter;
 
 use AnzuSystems\CommonBundle\Traits\SecurityAwareTrait;
 use AnzuSystems\Contracts\Entity\AnzuUser;
-use AnzuSystems\Contracts\Entity\Interfaces\OwnersHavingInterface;
+use AnzuSystems\Contracts\Entity\Interfaces\OwnersAwareInterface;
 use AnzuSystems\Contracts\Security\Grant;
 use RuntimeException;
 use Symfony\Component\Security\Core\Authentication\Token\TokenInterface;
@@ -65,7 +65,7 @@ abstract class AbstractVoter extends Voter
 
     protected function resolveAllowOwner(mixed $subject, AnzuUser $user): bool
     {
-        if ($subject instanceof OwnersHavingInterface) {
+        if ($subject instanceof OwnersAwareInterface) {
             return $subject->getOwners()->exists(
                 fn (AnzuUser $owner): bool => $owner->getId() === $user->getId()
             );
