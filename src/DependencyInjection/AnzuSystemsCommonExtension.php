@@ -169,7 +169,7 @@ final class AnzuSystemsCommonExtension extends Extension implements PrependExten
         $container->setDefinition(
             PermissionConfig::class,
             (new Definition(PermissionConfig::class))
-                ->setArgument('$config', $permissions['config'])
+                ->setArgument('$config', $permissions)
         );
         $container->setDefinition(
             PermissionController::class,

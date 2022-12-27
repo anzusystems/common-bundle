@@ -16,8 +16,10 @@ use AnzuSystems\CommonBundle\HealthCheck\Module\MongoModule;
 use AnzuSystems\CommonBundle\HealthCheck\Module\MysqlModule;
 use AnzuSystems\CommonBundle\HealthCheck\Module\OpCacheModule;
 use AnzuSystems\CommonBundle\HealthCheck\Module\RedisModule;
-use AnzuSystems\Contracts\Security\Grant;
+use AnzuSystems\CommonBundle\Security\PermissionConfig;
 use AnzuSystems\CommonBundle\Serializer\Exception\SerializerExceptionHandler;
+use AnzuSystems\Contracts\Entity\AnzuUser;
+use AnzuSystems\Contracts\Security\Grant;
 use Symfony\Bundle\FrameworkBundle\Command\AssetsInstallCommand;
 use Symfony\Bundle\FrameworkBundle\Command\CacheWarmupCommand;
 use Symfony\Component\Config\Definition\Builder\NodeDefinition;
@@ -73,25 +75,39 @@ final class Configuration implements ConfigurationInterface
             ->addDefaultsIfNotSet()
             ->canBeDisabled()
             ->children()
-                ->arrayNode('config')
+                ->arrayNode(PermissionConfig::PRM_DEFAULT_GRANTS)
+                    ->defaultValue([Grant::ALLOW, Grant::DENY])
+                    ->integerPrototype()->end()
+                ->end()
+                ->arrayNode(PermissionConfig::PRM_ROLES)
+                    ->defaultValue([AnzuUser::ROLE_USER, AnzuUser::ROLE_ADMIN])
+                    ->scalarPrototype()->end()
+                ->end()
+                ->arrayNode(PermissionConfig::PRM_CONFIG)
                     ->arrayPrototype()
-                        ->children()
-                            ->arrayNode('grants')
-                                ->defaultValue([Grant::DENY, Grant::ALLOW])
-                                ->validate()
-                                    ->ifTrue(static function (array $grants): bool {
-                                        foreach ($grants as $grant) {
-                                            if (false === in_array($grant, Grant::AVAILABLE_GRANTS, true)) {
-                                                return true;
-                                            }
-                                        }
-                                        return false;
-                                    })
-                                    ->thenInvalid('Invalid grant "%s". Valid grant values are: ' . implode('|', Grant::AVAILABLE_GRANTS))
-                                ->end()
-                                ->prototype('integer')->end()
+                        ->useAttributeAsKey('name')
+                        ->arrayPrototype()
+                            ->useAttributeAsKey('name')
+                            ->arrayPrototype()
+                                ->useAttributeAsKey('grants')
+                                ->scalarPrototype()->end()
                             ->end()
-                            ->arrayNode('trans')->ignoreExtraKeys(false)->end()
+                        ->end()
+                    ->end()
+                ->end()
+                ->arrayNode(PermissionConfig::PRM_TRANSLATION)
+                    ->children()
+                        ->arrayNode('subjects')
+                            ->arrayPrototype()
+                                ->useAttributeAsKey('name')
+                                ->scalarPrototype()->end()
+                            ->end()
+                        ->end()
+                        ->arrayNode('actions')
+                            ->arrayPrototype()
+                                ->useAttributeAsKey('name')
+                                ->scalarPrototype()->end()
+                            ->end()
                         ->end()
                     ->end()
                 ->end()
