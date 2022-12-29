@@ -7,6 +7,7 @@ namespace AnzuSystems\CommonBundle\Security\Voter;
 use AnzuSystems\CommonBundle\Traits\SecurityAwareTrait;
 use AnzuSystems\Contracts\Entity\AnzuUser;
 use AnzuSystems\Contracts\Entity\Interfaces\OwnersAwareInterface;
+use AnzuSystems\Contracts\Entity\Interfaces\UserTrackingInterface;
 use AnzuSystems\Contracts\Security\Grant;
 use RuntimeException;
 use Symfony\Component\Security\Core\Authentication\Token\TokenInterface;
@@ -16,14 +17,11 @@ abstract class AbstractVoter extends Voter
 {
     use SecurityAwareTrait;
 
-    protected function supports(string $attribute, $subject): bool
+    protected function supports(string $attribute, mixed $subject): bool
     {
         return in_array($attribute, $this->getSupportedPermissions(), true);
     }
 
-    /**
-     * @inheritDoc
-     */
     protected function voteOnAttribute(string $attribute, mixed $subject, TokenInterface $token): bool
     {
         /** @var AnzuUser $user */
@@ -67,8 +65,11 @@ abstract class AbstractVoter extends Voter
     {
         if ($subject instanceof OwnersAwareInterface) {
             return $subject->getOwners()->exists(
-                fn (AnzuUser $owner): bool => $owner->getId() === $user->getId()
+                fn (AnzuUser $owner): bool => $owner->is($user)
             );
+        }
+        if ($subject instanceof UserTrackingInterface) {
+            return $subject->getCreatedBy()->is($user);
         }
 
         return false;

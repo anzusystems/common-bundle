@@ -38,6 +38,7 @@ class User extends AnzuUser implements CopyableInterface
 
     public function __construct()
     {
+        parent::__construct();
         $this->setId(null);
         $this->setRoles([self::ROLE_USER]);
         $this->setName('');

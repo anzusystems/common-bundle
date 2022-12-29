@@ -13,6 +13,8 @@ use AnzuSystems\CommonBundle\DataFixtures\Interfaces\FixturesInterface;
 use AnzuSystems\CommonBundle\Doctrine\Query\AST\DateTime\Year;
 use AnzuSystems\CommonBundle\Doctrine\Query\AST\Numeric\Rand;
 use AnzuSystems\CommonBundle\Doctrine\Query\AST\String\Field;
+use AnzuSystems\CommonBundle\Domain\PermissionGroup\PermissionGroupFacade;
+use AnzuSystems\CommonBundle\Domain\PermissionGroup\PermissionGroupManager;
 use AnzuSystems\CommonBundle\Domain\User\CurrentAnzuUserProvider;
 use AnzuSystems\CommonBundle\Event\Listener\ExceptionListener;
 use AnzuSystems\CommonBundle\Event\Subscriber\AuditLogSubscriber;
@@ -43,9 +45,11 @@ use AnzuSystems\CommonBundle\Serializer\Handler\Handlers\GeolocationHandler;
 use AnzuSystems\CommonBundle\Serializer\Handler\Handlers\ValueObjectHandler;
 use AnzuSystems\CommonBundle\Serializer\Service\BsonConverter;
 use AnzuSystems\CommonBundle\Util\ResourceLocker;
+use AnzuSystems\CommonBundle\Validator\Validator;
 use AnzuSystems\SerializerBundle\Metadata\MetadataRegistry;
 use AnzuSystems\SerializerBundle\Serializer;
 use Doctrine\DBAL\Driver\Connection;
+use Doctrine\ORM\EntityManagerInterface;
 use Exception;
 use MongoDB;
 use Symfony\Component\Config\FileLocator;
@@ -58,6 +62,7 @@ use Symfony\Component\DependencyInjection\Extension\Extension;
 use Symfony\Component\DependencyInjection\Extension\PrependExtensionInterface;
 use Symfony\Component\DependencyInjection\Loader\PhpFileLoader;
 use Symfony\Component\DependencyInjection\Reference;
+use Symfony\Component\Validator\Validator\ValidatorInterface;
 
 final class AnzuSystemsCommonExtension extends Extension implements PrependExtensionInterface
 {
@@ -167,6 +172,22 @@ final class AnzuSystemsCommonExtension extends Extension implements PrependExten
         }
 
         $container->setDefinition(
+            PermissionGroupManager::class,
+            (new Definition(PermissionGroupManager::class))
+                ->setMethodCalls([
+                    ['setCurrentAnzuUserProvider', [new Reference(CurrentAnzuUserProvider::class)]],
+                    ['setEntityManager', [new Reference(EntityManagerInterface::class)]],
+                ])
+        );
+
+        $container->setDefinition(
+            PermissionGroupFacade::class,
+            (new Definition(PermissionGroupFacade::class))
+                ->setArgument('$validator', new Reference(Validator::class))
+                ->setArgument('$permissionGroupManager', new Reference(PermissionGroupManager::class))
+        );
+
+        $container->setDefinition(
             PermissionConfig::class,
             (new Definition(PermissionConfig::class))
                 ->setArgument('$config', $permissions)
@@ -197,6 +218,12 @@ final class AnzuSystemsCommonExtension extends Extension implements PrependExten
         $container
             ->getDefinition(CurrentAnzuUserProvider::class)
             ->replaceArgument('$userEntityClass', $settings['user_entity_class']);
+
+        $container->setDefinition(
+            Validator::class,
+            (new Definition(Validator::class))
+                ->setArgument('$validator', new Reference(ValidatorInterface::class))
+        );
 
         $definition = $this->createControllerDefinition(DebugController::class);
         $container->setDefinition(DebugController::class, $definition);
