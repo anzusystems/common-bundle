@@ -6,8 +6,6 @@ namespace AnzuSystems\CommonBundle\Domain\PermissionGroup;
 
 use AnzuSystems\CommonBundle\Domain\AbstractManager;
 use AnzuSystems\Contracts\Entity\AnzuPermissionGroup;
-use AnzuSystems\Contracts\Entity\AnzuUser;
-use Doctrine\Common\Collections\Collection;
 
 /**
  * PermissionGroup persistence management.
@@ -38,18 +36,6 @@ final class PermissionGroupManager extends AbstractManager
         $permissionGroup->setPermissions($newPermissionGroup->getPermissions());
         $permissionGroup->setTitle($newPermissionGroup->getTitle());
         $permissionGroup->setDescription($newPermissionGroup->getDescription());
-        $this->colUpdate(
-            oldCollection: $permissionGroup->getUsers(),
-            newCollection: $newPermissionGroup->getUsers(),
-            addElementFn: function (Collection $oldCollection, AnzuUser $newUser) use ($permissionGroup) {
-                $newUser->getPermissionGroups()->add($permissionGroup);
-                $oldCollection->add($newUser);
-            },
-            removeElementFn: function (Collection $oldCollection, AnzuUser $oldUser) use ($permissionGroup) {
-                $oldUser->getPermissionGroups()->removeElement($permissionGroup);
-                $oldCollection->removeElement($oldUser);
-            }
-        );
 
         $this->flush($flush);
 
