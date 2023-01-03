@@ -16,7 +16,10 @@ use AnzuSystems\CommonBundle\HealthCheck\Module\MongoModule;
 use AnzuSystems\CommonBundle\HealthCheck\Module\MysqlModule;
 use AnzuSystems\CommonBundle\HealthCheck\Module\OpCacheModule;
 use AnzuSystems\CommonBundle\HealthCheck\Module\RedisModule;
+use AnzuSystems\CommonBundle\Security\PermissionConfig;
 use AnzuSystems\CommonBundle\Serializer\Exception\SerializerExceptionHandler;
+use AnzuSystems\Contracts\Entity\AnzuUser;
+use AnzuSystems\Contracts\Security\Grant;
 use Symfony\Bundle\FrameworkBundle\Command\AssetsInstallCommand;
 use Symfony\Bundle\FrameworkBundle\Command\CacheWarmupCommand;
 use Symfony\Component\Config\Definition\Builder\NodeDefinition;
@@ -59,10 +62,63 @@ final class Configuration implements ConfigurationInterface
                 ->append($this->addErrorsSection())
                 ->append($this->addLogSection())
                 ->append($this->addHealthCheckSection())
+                ->append($this->addPermissionsSection())
             ->end()
         ;
 
         return $treeBuilder;
+    }
+
+    private function addPermissionsSection(): NodeDefinition
+    {
+        return (new TreeBuilder('permissions'))->getRootNode()
+            ->addDefaultsIfNotSet()
+            ->canBeDisabled()
+            ->children()
+                ->arrayNode(PermissionConfig::PRM_DEFAULT_GRANTS)
+                    ->defaultValue([Grant::ALLOW, Grant::DENY])
+                    ->integerPrototype()->end()
+                ->end()
+                ->arrayNode(PermissionConfig::PRM_ROLES)
+                    ->defaultValue([AnzuUser::ROLE_USER, AnzuUser::ROLE_ADMIN])
+                    ->scalarPrototype()->end()
+                ->end()
+                ->arrayNode(PermissionConfig::PRM_CONFIG)
+                    ->arrayPrototype()
+                        ->useAttributeAsKey('name')
+                        ->arrayPrototype()
+                            ->useAttributeAsKey('name')
+                            ->arrayPrototype()
+                                ->useAttributeAsKey('grants')
+                                ->scalarPrototype()->end()
+                            ->end()
+                        ->end()
+                    ->end()
+                ->end()
+                ->arrayNode(PermissionConfig::PRM_TRANSLATION)
+                    ->children()
+                        ->arrayNode('subjects')
+                            ->arrayPrototype()
+                                ->useAttributeAsKey('name')
+                                ->scalarPrototype()->end()
+                            ->end()
+                        ->end()
+                        ->arrayNode('actions')
+                            ->arrayPrototype()
+                                ->useAttributeAsKey('name')
+                                ->scalarPrototype()->end()
+                            ->end()
+                        ->end()
+                        ->arrayNode('roles')
+                            ->arrayPrototype()
+                                ->useAttributeAsKey('name')
+                                ->scalarPrototype()->end()
+                            ->end()
+                        ->end()
+                    ->end()
+                ->end()
+            ->end()
+        ;
     }
 
     private function addSettingsSection(): NodeDefinition
