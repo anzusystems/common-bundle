@@ -65,7 +65,7 @@ abstract class AbstractVoter extends Voter
     {
         if ($subject instanceof OwnersAwareInterface) {
             return $subject->getOwners()->exists(
-                fn (AnzuUser $owner): bool => $owner->is($user)
+                fn (int $key, AnzuUser $owner): bool => $owner->is($user)
             );
         }
         if ($subject instanceof UserTrackingInterface) {
