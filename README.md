@@ -164,8 +164,54 @@ anzu_common:
                 ssl: '%env(bool:ANZU_MONGODB_AUDIT_LOG_SSL)%'
                 collection: auditLogs
             logged_methods: ['POST', 'PUT', 'PATCH', 'DELETE']
+    permissions:
+        # List of roles that can be assigned to user.
+        roles: [ROLE_USER, ROLE_ADMIN]
+        # Default list of grants that can be assigned to all permissions.
+        default_grants: [2, 0]
+        config:
+            # List of arbitrary subjects of permission.
+            app_article:
+                # List of subject's actions with default grants:
+                create:
+                update:
+                # Action with non-default grants for permission app_article_delete:
+                delete:
+                    grants: [0, 1, 2]
+            app_post:
+                create:
+        translation:
+            subjects:
+                # Translation of all unique subjects defined in config above.
+                app_article:
+                    # Feel free to add more languages.
+                    en: Article
+                    sk: Článok
+                app_post:
+                  en: Post
+                  sk: Príspevok
+            actions:
+                # Translation of all unique actions in all subjects defined in config above.
+                create:
+                  en: Create
+                  sk: Vytvor
+                update:
+                  en: Update
+                  sk: Uprav
+                delete:
+                  en: Delete
+                  sk: Zmaž
+            roles:
+                # Translation of all roles provided in configuration above.
+                ROLE_USER:
+                    en: User
+                    sk: Užívateľ
+                ROLE_ADMIN:
+                    en: Admin
+                    sk: Administrátor
 ```
-
+# Setup permissions and their management
+See [Permission management](src/Resources/doc/permissions.md)
 # Documentation
 
 Besides AnzuSystems' own
@@ -174,18 +220,19 @@ Besides AnzuSystems' own
 common-bundle provides many functionalities, you can read about them in following categories:
 
 * [Argument Resolvers](Resources/doc/argument_resolvers.md)
-* [Debug](Resources/doc/debug.md)
-* [Exception Handlers](Resources/doc/exception_handlers.md)
-* [Fixtures](Resources/doc/fixtures.md)
-* [Health Check](Resources/doc/health_check.md)
-* [Helpers](Resources/doc/helpers.md)
-* [Locks](Resources/doc/locs.md)
-* [Logs](Resources/doc/logs.md)
-* [Param Converters (deprecated)](Resources/doc/param_converters.md)
-* [Proxy Cache](Resources/doc/proxy_cache.md)
-* [Tests](Resources/doc/tests.md)
-* [Traits](Resources/doc/traits.md)
-* [Value Objects](Resources/doc/value_objects.md)
+* [Debug](src/Resources/doc/debug.md)
+* [Exception Handlers](src/Resources/doc/exception_handlers.md)
+* [Fixtures](src/Resources/doc/fixtures.md)
+* [Health Check](src/Resources/doc/health_check.md)
+* [Helpers](src/Resources/doc/helpers.md)
+* [Locks](src/Resources/doc/locks.md)
+* [Logs](src/Resources/doc/logs.md)
+* [Param Converters (deprecated)](src/Resources/doc/param_converters.md)
+* [Proxy Cache](src/Resources/doc/proxy_cache.md)
+* [Tests](src/Resources/doc/tests.md)
+* [Traits](src/Resources/doc/traits.md)
+* [Value Objects](src/Resources/doc/value_objects.md)
+* [Permissions](src/Resources/doc/permissions.md)
 
 # Troubleshooting
 
