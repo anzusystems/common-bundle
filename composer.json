@@ -22,7 +22,6 @@
     "mongodb/mongodb": "^1.9",
     "monolog/monolog": "^2.7",
     "nelmio/api-doc-bundle": "^4.8",
-    "sensio/framework-extra-bundle": "^6.2",
     "symfony/dependency-injection": ">=5.3|^6.0",
     "symfony/dotenv": ">=5.3|^6.0",
     "symfony/expression-language": "^5.3|^6.0",
