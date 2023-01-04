@@ -1,52 +1,24 @@
-Param Converters (Deprecated)
+Argument Resolvers
 ============
 
 ---
 
-Since Symfony 6.2, [Argument Resolvers](https://symfony.com/doc/current/controller/value_resolver.html) are used instead.
-
----
-
-### [ValueObjectParamConverter](https://github.com/anzusystems/common-bundle/blob/main/src/Request/ParamConverter/ValueObjectParamConverter.php)
+### [ValueObjectValueResolver](https://github.com/anzusystems/common-bundle/blob/main/src/Request/ValueResolver/ValueObjectValueResolver.php)
 
 Converts value object value into value object. Example in controller action:
 ```php
 #[Route('/user/{user}/{newState}', methods: ['PATCH'])]
-#[ParamConverter('newState', converter: ValueObjectParamConverter::class)]
 public function state(User $user, UserState $newState): JsonResponse;
 ```
 
 ---
 
-### [EnumParamConverter](https://github.com/anzusystems/common-bundle/blob/main/src/Request/ParamConverter/EnumParamConverter.php)
-
-Converts enum value into enum object. Example in controller action:
-```php
-#[Route('/user/{user}/{newState}', methods: ['PATCH'])]
-#[ParamConverter('newState', converter: EnumParamConverter::class)]
-public function state(User $user, UserState $newState): JsonResponse;
-```
-
----
-
-### [SerializerParamConverter](https://github.com/anzusystems/serializer-bundle/blob/main/src/Request/ParamConverter/SerializerParamConverter.php)
-Provided by [serializer-bundle](https://github.com/anzusystems/serializer-bundle).
-Converts request content into object by json deserialization:
-```php
-#[Route('/user', methods: ['POST'])]
-#[ParamConverter('user', converter: SerializerParamConverter::class)]
-public function create(User $user): JsonResponse;
-```
-
----
-
-### [ApiFilterParamConverter](https://github.com/anzusystems/common-bundle/blob/main/src/Request/ParamConverter/ApiFilterParamConverter.php)
+### [ApiFilterValueResolver](https://github.com/anzusystems/common-bundle/blob/main/src/Request/ValueResolver/ApiFilterValueResolver.php)
 
 Converts common get parameters used for listing into [ApiParams](https://github.com/anzusystems/common-bundle/blob/main/src/ApiFilter/ApiParams.php) object.
 
 ```php
 #[Route('', methods: ['GET'])]
-#[ParamConverter('apiParams', converter: ApiFilterParamConverter::class)]
 public function getList(ApiParams $apiParams): JsonResponse;
 ```
 

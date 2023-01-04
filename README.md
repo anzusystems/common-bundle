@@ -219,6 +219,7 @@ Besides AnzuSystems' own
 [contracts](https://github.com/anzusystems/contracts),
 common-bundle provides many functionalities, you can read about them in following categories:
 
+* [Argument Resolvers](Resources/doc/argument_resolvers.md)
 * [Debug](src/Resources/doc/debug.md)
 * [Exception Handlers](src/Resources/doc/exception_handlers.md)
 * [Fixtures](src/Resources/doc/fixtures.md)
@@ -226,7 +227,7 @@ common-bundle provides many functionalities, you can read about them in followin
 * [Helpers](src/Resources/doc/helpers.md)
 * [Locks](src/Resources/doc/locks.md)
 * [Logs](src/Resources/doc/logs.md)
-* [Param Converters](src/Resources/doc/param_converters.md)
+* [Param Converters (deprecated)](src/Resources/doc/param_converters.md)
 * [Proxy Cache](src/Resources/doc/proxy_cache.md)
 * [Tests](src/Resources/doc/tests.md)
 * [Traits](src/Resources/doc/traits.md)

@@ -8,7 +8,7 @@ use AnzuSystems\Contracts\AnzuApp;
 use AnzuSystems\Contracts\Entity\AnzuUser;
 use Doctrine\ORM\EntityManagerInterface;
 use LogicException;
-use Symfony\Component\Security\Core\Security;
+use Symfony\Bundle\SecurityBundle\Security;
 
 class CurrentAnzuUserProvider
 {
@@ -51,7 +51,7 @@ class CurrentAnzuUserProvider
     {
         $this->currentUser = $user;
 
-        return $this->getCurrentUser();
+        return $user;
     }
 
     public function setAdminCurrentUser(): AnzuUser

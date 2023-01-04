@@ -10,9 +10,6 @@ use AnzuSystems\CommonBundle\Domain\User\CurrentAnzuUserProvider;
 use AnzuSystems\CommonBundle\Event\Listener\ExceptionListener;
 use AnzuSystems\CommonBundle\Event\Listener\LockReleaseListener;
 use AnzuSystems\CommonBundle\Event\Subscriber\CommandLockSubscriber;
-use AnzuSystems\CommonBundle\Request\ParamConverter\ApiFilterParamConverter;
-use AnzuSystems\CommonBundle\Request\ParamConverter\EnumParamConverter;
-use AnzuSystems\CommonBundle\Request\ParamConverter\ValueObjectParamConverter;
 use AnzuSystems\CommonBundle\Util\ResourceLocker;
 use AnzuSystems\CommonBundle\Validator\Constraints\EntityExistsValidator;
 use AnzuSystems\CommonBundle\Validator\Constraints\NotEmptyIdValidator;
@@ -68,14 +65,6 @@ return static function (ContainerConfigurator $configurator): void {
         ->tag('kernel.event_listener', ['event' => KernelEvents::EXCEPTION])
     ;
 
-    $services->set(ApiFilterParamConverter::class)
-        ->tag('request.param_converter', ['priority' => false, 'converter' => ApiFilterParamConverter::class])
-    ;
-
-    $services->set(ValueObjectParamConverter::class)
-        ->tag('request.param_converter', ['priority' => false, 'converter' => ValueObjectParamConverter::class])
-    ;
-
     $services->set(EntityExistsValidator::class)
         ->arg('$entityManager', service(EntityManagerInterface::class))
         ->tag('validator.constraint_validator')
@@ -83,9 +72,5 @@ return static function (ContainerConfigurator $configurator): void {
 
     $services->set(NotEmptyIdValidator::class)
         ->tag('validator.constraint_validator')
-    ;
-
-    $services->set(EnumParamConverter::class)
-        ->tag('request.param_converter', ['priority' => false, 'converter' => EnumParamConverter::class])
     ;
 };

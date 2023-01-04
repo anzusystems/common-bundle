@@ -4,9 +4,11 @@ declare(strict_types=1);
 
 namespace AnzuSystems\CommonBundle\Serializer\Handler\Handlers;
 
+use AnzuSystems\Contracts\Model\ValueObject\AbstractValueObject;
 use AnzuSystems\Contracts\Model\ValueObject\ValueObjectInterface;
 use AnzuSystems\SerializerBundle\Handler\Handlers\AbstractHandler;
 use AnzuSystems\SerializerBundle\Metadata\Metadata;
+use Symfony\Component\PropertyInfo\Type;
 
 final class ValueObjectHandler extends AbstractHandler
 {
@@ -31,5 +33,23 @@ final class ValueObjectHandler extends AbstractHandler
     public function deserialize(mixed $value, Metadata $metadata): object
     {
         return new $metadata->type($value);
+    }
+
+    public static function supportsDescribe(string $property, Metadata $metadata): bool
+    {
+        return is_a($metadata->type, AbstractValueObject::class, true);
+    }
+
+    public function describe(string $property, Metadata $metadata): array
+    {
+        $description = parent::describe($property, $metadata);
+
+        /** @var AbstractValueObject $valueObjectClass */
+        $valueObjectClass = $metadata->type;
+        $description['enum'] = $valueObjectClass::AVAILABLE_VALUES;
+        $description['type'] = Type::BUILTIN_TYPE_STRING;
+        $description['default'] = $valueObjectClass::DEFAULT_VALUE;
+
+        return $description;
     }
 }

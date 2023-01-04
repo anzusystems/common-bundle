@@ -9,6 +9,9 @@ use Sensio\Bundle\FrameworkExtraBundle\Configuration\ParamConverter;
 use Sensio\Bundle\FrameworkExtraBundle\Request\ParamConverter\ParamConverterInterface;
 use Symfony\Component\HttpFoundation\Request;
 
+/**
+ * @deprecated Use BackedEnumValueResolver::class instead.
+ */
 final class EnumParamConverter implements ParamConverterInterface
 {
     public function apply(Request $request, ParamConverter $configuration): bool

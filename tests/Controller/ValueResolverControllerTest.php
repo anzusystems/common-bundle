@@ -6,16 +6,14 @@ namespace AnzuSystems\CommonBundle\Tests\Controller;
 
 use AnzuSystems\CommonBundle\ApiFilter\ApiParams;
 use AnzuSystems\CommonBundle\Tests\Data\Model\DataObject\DummyDto;
-use AnzuSystems\CommonBundle\Tests\Data\Model\Enum\DummyEnum;
 use AnzuSystems\CommonBundle\Tests\Data\Model\ValueObject\DummyValueObject;
-use AnzuSystems\Contracts\Model\Enum\EnumInterface;
 use Symfony\Component\HttpFoundation\Request;
 
-final class ParamConverterControllerTest extends AbstractControllerTest
+final class ValueResolverControllerTest extends AbstractControllerTest
 {
     public function testValueObjectConverter(): void
     {
-        $uriFactory = static fn (string $value): string => sprintf('/dummy/param-converter/value-object/%s', $value);
+        $uriFactory = static fn (string $value): string => sprintf('/dummy/value-resolver/value-object/%s', $value);
 
         $expectedValue = DummyValueObject::ANZU;
         self::$client->request(method: Request::METHOD_GET, uri: $uriFactory($expectedValue));
@@ -29,26 +27,11 @@ final class ParamConverterControllerTest extends AbstractControllerTest
         self::assertSame($expectedValue, self::$client->getResponse()->getContent());
     }
 
-    public function tesEnumConverter(): void
-    {
-        $uriFactory = static fn (EnumInterface $value): string => sprintf('/dummy/param-converter/enum/%s', $value->toString());
-
-        $expectedValue = DummyEnum::StateThree;
-        self::$client->request(method: Request::METHOD_GET, uri: $uriFactory($expectedValue));
-        self::assertResponseIsSuccessful();
-        self::assertSame($expectedValue->toString(), self::$client->getResponse()->getContent());
-
-        $expectedValue = DummyEnum::Default;
-        self::$client->request(method: Request::METHOD_GET, uri: $uriFactory($expectedValue));
-        self::assertResponseIsSuccessful();
-        self::assertSame($expectedValue->toString(), self::$client->getResponse()->getContent());
-    }
-
-    public function testSerializerConverter(): void
+    public function testSerializerValueResolver(): void
     {
         $content = (new DummyDto())->setData('test');
         $response = $this->post(
-            uri: '/dummy/param-converter/serializer',
+            uri: '/dummy/value-resolver/serializer',
             content: $content,
             deserializationClass: DummyDto::class,
         );
@@ -56,10 +39,10 @@ final class ParamConverterControllerTest extends AbstractControllerTest
         self::assertSame($content->getData(), $response->getData());
     }
 
-    public function testApiFilterConverter(): void
+    public function testApiFilterValueResolver(): void
     {
         $response = $this->get(
-            uri: '/dummy/param-converter/api-filter',
+            uri: '/dummy/value-resolver/api-filter',
             deserializationClass: ApiParams::class,
             params: [
                 'limit' => 50,
