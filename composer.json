@@ -16,7 +16,7 @@
     "ext-mongodb": "*",
     "ext-redis": "*",
     "ext-zend-opcache": "*",
-    "anzusystems/contracts": "^2.0",
+    "anzusystems/contracts": "dev-permission_group",
     "anzusystems/serializer-bundle": "^2.0",
     "doctrine/orm": ">=2.10",
     "mongodb/mongodb": "^1.9",
