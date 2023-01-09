@@ -92,7 +92,7 @@ abstract class AbstractManager
 
     /**
      * @template TKey of array-key
-     * @template T of BaseIdentifiableInterface
+     * @template T
      *
      * @param Collection<TKey, T> $oldCollection - old collection to be updated
      * @param Collection<TKey, T> $newCollection - new collection with changed items
