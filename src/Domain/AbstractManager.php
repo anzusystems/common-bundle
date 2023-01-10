@@ -122,7 +122,7 @@ abstract class AbstractManager
                 BaseIdentifiableInterface $entityTwo
             ): int => $entityOne->getId() <=> $entityTwo->getId();
             foreach ($oldCollection as $upd) {
-                /** @var BaseIdentifiableInterface $newUpd */
+                /** @var T $newUpd */
                 $newUpd = $newCollection->filter(
                     fn (BaseIdentifiableInterface $newElement): bool => 0 === $elementCompareFn($upd, $newElement)
                 )->first();
