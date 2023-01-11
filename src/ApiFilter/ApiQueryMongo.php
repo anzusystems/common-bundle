@@ -146,6 +146,7 @@ final class ApiQueryMongo
      */
     private function getPropertyByField(string $field): ReflectionProperty
     {
+        /** @var non-empty-list<non-empty-string> $propertyPath */
         $propertyPath = explode('.', $field);
         $propertyName = array_pop($propertyPath);
         $class = $this->classReflection;

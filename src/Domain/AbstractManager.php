@@ -91,12 +91,15 @@ abstract class AbstractManager
     }
 
     /**
-     * @param $oldCollection - old collection to be updated
-     * @param $newCollection - new collection with changed items
-     * @param $updateElementFn - run this function on each item that is in both old and new collections
-     * @param $addElementFn - run this function on each item that is in new but not in old collection
-     * @param $removeElementFn - run this function on each item that is in old but not in new collection
-     * @param $colDiffFn - this function must return spaceship operator comparison result
+     * @template TKey of array-key
+     * @template T
+     *
+     * @param Collection<TKey, T> $oldCollection - old collection to be updated
+     * @param Collection<TKey, T> $newCollection - new collection with changed items
+     * @param null|Closure(T,T): bool $updateElementFn - run this function on each item that is in both old and new collections
+     * @param null|Closure(Collection<TKey, T>,T): bool $addElementFn - run this function on each item that is in new but not in old collection
+     * @param null|Closure(Collection<TKey, T>,T): bool $removeElementFn - run this function on each item that is in old but not in new collection
+     * @param null|Closure(T,T): int $colDiffFn - this function must return spaceship operator comparison result
      */
     public function colUpdate(
         Collection $oldCollection,
@@ -119,7 +122,7 @@ abstract class AbstractManager
                 BaseIdentifiableInterface $entityTwo
             ): int => $entityOne->getId() <=> $entityTwo->getId();
             foreach ($oldCollection as $upd) {
-                /** @var BaseIdentifiableInterface $newUpd */
+                /** @var T $newUpd */
                 $newUpd = $newCollection->filter(
                     fn (BaseIdentifiableInterface $newElement): bool => 0 === $elementCompareFn($upd, $newElement)
                 )->first();

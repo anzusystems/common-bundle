@@ -13,7 +13,9 @@ use Traversable;
 class CollectionHelper
 {
     /**
-     * @return list<mixed>
+     * @template T
+     *
+     * @param null|Closure(T): mixed $getIdAction
      */
     public static function traversableToIds(Traversable $traversable, Closure $getIdAction = null): array
     {
@@ -23,6 +25,14 @@ class CollectionHelper
         );
     }
 
+    /**
+     * @template TKey of array-key
+     * @template T
+     *
+     * @param Collection<TKey, T> $collectionOne
+     * @param Collection<TKey, T> $collectionTwo
+     * @param null|Closure(T,T): int $colDiffFn
+     */
     public static function colDiff(
         Collection $collectionOne,
         Collection $collectionTwo,

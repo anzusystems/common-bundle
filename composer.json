@@ -16,7 +16,7 @@
     "ext-mongodb": "*",
     "ext-redis": "*",
     "ext-zend-opcache": "*",
-    "anzusystems/contracts": "^2.0",
+    "anzusystems/contracts": "^2.1.0",
     "anzusystems/serializer-bundle": "^2.0",
     "doctrine/orm": ">=2.10",
     "mongodb/mongodb": "^1.9",
@@ -44,7 +44,7 @@
     "slevomat/coding-standard": "^8.0",
     "symfony/test-pack": "^1.0",
     "symplify/easy-coding-standard": "^11.0",
-    "vimeo/psalm": "^4.11"
+    "vimeo/psalm": "^5.4"
   },
   "autoload": {
     "psr-4": {

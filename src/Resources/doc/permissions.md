@@ -16,7 +16,7 @@ anzu_systems_common.permissions.config:
 ```
 See [README](../../../README.md) for permission configuration example.
 
-### Provide user permission update API.
+### Provide user permission create/update API.
 #### Override permissionGroup property in your User entity to get relations to PermissionGroup:
 ```php
     #[ORM\ManyToMany(targetEntity: PermissionGroup::class, inversedBy: 'users', fetch: 'EXTRA_LAZY', indexBy: 'id')]
@@ -32,20 +32,27 @@ use AnzuSystems\CommonBundle\Domain\User\AbstractUserManager;
 class UserManager extends AbstractUserManager
 ```
 
-#### Create controller action:
+#### Create controller actions:
 ```php
-use AnzuSystems\CommonBundle\Model\Permission\PermissionUserUpdateDto;
-use AnzuSystems\SerializerBundle\Request\ParamConverter\SerializerParamConverter;
+use AnzuSystems\Contracts\Model\User\UserDto;
+use AnzuSystems\SerializerBundle\Attributes\SerializeParam;
 use App\Entity\User;
 
-#[Route('/permissions/{user}', 'update_permissions', ['user' => '\d+'], methods: [Request::METHOD_PATCH])]
-#[ParamConverter('permissionUserUpdateDto', converter: SerializerParamConverter::class)]
-public function updatePermissions(User $user, PermissionUserUpdateDto $permissionUserUpdateDto): JsonResponse
-{
-    return $this->okResponse(
-        $this->userManager->updatePermissions($user, $permissionUserUpdateDto)
-    );
-}
+    #[Route('', 'create', methods: [Request::METHOD_POST])]
+    public function create(#[SerializeParam] UserDto $userDto): JsonResponse
+    {
+        return $this->createdResponse(
+            $this->userManager->createAnzuUser($userDto)
+        );
+    }
+
+    #[Route('/{user}', 'update', ['user' => '\d+'], methods: [Request::METHOD_PUT])]
+    public function update(User $user, #[SerializeParam] UserDto $userDto): JsonResponse
+    {
+        return $this->okResponse(
+            $this->userManager->updateAnzuUser($user, $userDto)
+        );
+    }
 ```
 
 ### Provide PermissionGroup management APIs.
@@ -86,7 +93,6 @@ final class PermissionGroupController extends AbstractAnzuApiController
     }
     
     #[Route('/permission-group', 'get_list', methods: [Request::METHOD_GET])]
-    #[ParamConverter('apiParams', converter: ApiFilterParamConverter::class)]
     public function getList(ApiParams $apiParams): JsonResponse
     {
         return $this->okResponse(
@@ -95,8 +101,7 @@ final class PermissionGroupController extends AbstractAnzuApiController
     }
     
     #[Route('/permission-group', 'create', methods: [Request::METHOD_POST])]
-    #[ParamConverter('permissionGroup', converter: SerializerParamConverter::class)]
-    public function create(PermissionGroup $permissionGroup): JsonResponse
+    public function create(#[SerializeParam] PermissionGroup $permissionGroup): JsonResponse
     {
         return $this->createdResponse(
             $this->permissionGroupFacade->create($permissionGroup)
@@ -104,8 +109,7 @@ final class PermissionGroupController extends AbstractAnzuApiController
     }
     
     #[Route('/permission-group/{permissionGroup}', 'update', ['permissionGroup' => '\d+'], methods: [Request::METHOD_PUT])]
-    #[ParamConverter('newPermissionGroup', converter: SerializerParamConverter::class)]
-    public function update(PermissionGroup $permissionGroup, PermissionGroup $newPermissionGroup): JsonResponse
+    public function update(PermissionGroup $permissionGroup, #[SerializeParam] PermissionGroup $newPermissionGroup): JsonResponse
     {
         return $this->okResponse(
             $this->permissionGroupFacade->update($permissionGroup, $newPermissionGroup)

@@ -5,21 +5,33 @@ declare(strict_types=1);
 namespace AnzuSystems\CommonBundle\Domain\User;
 
 use AnzuSystems\CommonBundle\Domain\AbstractManager;
-use AnzuSystems\CommonBundle\Model\Permission\PermissionUserUpdateDto;
 use AnzuSystems\Contracts\Entity\AnzuUser;
+use AnzuSystems\Contracts\Model\User\UserDto;
 
 abstract class AbstractUserManager extends AbstractManager
 {
-    public function updatePermissions(AnzuUser $user, PermissionUserUpdateDto $permissionUserUpdateDto): AnzuUser
+    public function createAnzuUser(AnzuUser $user, UserDto $userDto, bool $flush = true): AnzuUser
+    {
+        $user->setId($userDto->getId());
+        $this->updateAnzuUser($user, $userDto, false);
+        $this->trackCreation($user);
+        $this->entityManager->persist($user);
+        $this->flush($flush);
+
+        return $user;
+    }
+
+    public function updateAnzuUser(AnzuUser $user, UserDto $userDto, bool $flush = true): AnzuUser
     {
         $user
-            ->setRoles($permissionUserUpdateDto->getRoles())
-            ->setPermissions($permissionUserUpdateDto->getPermissions())
-            ->setEnabled($permissionUserUpdateDto->isEnabled())
+            ->setEmail($userDto->getEmail())
+            ->setEnabled($userDto->isEnabled())
+            ->setRoles($userDto->getRoles())
+            ->setPermissions($userDto->getPermissions())
         ;
-        $this->colUpdate($user->getPermissionGroups(), $permissionUserUpdateDto->getPermissionGroups());
+        $this->colUpdate($user->getPermissionGroups(), $userDto->getPermissionGroups());
         $this->trackModification($user);
-        $this->flush();
+        $this->flush($flush);
 
         return $user;
     }
