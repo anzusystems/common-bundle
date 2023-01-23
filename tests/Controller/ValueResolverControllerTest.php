@@ -59,4 +59,17 @@ final class ValueResolverControllerTest extends AbstractControllerTest
         self::assertSame([ApiParams::FILTER_EQ => ['test' => 'rest']], $response->getFilter());
         self::assertSame(['id' => 'desc'], $response->getOrder());
     }
+
+    public function testArrayStringValueResolver(): void
+    {
+        $arrayString = '1,2,3';
+        $response = $this->get(
+            uri: '/dummy/value-resolver/array-string/' . $arrayString,
+        );
+        self::assertResponseIsSuccessful();
+        self::assertSame(
+            expected: array_map('intval', explode(',', $arrayString)),
+            actual: $response,
+        );
+    }
 }

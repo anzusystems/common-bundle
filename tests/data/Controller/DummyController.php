@@ -6,6 +6,7 @@ namespace AnzuSystems\CommonBundle\Tests\Data\Controller;
 
 use AnzuSystems\CommonBundle\ApiFilter\ApiParams;
 use AnzuSystems\CommonBundle\Controller\AbstractAnzuApiController;
+use AnzuSystems\CommonBundle\Model\Attributes\ArrayStringParam;
 use AnzuSystems\CommonBundle\Tests\Data\Model\DataObject\DummyDto;
 use AnzuSystems\CommonBundle\Tests\Data\Model\ValueObject\DummyValueObject;
 use AnzuSystems\CommonBundle\Tests\Data\Response\Cache\UserCacheSettings;
@@ -24,20 +25,27 @@ final class DummyController extends AbstractAnzuApiController
     }
 
     #[Route('/value-resolver/value-object/{dummy}', methods: [Request::METHOD_GET])]
-    public function valueObjectConverterTest(DummyValueObject $dummy): Response
+    public function valueObjectValueResolverTest(DummyValueObject $dummy): Response
     {
         return new Response($dummy->toString());
     }
 
     #[Route('/value-resolver/serializer', methods: [Request::METHOD_POST])]
-    public function serializerConverterTest(#[SerializeParam] DummyDto $dummy): JsonResponse
+    public function serializerValueResolverTest(#[SerializeParam] DummyDto $dummy): JsonResponse
     {
         return $this->okResponse($dummy);
     }
 
     #[Route('/value-resolver/api-filter', methods: [Request::METHOD_GET])]
-    public function apiFilterConverterTest(ApiParams $dummy): JsonResponse
+    public function apiFilterValueResolverTest(ApiParams $dummy): JsonResponse
     {
+        return $this->okResponse($dummy);
+    }
+
+    #[Route('/value-resolver/array-string/{dummy}', methods: [Request::METHOD_GET])]
+    public function apiFilterConverterTest(
+        #[ArrayStringParam(itemsLimit: 3, itemNormalizer: 'intval', separator: ',')] array $dummy,
+    ): JsonResponse {
         return $this->okResponse($dummy);
     }
 

@@ -43,6 +43,7 @@ use AnzuSystems\CommonBundle\Request\ParamConverter\ApiFilterParamConverter;
 use AnzuSystems\CommonBundle\Request\ParamConverter\EnumParamConverter;
 use AnzuSystems\CommonBundle\Request\ParamConverter\ValueObjectParamConverter;
 use AnzuSystems\CommonBundle\Request\ValueResolver\ApiFilterParamValueResolver;
+use AnzuSystems\CommonBundle\Request\ValueResolver\ArrayStringValueResolver;
 use AnzuSystems\CommonBundle\Request\ValueResolver\ValueObjectValueResolver;
 use AnzuSystems\CommonBundle\Security\PermissionConfig;
 use AnzuSystems\CommonBundle\Serializer\Exception\SerializerExceptionHandler;
@@ -470,6 +471,10 @@ final class AnzuSystemsCommonExtension extends Extension implements PrependExten
             ;
             $container
                 ->register(ValueObjectValueResolver::class)
+                ->addTag('controller.argument_value_resolver', ['priority' => 150])
+            ;
+            $container
+                ->register(ArrayStringValueResolver::class)
                 ->addTag('controller.argument_value_resolver', ['priority' => 150])
             ;
         }

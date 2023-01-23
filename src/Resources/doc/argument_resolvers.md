@@ -13,6 +13,16 @@ public function state(User $user, UserState $newState): JsonResponse;
 
 ---
 
+### [ArrayStringValueResolver](https://github.com/anzusystems/common-bundle/blob/main/src/Request/ValueResolver/ArrayStringValueResolver.php)
+
+Converts string separated by string value into value object. Example in controller action:
+```php
+#[Route('/user/{user}/{ids}', methods: ['GET'])]
+public function getByUserAndIds(User $user, #[ArrayStringParam] array $ids): JsonResponse;
+```
+
+---
+
 ### [ApiFilterValueResolver](https://github.com/anzusystems/common-bundle/blob/main/src/Request/ValueResolver/ApiFilterValueResolver.php)
 
 Converts common get parameters used for listing into [ApiParams](https://github.com/anzusystems/common-bundle/blob/main/src/ApiFilter/ApiParams.php) object.
