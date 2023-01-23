@@ -11,7 +11,13 @@ final class ArrayStringParam
 {
     public function __construct(
         public ?int $itemsLimit = null,
+        /**
+         * @var non-empty-string|null
+         */
         public ?string $itemNormalizer = null,
+        /**
+         * @var non-empty-string
+         */
         public string $separator = ',',
     ) {
     }
