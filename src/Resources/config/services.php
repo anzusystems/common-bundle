@@ -50,7 +50,6 @@ return static function (ContainerConfigurator $configurator): void {
     $services->set(FixturesLoader::class)
         ->arg('$fixtures', tagged_iterator(
             tag: AnzuSystemsCommonBundle::TAG_DATA_FIXTURE,
-            defaultIndexMethod: 'getIndexKey',
             defaultPriorityMethod: 'getPriority',
         ))
     ;
