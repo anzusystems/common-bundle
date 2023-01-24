@@ -8,6 +8,7 @@ use AnzuSystems\CommonBundle\DataFixtures\Interfaces\FixturesInterface;
 use AnzuSystems\CommonBundle\Traits\EntityManagerAwareTrait;
 use Closure;
 use Doctrine\Common\Collections\ArrayCollection;
+use Doctrine\ORM\Id\AbstractIdGenerator;
 use Doctrine\ORM\Id\AssignedGenerator;
 use Doctrine\ORM\Mapping\ClassMetadataInfo;
 use InvalidArgumentException;
@@ -25,6 +26,12 @@ abstract class AbstractFixtures implements FixturesInterface
      */
     private ?ArrayCollection $registry;
     private static int $defaultPriority = -1;
+    private AbstractIdGenerator $idGenerator;
+
+    /**
+     * @psalm-var ClassMetadataInfo::GENERATOR_TYPE_*
+     */
+    private int $generatorType;
 
     public static function getDependencies(): array
     {
@@ -97,8 +104,17 @@ abstract class AbstractFixtures implements FixturesInterface
 
     public function configureAssignedGenerator(): void
     {
-        $meta = $this->entityManager->getClassMetadata(static::getIndexKey());
-        $meta->setIdGenerator(new AssignedGenerator());
-        $meta->setIdGeneratorType(ClassMetadataInfo::GENERATOR_TYPE_NONE);
+        $metadata = $this->entityManager->getClassMetadata(static::getIndexKey());
+        $this->idGenerator = $metadata->idGenerator;
+        $this->generatorType = $metadata->generatorType;
+        $metadata->setIdGenerator(new AssignedGenerator());
+        $metadata->setIdGeneratorType(ClassMetadataInfo::GENERATOR_TYPE_NONE);
+    }
+
+    public function disableAssignedGenerator(): void
+    {
+        $metadata = $this->entityManager->getClassMetadata(static::getIndexKey());
+        $metadata->setIdGenerator($this->idGenerator);
+        $metadata->setIdGeneratorType($this->generatorType);
     }
 }

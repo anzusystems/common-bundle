@@ -39,4 +39,6 @@ interface FixturesInterface
     public function useCustomId(): bool;
 
     public function configureAssignedGenerator(): void;
+
+    public function disableAssignedGenerator(): void;
 }
