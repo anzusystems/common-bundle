@@ -33,6 +33,10 @@ final class FixturesLoader
             $progressBar->setFormat('debug');
 
             $fixtures->load($progressBar);
+
+            if ($fixtures->useCustomId()) {
+                $fixtures->disableAssignedGenerator();
+            }
         }
 
         $output->writeln(PHP_EOL);
