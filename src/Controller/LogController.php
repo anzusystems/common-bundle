@@ -14,6 +14,7 @@ use AnzuSystems\CommonBundle\Model\OpenApi\Parameter\OAParameterPath;
 use AnzuSystems\CommonBundle\Model\OpenApi\Request\OARequest;
 use AnzuSystems\CommonBundle\Model\OpenApi\Response\OAResponse;
 use AnzuSystems\CommonBundle\Model\OpenApi\Response\OAResponseCreated;
+use AnzuSystems\CommonBundle\Model\OpenApi\Response\OAResponseList;
 use AnzuSystems\SerializerBundle\Attributes\SerializeParam;
 use AnzuSystems\SerializerBundle\Exception\SerializerException;
 use OpenApi\Attributes as OA;
@@ -33,8 +34,10 @@ final class LogController extends AbstractAnzuApiController
 
     /**
      * Get list of audit logs.
+     *
+     * @throws SerializerException
      */
-    #[OAResponse([Log::class])]
+    #[OAResponseList(Log::class)]
     public function getAuditLogs(ApiParams $apiParams): JsonResponse
     {
         return $this->okResponse(
@@ -44,8 +47,10 @@ final class LogController extends AbstractAnzuApiController
 
     /**
      * Get list of app logs.
+     *
+     * @throws SerializerException
      */
-    #[OAResponse([Log::class])]
+    #[OAResponseList(Log::class)]
     public function getAppLogs(ApiParams $apiParams): JsonResponse
     {
         return $this->okResponse(
@@ -69,6 +74,8 @@ final class LogController extends AbstractAnzuApiController
 
     /**
      * Get one audit log.
+     *
+     * @throws SerializerException
      */
     #[OAParameterPath('id'), OAResponse(Log::class)]
     public function getOneAuditLog(string $id): JsonResponse

@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace AnzuSystems\CommonBundle\Validator;
 
 use AnzuSystems\CommonBundle\Exception\ValidationException;
-use AnzuSystems\Contracts\Entity\Interfaces\IdentifiableInterface;
 use Symfony\Component\Validator\ConstraintViolation;
 use Symfony\Component\Validator\ConstraintViolationList;
 use Symfony\Component\Validator\ConstraintViolationListInterface;
@@ -23,44 +22,33 @@ final class Validator
     /**
      * @throws ValidationException
      */
-    public function validateDto(object $dto): void
+    public function validate(object $object, ?object $oldObject = null): void
     {
         $this->violationList = new ConstraintViolationList();
-        $this->violationList->addAll(
-            $this->validator->validate($dto)
-        );
+        $this->validateConstraints($object);
+        $this->validateIdentity($object, $oldObject);
 
         if ($this->violationList->count() > 0) {
             throw new ValidationException($this->violationList);
         }
     }
 
-    /**
-     * @throws ValidationException
-     */
-    public function validateIdentifiable(IdentifiableInterface $newEntity, ?IdentifiableInterface $oldEntity = null): void
-    {
-        $this->violationList = new ConstraintViolationList();
-        $this->validateConstraints($newEntity);
-        $this->validateIdentity($newEntity, $oldEntity);
-
-        if ($this->violationList->count() > 0) {
-            throw new ValidationException($this->violationList);
-        }
-    }
-
-    private function validateConstraints(IdentifiableInterface $entity): void
+    private function validateConstraints(object $object): void
     {
         $this->violationList->addAll(
-            $this->validator->validate($entity)
+            $this->validator->validate($object)
         );
     }
 
     private function validateIdentity(
-        IdentifiableInterface $newEntity,
-        ?IdentifiableInterface $oldEntity = null
+        object $object,
+        ?object $oldObject = null
     ): void {
-        if (null === $oldEntity || $newEntity->getId() === $oldEntity->getId()) {
+        if (null === $oldObject
+            || false === method_exists($oldObject, 'getId')
+            || false === method_exists($object, 'getId')
+            || $object->getId() === $oldObject->getId()
+        ) {
             return;
         }
 
@@ -69,9 +57,9 @@ final class Validator
                 ValidationException::ERROR_ID_MISMATCH,
                 ValidationException::ERROR_ID_MISMATCH,
                 [],
-                $newEntity::class,
+                $object::class,
                 'id',
-                $newEntity->getId(),
+                $object->getId(),
             )
         );
     }

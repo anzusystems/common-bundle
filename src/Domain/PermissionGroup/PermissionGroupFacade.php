@@ -26,7 +26,7 @@ final class PermissionGroupFacade
      */
     public function create(AnzuPermissionGroup $permissionGroup): AnzuPermissionGroup
     {
-        $this->validator->validateIdentifiable($permissionGroup);
+        $this->validator->validate($permissionGroup);
         $this->permissionGroupManager->create($permissionGroup);
 
         return $permissionGroup;
@@ -41,7 +41,7 @@ final class PermissionGroupFacade
         AnzuPermissionGroup $permissionGroup,
         AnzuPermissionGroup $newPermissionGroup
     ): AnzuPermissionGroup {
-        $this->validator->validateIdentifiable($newPermissionGroup, $permissionGroup);
+        $this->validator->validate($newPermissionGroup, $permissionGroup);
         $this->permissionGroupManager->update($permissionGroup, $newPermissionGroup);
 
         return $permissionGroup;
