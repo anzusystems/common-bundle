@@ -13,6 +13,7 @@ use AnzuSystems\CommonBundle\DataFixtures\Interfaces\FixturesInterface;
 use AnzuSystems\CommonBundle\Doctrine\Query\AST\DateTime\Year;
 use AnzuSystems\CommonBundle\Doctrine\Query\AST\Numeric\Rand;
 use AnzuSystems\CommonBundle\Doctrine\Query\AST\String\Field;
+use AnzuSystems\CommonBundle\Domain\Job\Processor\AbstractJobProcessor;
 use AnzuSystems\CommonBundle\Domain\PermissionGroup\PermissionGroupFacade;
 use AnzuSystems\CommonBundle\Domain\PermissionGroup\PermissionGroupManager;
 use AnzuSystems\CommonBundle\Domain\User\CurrentAnzuUserProvider;
@@ -70,7 +71,6 @@ use Symfony\Component\DependencyInjection\Extension\PrependExtensionInterface;
 use Symfony\Component\DependencyInjection\Loader\PhpFileLoader;
 use Symfony\Component\DependencyInjection\Reference;
 use Symfony\Component\HttpKernel\Controller\ValueResolverInterface;
-use Symfony\Component\Validator\Validator\ValidatorInterface;
 
 final class AnzuSystemsCommonExtension extends Extension implements PrependExtensionInterface
 {
@@ -228,18 +228,16 @@ final class AnzuSystemsCommonExtension extends Extension implements PrependExten
             ->getDefinition(CurrentAnzuUserProvider::class)
             ->replaceArgument('$userEntityClass', $settings['user_entity_class']);
 
-        $container->setDefinition(
-            Validator::class,
-            (new Definition(Validator::class))
-                ->setArgument('$validator', new Reference(ValidatorInterface::class))
-        );
-
         $definition = $this->createControllerDefinition(DebugController::class);
         $container->setDefinition(DebugController::class, $definition);
 
         $container
             ->registerForAutoconfiguration(FixturesInterface::class)
             ->addTag(AnzuSystemsCommonBundle::TAG_DATA_FIXTURE);
+
+        $container
+            ->registerForAutoconfiguration(AbstractJobProcessor::class)
+            ->addTag(AnzuSystemsCommonBundle::TAG_JOB_PROCESSOR);
     }
 
     private function loadErrors(ContainerBuilder $container): void

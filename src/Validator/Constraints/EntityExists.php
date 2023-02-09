@@ -10,7 +10,9 @@ use Symfony\Component\Validator\Constraint;
 #[Attribute(Attribute::TARGET_PROPERTY)]
 final class EntityExists extends Constraint
 {
-    public string $message = 'entity_not_exists';
+    public const MESSAGE = 'entity_not_exists';
+
+    public string $message = self::MESSAGE;
 
     /**
      * @param class-string $entity

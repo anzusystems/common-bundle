@@ -35,14 +35,14 @@ final class ForceIndexWalkerQueryTest extends AbstractDoctrineQueryTestCase
             [
                 'SELECT e.name FROM ' . Example::class . ' e',
                 ForceIndexWalker::HINT_FORCE_INDEX_FOR_FROM,
-                Example::IDX_JOINED_ENTITY,
-                'SELECT e0_.name AS name_0 FROM example e0_ FORCE INDEX (' . Example::IDX_JOINED_ENTITY . ')',
+                ExampleJoinedEntity::IDX_JOINED_ENTITY,
+                'SELECT e0_.name AS name_0 FROM example e0_ FORCE INDEX (' . ExampleJoinedEntity::IDX_JOINED_ENTITY . ')',
             ],
             [
                 'SELECT e.name FROM ' . Example::class . ' e WHERE e.id > 0',
                 ForceIndexWalker::HINT_FORCE_INDEX_FOR_FROM,
-                Example::IDX_JOINED_ENTITY,
-                'SELECT e0_.name AS name_0 FROM example e0_ FORCE INDEX (' . Example::IDX_JOINED_ENTITY . ') WHERE e0_.id > 0',
+                ExampleJoinedEntity::IDX_JOINED_ENTITY,
+                'SELECT e0_.name AS name_0 FROM example e0_ FORCE INDEX (' . ExampleJoinedEntity::IDX_JOINED_ENTITY . ') WHERE e0_.id > 0',
             ],
             [
                 'SELECT e.name FROM ' . Example::class . ' e JOIN ' . ExampleJoinedEntity::class . ' j',

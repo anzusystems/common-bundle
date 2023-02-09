@@ -19,4 +19,17 @@ class AnzuWebTestCase extends WebTestCase
         static::$client = static::createClient();
         static::$client->disableReboot();
     }
+
+    protected function assertValidationErrors(array $responseContent, array $expectedValidationErrors): void
+    {
+        $this->assertArrayHasKey('error', $responseContent);
+        $this->assertArrayHasKey('fields', $responseContent);
+        $this->assertSame('validation_failed', $responseContent['error']);
+        $this->assertSameSize($expectedValidationErrors, $responseContent['fields']);
+        foreach ($expectedValidationErrors as $fieldName => $errors) {
+            foreach ($errors as $error) {
+                $this->assertContains($error, $responseContent['fields'][$fieldName]);
+            }
+        }
+    }
 }
