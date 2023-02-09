@@ -10,7 +10,7 @@ use AnzuSystems\CommonBundle\Entity\Interfaces\JobInterface;
 /**
  * Job persistence management.
  */
-final class JobManager extends AbstractManager
+class JobManager extends AbstractManager
 {
     /**
      * Persist new job.

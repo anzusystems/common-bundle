@@ -5,8 +5,11 @@ declare(strict_types=1);
 namespace Symfony\Component\DependencyInjection\Loader\Configurator;
 
 use AnzuSystems\CommonBundle\AnzuSystemsCommonBundle;
+use AnzuSystems\CommonBundle\Command\GenerateFixturesCommand;
 use AnzuSystems\CommonBundle\Command\ProcessJobCommand;
 use AnzuSystems\CommonBundle\DataFixtures\FixturesLoader;
+use AnzuSystems\CommonBundle\Domain\Job\JobFacade;
+use AnzuSystems\CommonBundle\Domain\Job\JobManager;
 use AnzuSystems\CommonBundle\Domain\Job\JobProcessor;
 use AnzuSystems\CommonBundle\Domain\User\CurrentAnzuUserProvider;
 use AnzuSystems\CommonBundle\Event\Listener\ExceptionListener;
@@ -19,7 +22,7 @@ use AnzuSystems\CommonBundle\Validator\Constraints\EntityExistsValidator;
 use AnzuSystems\CommonBundle\Validator\Constraints\NotEmptyIdValidator;
 use AnzuSystems\CommonBundle\Validator\Validator;
 use Doctrine\ORM\EntityManagerInterface;
-use Symfony\Bridge\Doctrine\ManagerRegistry;
+use Doctrine\Persistence\ManagerRegistry;
 use Symfony\Component\HttpKernel\KernelEvents;
 use Symfony\Component\Validator\Validator\ValidatorInterface;
 
@@ -61,9 +64,14 @@ return static function (ContainerConfigurator $configurator): void {
         ))
     ;
 
+    $services->set(GenerateFixturesCommand::class)
+        ->arg('$fixturesLoader', service(FixturesLoader::class))
+        ->tag('console.command')
+    ;
+
     $services->set(JobProcessor::class)
         ->arg('$jobRepo', service(JobRepository::class))
-        ->arg('$processorsLocator', tagged_locator(
+        ->arg('$processorProvider', tagged_locator(
             tag: AnzuSystemsCommonBundle::TAG_JOB_PROCESSOR,
             defaultIndexMethod: 'getSupportedJob',
         ))
@@ -76,10 +84,22 @@ return static function (ContainerConfigurator $configurator): void {
 
     $services->set(JobRepository::class)
         ->arg('$registry', service(ManagerRegistry::class))
+        ->tag('doctrine.repository_service')
     ;
 
     $services->set(JobUserDataDeleteRepository::class)
         ->arg('$registry', service(ManagerRegistry::class))
+        ->tag('doctrine.repository_service')
+    ;
+
+    $services->set(JobManager::class)
+        ->call('setCurrentAnzuUserProvider', [service(CurrentAnzuUserProvider::class)])
+        ->call('setEntityManager', [service(EntityManagerInterface::class)])
+    ;
+
+    $services->set(JobFacade::class)
+        ->arg('$validator', service(Validator::class))
+        ->arg('$manager', service(JobManager::class))
     ;
 
     $services->set(ExceptionListener::class)

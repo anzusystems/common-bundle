@@ -13,7 +13,7 @@ use RuntimeException;
 /**
  * Complete Job processing.
  */
-final class JobFacade
+class JobFacade
 {
     public function __construct(
         private readonly Validator $validator,

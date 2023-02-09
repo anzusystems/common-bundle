@@ -1,0 +1,4 @@
+anzu_systems_serializer:
+    parameter_bag:
+        AnzuSystems\Contracts\Entity\AnzuUser: AnzuSystems\CommonBundle\Tests\Data\Entity\User
+        AnzuSystems\Contracts\Entity\AnzuPermissionGroup: AnzuSystems\CommonBundle\Tests\Data\Entity\PermissionGroup

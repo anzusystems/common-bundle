@@ -22,6 +22,16 @@ interface JobInterface extends IdentifiableInterface
 
     public function setFinishedAt(?DateTimeImmutable $finishedAt): static;
 
+    public function getLastBatchProcessedRecord(): string;
+
+    public function setLastBatchProcessedRecord(string $lastBatchProcessedRecord): self;
+
+    public function getBatchProcessedIterationCount(): int;
+
+    public function setBatchProcessedIterationCount(int $batchProcessedIterationCount): self;
+
+    public function increaseBatchProcessedIterationCount(): self;
+
     public function getResult(): string;
 
     public function setResult(string $result): static;

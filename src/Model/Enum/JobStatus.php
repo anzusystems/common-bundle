@@ -12,7 +12,7 @@ enum JobStatus: string implements EnumInterface
     use BaseEnumTrait;
 
     case Waiting = 'waiting';
-    case WaitingBatch = 'waiting_batch';
+    case AwaitingBatchProcess = 'awaiting_batch_process';
     case Processing = 'processing';
     case Done = 'done';
     case Error = 'error';
@@ -21,6 +21,6 @@ enum JobStatus: string implements EnumInterface
 
     public const PROCESSABLE_STATUSES = [
         self::Waiting,
-        self::WaitingBatch,
+        self::AwaitingBatchProcess,
     ];
 }

@@ -46,10 +46,13 @@ abstract class AbstractJobProcessor implements JobProcessorInterface
         $this->entityManager->flush();
     }
 
-    protected function toWaitingBatch(JobInterface $job): void
+    protected function toAwaitingBatchProcess(JobInterface $job, string $lastProcessedRecord = ''): void
     {
         $this->getManagedJob($job)
-            ->setStatus(JobStatus::WaitingBatch);
+            ->setStatus(JobStatus::AwaitingBatchProcess)
+            ->setLastBatchProcessedRecord($lastProcessedRecord)
+            ->increaseBatchProcessedIterationCount()
+        ;
         $this->entityManager->flush();
     }
 

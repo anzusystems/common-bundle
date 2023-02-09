@@ -47,6 +47,20 @@ abstract class Job implements UserTrackingInterface, TimeTrackingInterface, JobI
     protected ?DateTimeImmutable $finishedAt;
 
     /**
+     * In case of batch processing, it might contain a needle from which should the batch processing continue.
+     */
+    #[ORM\Column(type: Types::STRING)]
+    #[Serialize]
+    protected string $lastBatchProcessedRecord;
+
+    /**
+     * In case of batch processing, it counts total number of batch processed iterations.
+     */
+    #[ORM\Column(type: Types::INTEGER)]
+    #[Serialize]
+    protected int $batchProcessedIterationCount;
+
+    /**
      * Optional result data.
      */
     #[ORM\Column(type: Types::STRING, length: 255)]
@@ -59,6 +73,8 @@ abstract class Job implements UserTrackingInterface, TimeTrackingInterface, JobI
         $this->setResult('');
         $this->setStartedAt(null);
         $this->setFinishedAt(null);
+        $this->setLastBatchProcessedRecord('');
+        $this->setBatchProcessedIterationCount(0);
     }
 
     public function getStatus(): JobStatus
@@ -93,6 +109,37 @@ abstract class Job implements UserTrackingInterface, TimeTrackingInterface, JobI
     public function setFinishedAt(?DateTimeImmutable $finishedAt): static
     {
         $this->finishedAt = $finishedAt;
+
+        return $this;
+    }
+
+    public function getLastBatchProcessedRecord(): string
+    {
+        return $this->lastBatchProcessedRecord;
+    }
+
+    public function setLastBatchProcessedRecord(string $lastBatchProcessedRecord): self
+    {
+        $this->lastBatchProcessedRecord = $lastBatchProcessedRecord;
+
+        return $this;
+    }
+
+    public function getBatchProcessedIterationCount(): int
+    {
+        return $this->batchProcessedIterationCount;
+    }
+
+    public function setBatchProcessedIterationCount(int $batchProcessedIterationCount): self
+    {
+        $this->batchProcessedIterationCount = $batchProcessedIterationCount;
+
+        return $this;
+    }
+
+    public function increaseBatchProcessedIterationCount(): self
+    {
+        ++$this->batchProcessedIterationCount;
 
         return $this;
     }

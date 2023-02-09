@@ -4,10 +4,7 @@
 
 # Cache, session files, logs and secure files
 /config/secrets/prod/prod.decrypt.private.php
-/var/cache/*
-/var/cron.stop
-/var/ecs_cache/*
-/var/log/*
+/var
 
 # Env files
 .env.local

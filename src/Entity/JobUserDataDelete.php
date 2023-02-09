@@ -21,6 +21,7 @@ class JobUserDataDelete extends Job
     #[ORM\Column(type: Types::INTEGER)]
     #[AppAssert\EntityExists(entity: AnzuUser::class)]
     #[Assert\NotBlank]
+    #[Serialize]
     protected int $targetUserId;
 
     /**
@@ -34,6 +35,7 @@ class JobUserDataDelete extends Job
     {
         parent::__construct();
         $this->setTargetUserId(0);
+        $this->setAnonymizeUser(false);
     }
 
     public function getTargetUserId(): int

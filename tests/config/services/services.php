@@ -7,9 +7,14 @@ namespace Symfony\Component\DependencyInjection\Loader\Configurator;
 use AnzuSystems\CommonBundle\AnzuSystemsCommonBundle;
 use AnzuSystems\CommonBundle\DataFixtures\FixturesLoader;
 use AnzuSystems\CommonBundle\Tests\Data\Controller\DummyController;
-use AnzuSystems\CommonBundle\Tests\Data\Fixtures\DummyFixtures;
+use AnzuSystems\CommonBundle\Tests\Data\Controller\JobController;
+use AnzuSystems\CommonBundle\Tests\Data\Domain\Job\Processor\JobUserDataDeleteProcessor;
+use AnzuSystems\CommonBundle\Tests\Data\Fixtures\UserFixtures;
+use AnzuSystems\CommonBundle\Tests\Data\Repository\UserRepository;
 use AnzuSystems\CommonBundle\Util\ResourceLocker;
 use AnzuSystems\SerializerBundle\Serializer;
+use Doctrine\ORM\EntityManagerInterface;
+use Doctrine\Persistence\ManagerRegistry;
 use Redis;
 use Symfony\Component\Security\Core\Authorization\AuthorizationChecker;
 
@@ -31,10 +36,27 @@ return static function (ContainerConfigurator $configurator): void {
         ->call('setResourceLocker', [service(ResourceLocker::class)])
     ;
 
+    $services->set(JobController::class)
+        ->autowire(true)
+        ->autoconfigure(true)
+        ->call('setSerializer', [service(Serializer::class)])
+        ->call('setResourceLocker', [service(ResourceLocker::class)])
+    ;
+
     $services->alias('security.token_storage.test', 'security.untracked_token_storage');
 
-    $services->set(DummyFixtures::class)
+    $services->set(UserFixtures::class)
+        ->call('setEntityManager', [service(EntityManagerInterface::class)])
         ->tag(AnzuSystemsCommonBundle::TAG_DATA_FIXTURE)
+    ;
+
+    $services->set(JobUserDataDeleteProcessor::class)
+        ->tag(AnzuSystemsCommonBundle::TAG_JOB_PROCESSOR)
+    ;
+
+    $services->set(UserRepository::class)
+        ->arg('$registry', service(ManagerRegistry::class))
+        ->tag('doctrine.repository_service')
     ;
 
     $services->alias(FixturesLoader::class . '.test', FixturesLoader::class)
