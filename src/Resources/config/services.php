@@ -20,10 +20,13 @@ use AnzuSystems\CommonBundle\Repository\JobUserDataDeleteRepository;
 use AnzuSystems\CommonBundle\Util\ResourceLocker;
 use AnzuSystems\CommonBundle\Validator\Constraints\EntityExistsValidator;
 use AnzuSystems\CommonBundle\Validator\Constraints\NotEmptyIdValidator;
+use AnzuSystems\CommonBundle\Validator\Constraints\UniqueEntityDtoValidator;
+use AnzuSystems\CommonBundle\Validator\Constraints\UniqueEntityValidator;
 use AnzuSystems\CommonBundle\Validator\Validator;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\Persistence\ManagerRegistry;
 use Symfony\Component\HttpKernel\KernelEvents;
+use Symfony\Component\PropertyAccess\PropertyAccessorInterface;
 use Symfony\Component\Validator\Validator\ValidatorInterface;
 
 return static function (ContainerConfigurator $configurator): void {
@@ -117,6 +120,18 @@ return static function (ContainerConfigurator $configurator): void {
     ;
 
     $services->set(EntityExistsValidator::class)
+        ->arg('$entityManager', service(EntityManagerInterface::class))
+        ->tag('validator.constraint_validator')
+    ;
+
+    $services->set(UniqueEntityValidator::class)
+        ->arg('$propertyAccessor', service(PropertyAccessorInterface::class))
+        ->arg('$entityManager', service(EntityManagerInterface::class))
+        ->tag('validator.constraint_validator')
+    ;
+
+    $services->set(UniqueEntityDtoValidator::class)
+        ->arg('$propertyAccessor', service(PropertyAccessorInterface::class))
         ->arg('$entityManager', service(EntityManagerInterface::class))
         ->tag('validator.constraint_validator')
     ;
