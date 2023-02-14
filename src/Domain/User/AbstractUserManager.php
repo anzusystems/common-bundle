@@ -7,11 +7,10 @@ namespace AnzuSystems\CommonBundle\Domain\User;
 use AnzuSystems\CommonBundle\Domain\AbstractManager;
 use AnzuSystems\CommonBundle\Model\User\UserDto;
 use AnzuSystems\Contracts\Entity\AnzuUser;
-use AnzuSystems\Contracts\Model\User\UserDto as DeprecatedUserDto;
 
 abstract class AbstractUserManager extends AbstractManager
 {
-    public function createAnzuUser(AnzuUser $user, DeprecatedUserDto|UserDto $userDto, bool $flush = true): AnzuUser
+    public function createAnzuUser(AnzuUser $user, UserDto $userDto, bool $flush = true): AnzuUser
     {
         $user->setId($userDto->getId());
         $this->updateAnzuUser($user, $userDto, false);
@@ -22,7 +21,7 @@ abstract class AbstractUserManager extends AbstractManager
         return $user;
     }
 
-    public function updateAnzuUser(AnzuUser $user, DeprecatedUserDto|UserDto $userDto, bool $flush = true): AnzuUser
+    public function updateAnzuUser(AnzuUser $user, UserDto $userDto, bool $flush = true): AnzuUser
     {
         $user
             ->setEmail($userDto->getEmail())
