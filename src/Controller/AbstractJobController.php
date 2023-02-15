@@ -75,7 +75,7 @@ abstract class AbstractJobController extends AbstractAnzuApiController
      */
     #[Route('/user-data-delete', 'create_job_user_data_delete', methods: [Request::METHOD_POST])]
     #[OARequest(JobUserDataDelete::class), OAResponseCreated(JobUserDataDelete::class), OAResponseValidation]
-    public function createJobGdprDelete(#[SerializeParam] JobUserDataDelete $job): JsonResponse
+    public function createUserDataDelete(#[SerializeParam] JobUserDataDelete $job): JsonResponse
     {
         AnzuApp::throwOnReadOnlyMode();
         if ($this->getCreateAcl()) {
