@@ -37,7 +37,7 @@ class PermissionGroup extends AnzuPermissionGroup
         return $this->users;
     }
 
-    public function setUsers(Collection $users): self
+    public function setUsers(Collection $users): static
     {
         $this->users = $users;
 
