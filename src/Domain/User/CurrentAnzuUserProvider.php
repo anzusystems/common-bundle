@@ -56,12 +56,30 @@ class CurrentAnzuUserProvider
 
     public function setAdminCurrentUser(): AnzuUser
     {
-        $adminUser = $this->entityManager->find($this->userEntityClass, AnzuApp::getUserIdAdmin());
-        if (false === ($adminUser instanceof AnzuUser)) {
-            throw new LogicException('Admin user not found');
+        return $this->setCurrentUserById(AnzuApp::getUserIdAdmin());
+    }
+
+    public function setConsoleCurrentUser(): AnzuUser
+    {
+        return $this->setCurrentUserById(AnzuApp::getUserIdConsole());
+    }
+
+    public function setAnonymousCurrentUser(): AnzuUser
+    {
+        return $this->setCurrentUserById(AnzuApp::getUserIdAnonymous());
+    }
+
+    public function setCurrentUserById(int $userId): AnzuUser
+    {
+        if ($userId === $this->currentUser?->getId()) {
+            return $this->getCurrentUser();
+        }
+        $user = $this->entityManager->find($this->userEntityClass, $userId);
+        if (false === ($user instanceof AnzuUser)) {
+            throw new LogicException('User not found. ID: ' . $userId);
         }
 
-        return $this->setCurrentUser($adminUser);
+        return $this->setCurrentUser($user);
     }
 
     public function isCurrentUser(AnzuUser $user): bool

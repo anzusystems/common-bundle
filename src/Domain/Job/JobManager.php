@@ -25,6 +25,17 @@ class JobManager extends AbstractManager
     }
 
     /**
+     * Persist new job.
+     */
+    public function update(JobInterface $job, bool $flush = true): JobInterface
+    {
+        $this->trackModification($job);
+        $this->flush($flush);
+
+        return $job;
+    }
+
+    /**
      * Delete job from persistence.
      */
     public function delete(JobInterface $job, bool $flush = true): bool
