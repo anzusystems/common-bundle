@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace AnzuSystems\CommonBundle\Domain\Job\Processor;
 
+use AnzuSystems\CommonBundle\Domain\Job\JobManager;
+use AnzuSystems\CommonBundle\Domain\User\CurrentAnzuUserProvider;
 use AnzuSystems\CommonBundle\Entity\Interfaces\JobInterface;
 use AnzuSystems\CommonBundle\Model\Enum\JobStatus;
 use DateTimeImmutable;
@@ -15,6 +17,8 @@ abstract class AbstractJobProcessor implements JobProcessorInterface
 {
     protected ManagerRegistry $doctrine;
     protected EntityManagerInterface $entityManager;
+    protected CurrentAnzuUserProvider $currentAnzuUserProvider;
+    protected JobManager $jobManager;
 
     #[Required]
     public function setManagerRegistry(ManagerRegistry $doctrine): void
@@ -28,32 +32,48 @@ abstract class AbstractJobProcessor implements JobProcessorInterface
         $this->entityManager = $entityManager;
     }
 
+    #[Required]
+    public function setCurrentAnzuUserProvider(CurrentAnzuUserProvider $currentAnzuUserProvider): void
+    {
+        $this->currentAnzuUserProvider = $currentAnzuUserProvider;
+    }
+
+    #[Required]
+    public function setJobManager(JobManager $jobManager): void
+    {
+        $this->jobManager = $jobManager;
+    }
+
     protected function start(JobInterface $job): void
     {
+        $this->currentAnzuUserProvider->setConsoleCurrentUser();
         $this->getManagedJob($job)
             ->setStartedAt(new DateTimeImmutable())
             ->setStatus(JobStatus::Processing)
         ;
-        $this->entityManager->flush();
+        $this->jobManager->update($job);
+        $this->currentAnzuUserProvider->setCurrentUser($job->getCreatedBy());
     }
 
     protected function finishSuccess(JobInterface $job): void
     {
+        $this->currentAnzuUserProvider->setConsoleCurrentUser();
         $this->getManagedJob($job)
             ->setFinishedAt(new DateTimeImmutable())
             ->setStatus(JobStatus::Done)
         ;
-        $this->entityManager->flush();
+        $this->jobManager->update($job);
     }
 
     protected function toAwaitingBatchProcess(JobInterface $job, string $lastProcessedRecord = ''): void
     {
+        $this->currentAnzuUserProvider->setConsoleCurrentUser();
         $this->getManagedJob($job)
             ->setStatus(JobStatus::AwaitingBatchProcess)
             ->setLastBatchProcessedRecord($lastProcessedRecord)
             ->increaseBatchProcessedIterationCount()
         ;
-        $this->entityManager->flush();
+        $this->jobManager->update($job);
     }
 
     protected function finishFail(JobInterface $job, string $error): void
@@ -63,13 +83,13 @@ abstract class AbstractJobProcessor implements JobProcessorInterface
             $entityManager = $this->doctrine->resetManager();
             $this->entityManager = $entityManager;
         }
-
+        $this->currentAnzuUserProvider->setConsoleCurrentUser();
         $this->getManagedJob($job)
             ->setResult($error)
             ->setFinishedAt(new DateTimeImmutable())
             ->setStatus(JobStatus::Error)
         ;
-        $this->entityManager->flush();
+        $this->jobManager->update($job);
     }
 
     protected function getManagedJob(JobInterface $job): JobInterface

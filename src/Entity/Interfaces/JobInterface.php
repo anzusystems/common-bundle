@@ -6,9 +6,11 @@ namespace AnzuSystems\CommonBundle\Entity\Interfaces;
 
 use AnzuSystems\CommonBundle\Model\Enum\JobStatus;
 use AnzuSystems\Contracts\Entity\Interfaces\IdentifiableInterface;
+use AnzuSystems\Contracts\Entity\Interfaces\TimeTrackingInterface;
+use AnzuSystems\Contracts\Entity\Interfaces\UserTrackingInterface;
 use DateTimeImmutable;
 
-interface JobInterface extends IdentifiableInterface
+interface JobInterface extends IdentifiableInterface, UserTrackingInterface, TimeTrackingInterface
 {
     public function getStatus(): JobStatus;
 
