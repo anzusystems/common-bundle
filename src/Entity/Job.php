@@ -19,6 +19,7 @@ use Doctrine\ORM\Mapping as ORM;
 
 #[ORM\Entity(repositoryClass: JobRepository::class)]
 #[ORM\InheritanceType('SINGLE_TABLE')]
+#[ORM\DiscriminatorColumn(name: 'discr', type: 'string')]
 abstract class Job implements UserTrackingInterface, TimeTrackingInterface, JobInterface
 {
     use IdentityTrait;
