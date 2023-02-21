@@ -47,7 +47,7 @@ abstract class AbstractVoter extends Voter
 
     protected function permissionVote(string $attribute, mixed $subject, AnzuUser $user): bool
     {
-        $userPermissions = $user->getPermissions();
+        $userPermissions = $user->getResolvedPermissions();
         if (false === array_key_exists($attribute, $userPermissions)) {
             return false;
         }
