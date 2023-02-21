@@ -9,10 +9,14 @@ use AnzuSystems\CommonBundle\ApiFilter\ApiParams;
 use AnzuSystems\CommonBundle\ApiFilter\ApiQuery;
 use AnzuSystems\CommonBundle\ApiFilter\ApiResponseList;
 use AnzuSystems\CommonBundle\ApiFilter\CustomFilterInterface;
+use AnzuSystems\Contracts\Entity\AnzuUser;
+use AnzuSystems\Contracts\Entity\Interfaces\UserTrackingInterface;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\ORM\Exception\ORMException;
+use Doctrine\ORM\QueryBuilder;
 use Doctrine\Persistence\ManagerRegistry;
+use DomainException;
 use JetBrains\PhpStorm\Deprecated;
 
 /**
@@ -136,6 +140,27 @@ abstract class AbstractAnzuRepository extends ServiceEntityRepository implements
         return (bool) $this->count([
             'id' => $id,
         ]);
+    }
+
+    public function getTouchedByUserQuery(AnzuUser $user): QueryBuilder
+    {
+        if (false === is_a($this->getEntityClass(), UserTrackingInterface::class, true)) {
+            throw new DomainException(
+                sprintf(
+                    'The class `%s` is not of `%s`. Forgot to override `%s`?',
+                    static::class,
+                    UserTrackingInterface::class,
+                    __METHOD__
+                )
+            );
+        }
+
+        return $this->createQueryBuilder('entity')
+            ->select('entity')
+            ->where('IDENTITY(entity.createdBy) = :userId')
+            ->orWhere('IDENTITY(entity.modifiedBy) = :userId')
+            ->setParameter('userId', $user->getId())
+        ;
     }
 
     /**
