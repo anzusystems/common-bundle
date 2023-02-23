@@ -29,6 +29,15 @@ abstract class AbstractUserManager extends AbstractManager
             ->setRoles($userDto->getRoles())
             ->setPermissions($userDto->getPermissions())
         ;
+        $user->getAvatar()
+            ->setAvatarColor($userDto->getAvatar()->getAvatarColor())
+            ->setAvatarText($userDto->getAvatar()->getAvatarText())
+        ;
+        $user->getPerson()
+            ->setFirstName($userDto->getPerson()->getFirstName())
+            ->setLastName($userDto->getPerson()->getLastName())
+            ->setFullName($userDto->getPerson()->getFullName())
+        ;
         $this->colUpdate($user->getPermissionGroups(), $userDto->getPermissionGroups());
         $this->trackModification($user);
         $this->flush($flush);
