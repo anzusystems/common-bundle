@@ -8,6 +8,8 @@ use AnzuSystems\CommonBundle\Exception\ValidationException;
 use AnzuSystems\CommonBundle\Validator\Constraints\UniqueEntityDto;
 use AnzuSystems\Contracts\Entity\AnzuPermissionGroup;
 use AnzuSystems\Contracts\Entity\AnzuUser;
+use AnzuSystems\Contracts\Entity\Embeds\Avatar;
+use AnzuSystems\Contracts\Entity\Embeds\Person;
 use AnzuSystems\SerializerBundle\Attributes\Serialize;
 use AnzuSystems\SerializerBundle\Handler\Handlers\EntityIdHandler;
 use AnzuSystems\SerializerBundle\Metadata\ContainerParam;
@@ -28,6 +30,14 @@ final class UserDto
     #[Serialize]
     private string $email = '';
 
+    #[Assert\Valid]
+    #[Serialize]
+    private Person $person;
+
+    #[Assert\Valid]
+    #[Serialize]
+    private Avatar $avatar;
+
     #[Serialize]
     private bool $enabled = true;
 
@@ -46,6 +56,8 @@ final class UserDto
     public function __construct()
     {
         $this->setPermissionGroups(new ArrayCollection());
+        $this->setPerson(new Person());
+        $this->setAvatar(new Avatar());
     }
 
     public function getId(): ?int
@@ -68,6 +80,30 @@ final class UserDto
     public function setEmail(string $email): self
     {
         $this->email = $email;
+
+        return $this;
+    }
+
+    public function getPerson(): Person
+    {
+        return $this->person;
+    }
+
+    public function setPerson(Person $person): self
+    {
+        $this->person = $person;
+
+        return $this;
+    }
+
+    public function getAvatar(): Avatar
+    {
+        return $this->avatar;
+    }
+
+    public function setAvatar(Avatar $avatar): self
+    {
+        $this->avatar = $avatar;
 
         return $this;
     }
