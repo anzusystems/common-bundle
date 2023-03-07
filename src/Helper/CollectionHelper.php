@@ -19,9 +19,11 @@ class CollectionHelper
      */
     public static function traversableToIds(Traversable $traversable, Closure $getIdAction = null): array
     {
-        return array_map(
-            $getIdAction ?: static fn (BaseIdentifiableInterface $identifiable): mixed => $identifiable->getId(),
-            iterator_to_array($traversable)
+        return array_values(
+            array_map(
+                $getIdAction ?: static fn (BaseIdentifiableInterface $identifiable): mixed => $identifiable->getId(),
+                iterator_to_array($traversable)
+            )
         );
     }
 
