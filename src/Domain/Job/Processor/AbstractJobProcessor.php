@@ -11,6 +11,7 @@ use AnzuSystems\CommonBundle\Model\Enum\JobStatus;
 use DateTimeImmutable;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\Persistence\ManagerRegistry;
+use Symfony\Component\String\UnicodeString;
 use Symfony\Contracts\Service\Attribute\Required;
 
 abstract class AbstractJobProcessor implements JobProcessorInterface
@@ -85,7 +86,7 @@ abstract class AbstractJobProcessor implements JobProcessorInterface
         }
         $this->currentAnzuUserProvider->setConsoleCurrentUser();
         $this->getManagedJob($job)
-            ->setResult($error)
+            ->setResult((new UnicodeString($error))->truncate(255)->toString())
             ->setFinishedAt(new DateTimeImmutable())
             ->setStatus(JobStatus::Error)
         ;
