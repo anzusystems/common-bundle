@@ -18,6 +18,7 @@
     "ext-zend-opcache": "*",
     "anzusystems/contracts": "^2.2",
     "anzusystems/serializer-bundle": "^2.0",
+    "doctrine/dbal": ">=3.0",
     "doctrine/orm": ">=2.10",
     "mongodb/mongodb": "^1.9",
     "monolog/monolog": "^2.7",

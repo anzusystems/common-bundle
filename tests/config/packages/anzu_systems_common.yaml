@@ -16,7 +16,6 @@ anzu_systems_common:
         modules:
             - AnzuSystems\CommonBundle\HealthCheck\Module\OpCacheModule
             - AnzuSystems\CommonBundle\HealthCheck\Module\ForwardIpModule
-            - AnzuSystems\CommonBundle\HealthCheck\Module\MysqlModule
             - AnzuSystems\CommonBundle\HealthCheck\Module\RedisModule
             - AnzuSystems\CommonBundle\HealthCheck\Module\DataMountModule
             - AnzuSystems\CommonBundle\HealthCheck\Module\MongoModule
