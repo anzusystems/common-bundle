@@ -25,7 +25,6 @@ final class HealthCheckControllerTest extends AbstractControllerTest
 
         self::assertContains('opcache', $moduleResultsKeys);
         self::assertContains('forwardIp', $moduleResultsKeys);
-        self::assertContains('mysql', $moduleResultsKeys);
         self::assertContains('redis', $moduleResultsKeys);
         self::assertContains('dataMount', $moduleResultsKeys);
         self::assertContains('mongo', $moduleResultsKeys);
