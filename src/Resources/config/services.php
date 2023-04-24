@@ -12,6 +12,7 @@ use AnzuSystems\CommonBundle\Domain\Job\JobFacade;
 use AnzuSystems\CommonBundle\Domain\Job\JobManager;
 use AnzuSystems\CommonBundle\Domain\Job\JobProcessor;
 use AnzuSystems\CommonBundle\Domain\User\CurrentAnzuUserProvider;
+use AnzuSystems\CommonBundle\Event\Listener\ConsoleExceptionListener;
 use AnzuSystems\CommonBundle\Event\Listener\ExceptionListener;
 use AnzuSystems\CommonBundle\Event\Listener\LockReleaseListener;
 use AnzuSystems\CommonBundle\Event\Subscriber\CommandLockSubscriber;
@@ -25,6 +26,7 @@ use AnzuSystems\CommonBundle\Validator\Constraints\UniqueEntityValidator;
 use AnzuSystems\CommonBundle\Validator\Validator;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\Persistence\ManagerRegistry;
+use Symfony\Component\Console\ConsoleEvents;
 use Symfony\Component\HttpKernel\KernelEvents;
 use Symfony\Component\PropertyAccess\PropertyAccessorInterface;
 use Symfony\Component\Validator\Validator\ValidatorInterface;
@@ -113,6 +115,13 @@ return static function (ContainerConfigurator $configurator): void {
         ->arg('$logContextFactory', null)
         ->arg('$onlyUriMatch', null)
         ->tag('kernel.event_listener', ['event' => KernelEvents::EXCEPTION])
+    ;
+
+    $services->set(ConsoleExceptionListener::class)
+        ->arg('$ignoredExceptions', null)
+        ->arg('$appLogger', service('monolog.logger'))
+        ->arg('$logContextFactory', null)
+        ->tag('kernel.event_listener', ['event' => ConsoleEvents::ERROR])
     ;
 
     $services->set(Validator::class)

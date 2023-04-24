@@ -11,6 +11,7 @@ use AnzuSystems\Contracts\AnzuApp;
 use AnzuSystems\SerializerBundle\Exception\SerializerException;
 use AnzuSystems\SerializerBundle\Serializer;
 use JsonException;
+use Symfony\Component\Console\Event\ConsoleErrorEvent;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 
@@ -83,6 +84,27 @@ final class LogContextFactory
         return $this->serializer->toArray(
             $this->buildFromRequest($request, $response)
         );
+    }
+
+    /**
+     * @throws SerializerException
+     */
+    public function buildFromConsoleErrorEventToArray(ConsoleErrorEvent $event): array
+    {
+        return $this->serializer->toArray(
+            $this->buildFromConsoleErrorEvent($event)
+        );
+    }
+
+    public function buildFromConsoleErrorEvent(ConsoleErrorEvent $event): LogContext
+    {
+        return $this->buildBaseContext()
+            ->setContent((string) $event->getError())
+            ->setPath((string) $event->getCommand()?->getName())
+            ->setParams(['args' => $event->getInput()->getArguments(), 'opts' => $event->getInput()->getOptions()])
+            ->setUserId((int) $this->userProvider->getCurrentUser()->getId())
+            ->setHttpStatus($event->getExitCode())
+        ;
     }
 
     public function buildCustomFromRequest(Request $request, LogDto $logDto): LogContext
