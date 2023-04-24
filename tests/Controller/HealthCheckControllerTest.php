@@ -28,5 +28,6 @@ final class HealthCheckControllerTest extends AbstractControllerTest
         self::assertContains('redis', $moduleResultsKeys);
         self::assertContains('dataMount', $moduleResultsKeys);
         self::assertContains('mongo', $moduleResultsKeys);
+        self::assertContains('mysql', $moduleResultsKeys);
     }
 }

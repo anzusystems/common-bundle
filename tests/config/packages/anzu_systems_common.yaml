@@ -5,6 +5,7 @@ anzu_systems_common:
         user_entity_class: AnzuSystems\CommonBundle\Tests\Data\Entity\User
         app_entity_namespace: AnzuSystems\CommonBundle\Tests\Data\Entity
         app_value_object_namespace: AnzuSystems\CommonBundle\Tests\Data\Model\ValueObject
+        send_context_id_with_response: true
         unlocked_commands:
             - Symfony\Bundle\FrameworkBundle\Command\AssetsInstallCommand
             - Symfony\Bundle\FrameworkBundle\Command\CacheWarmupCommand
@@ -19,6 +20,7 @@ anzu_systems_common:
             - AnzuSystems\CommonBundle\HealthCheck\Module\RedisModule
             - AnzuSystems\CommonBundle\HealthCheck\Module\DataMountModule
             - AnzuSystems\CommonBundle\HealthCheck\Module\MongoModule
+            - AnzuSystems\CommonBundle\HealthCheck\Module\MysqlModule
     errors:
         enabled: true
         default_exception_handler: AnzuSystems\CommonBundle\Exception\Handler\DefaultExceptionHandler

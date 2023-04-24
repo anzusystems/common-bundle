@@ -132,6 +132,7 @@ final class Configuration implements ConfigurationInterface
                 ->scalarNode('app_entity_namespace')->defaultValue('App\\Entity')->end()
                 ->scalarNode('app_value_object_namespace')->defaultValue('App\\Model\\ValueObject')->end()
                 ->scalarNode('app_enum_namespace')->defaultValue('App\\Model\\Enum')->end()
+                ->booleanNode('send_context_id_with_response')->defaultFalse()->end()
                 ->arrayNode('unlocked_commands')
                     ->defaultValue(self::DEFAULT_UNLOCKED_COMMANDS)
                     ->validate()

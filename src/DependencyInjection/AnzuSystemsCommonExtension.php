@@ -17,6 +17,8 @@ use AnzuSystems\CommonBundle\Domain\Job\Processor\AbstractJobProcessor;
 use AnzuSystems\CommonBundle\Domain\PermissionGroup\PermissionGroupFacade;
 use AnzuSystems\CommonBundle\Domain\PermissionGroup\PermissionGroupManager;
 use AnzuSystems\CommonBundle\Domain\User\CurrentAnzuUserProvider;
+use AnzuSystems\CommonBundle\Event\Listener\ConsoleExceptionListener;
+use AnzuSystems\CommonBundle\Event\Listener\ContextIdOnResponseListener;
 use AnzuSystems\CommonBundle\Event\Listener\ExceptionListener;
 use AnzuSystems\CommonBundle\Event\Subscriber\AuditLogSubscriber;
 use AnzuSystems\CommonBundle\Event\Subscriber\CommandLockSubscriber;
@@ -55,7 +57,6 @@ use AnzuSystems\CommonBundle\Util\ResourceLocker;
 use AnzuSystems\CommonBundle\Validator\Validator;
 use AnzuSystems\SerializerBundle\Metadata\MetadataRegistry;
 use AnzuSystems\SerializerBundle\Serializer;
-use Doctrine\DBAL\Driver\Connection;
 use Doctrine\ORM\EntityManagerInterface;
 use Exception;
 use MongoDB;
@@ -71,6 +72,7 @@ use Symfony\Component\DependencyInjection\Extension\PrependExtensionInterface;
 use Symfony\Component\DependencyInjection\Loader\PhpFileLoader;
 use Symfony\Component\DependencyInjection\Reference;
 use Symfony\Component\HttpKernel\Controller\ValueResolverInterface;
+use Symfony\Component\HttpKernel\KernelEvents;
 
 final class AnzuSystemsCommonExtension extends Extension implements PrependExtensionInterface
 {
@@ -228,6 +230,12 @@ final class AnzuSystemsCommonExtension extends Extension implements PrependExten
             ->getDefinition(CurrentAnzuUserProvider::class)
             ->replaceArgument('$userEntityClass', $settings['user_entity_class']);
 
+        if ($settings['send_context_id_with_response']) {
+            $container->register(ContextIdOnResponseListener::class)
+                ->addTag('kernel.event_listener', ['event' => KernelEvents::RESPONSE])
+            ;
+        }
+
         $definition = $this->createControllerDefinition(DebugController::class);
         $container->setDefinition(DebugController::class, $definition);
 
@@ -319,7 +327,7 @@ final class AnzuSystemsCommonExtension extends Extension implements PrependExten
 
         if ($hasModule(MysqlModule::class)) {
             $definition = new Definition(MysqlModule::class);
-            $definition->setArgument('$connection', new Reference(Connection::class));
+            $definition->setArgument('$connection', new Reference('database_connection'));
             $definition->setArgument('$tableName', $healthCheck['mysql_table_name']);
             $definition->addTag(AnzuSystemsCommonBundle::TAG_HEALTH_CHECK_MODULE);
             $container->setDefinition(MysqlModule::class, $definition);
@@ -388,6 +396,12 @@ final class AnzuSystemsCommonExtension extends Extension implements PrependExten
 
         $container
             ->getDefinition(ExceptionListener::class)
+            ->replaceArgument('$logContextFactory', new Reference(LogContextFactory::class))
+            ->replaceArgument('$ignoredExceptions', $logs['app']['ignored_exceptions'])
+        ;
+
+        $container
+            ->getDefinition(ConsoleExceptionListener::class)
             ->replaceArgument('$logContextFactory', new Reference(LogContextFactory::class))
             ->replaceArgument('$ignoredExceptions', $logs['app']['ignored_exceptions'])
         ;
