@@ -20,7 +20,7 @@ final class CsvHelper
         return $count - 1;
     }
 
-    public static function getCsv(string $filename, ?string $mode = null ): SplFileObject
+    public static function getCsv(string $filename, ?string $mode = 'r' ): SplFileObject
     {
         $userCsv = new SplFileObject($filename, $mode);
         $userCsv->setFlags(SplFileObject::READ_CSV);
