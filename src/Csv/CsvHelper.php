@@ -20,9 +20,9 @@ final class CsvHelper
         return $count - 1;
     }
 
-    public static function getCsv(string $filename): SplFileObject
+    public static function getCsv(string $filename, ?string $mode = null ): SplFileObject
     {
-        $userCsv = new SplFileObject($filename);
+        $userCsv = new SplFileObject($filename, $mode);
         $userCsv->setFlags(SplFileObject::READ_CSV);
         $userCsv->setCsvControl();
 
@@ -31,10 +31,11 @@ final class CsvHelper
 
     public static function writeCsv(string $filename): SplFileObject
     {
-        $userCsv = new SplFileObject($filename, 'w');
-        $userCsv->setFlags(SplFileObject::READ_CSV);
-        $userCsv->setCsvControl();
+        return self::getCsv($filename, 'w');
+    }
 
-        return $userCsv;
+    public static function appendCsv(string $filename): SplFileObject
+    {
+        return self::getCsv($filename, 'a');
     }
 }
