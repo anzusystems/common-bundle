@@ -19,6 +19,10 @@ final class ArrayStringParam
          * @var non-empty-string
          */
         public string $separator = ',',
+        /**
+         * @var int[]
+         */
+        public array $limitAllowList = [],
     ) {
     }
 }

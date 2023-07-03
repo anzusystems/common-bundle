@@ -33,6 +33,12 @@ final class ArrayStringValueResolver implements ValueResolverInterface
         if (is_int($arrayStringParam->itemsLimit) && $itemsCount > $arrayStringParam->itemsLimit) {
             throw new InvalidArgumentException('invalid_array_string_count');
         }
+        if (
+            false === empty($arrayStringParam->limitAllowList) &&
+            false === in_array($itemsCount, $arrayStringParam->limitAllowList, true)
+        ) {
+            throw new InvalidArgumentException('invalid_array_string_count');
+        }
         if (is_callable($arrayStringParam->itemNormalizer)) {
             $items = array_map($arrayStringParam->itemNormalizer, $items);
         }

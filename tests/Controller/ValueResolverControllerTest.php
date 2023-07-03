@@ -72,4 +72,17 @@ final class ValueResolverControllerTest extends AbstractControllerTest
             actual: $response,
         );
     }
+
+    public function testArrayStringAllowListValueResolver(): void
+    {
+        $arrayString = '1,2,3,4,5';
+        $response = $this->get(
+            uri: '/dummy/array-string-allow-list/array-string/' . $arrayString,
+        );
+        self::assertResponseIsSuccessful();
+        self::assertSame(
+            expected: array_map('intval', explode(',', $arrayString)),
+            actual: $response,
+        );
+    }
 }

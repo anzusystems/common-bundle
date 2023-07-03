@@ -50,6 +50,13 @@ final class DummyController extends AbstractAnzuApiController
         return $this->okResponse($dummy);
     }
 
+    #[Route('/value-resolver/array-string-allow-list/{dummy}', methods: [Request::METHOD_GET])]
+    public function apiFilterConverterAllowListTest(
+        #[ArrayStringParam(itemNormalizer: 'intval', separator: ',', limitAllowList: [5])] array $dummy,
+    ): JsonResponse {
+        return $this->okResponse($dummy);
+    }
+
     #[Route('/cache-test', methods: [Request::METHOD_GET])]
     public function cacheTest(): JsonResponse
     {
