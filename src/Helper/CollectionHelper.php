@@ -51,4 +51,21 @@ class CollectionHelper
             )
         );
     }
+
+    /**
+     * @template T
+     * @template TKey of array-key
+     * @param Collection<TKey, T> $collection
+     * @return Collection<string, T>
+     *
+     */
+    public static function getIndexedByUuid(Collection $collection): Collection
+    {
+        $indexedCol = new ArrayCollection();
+        foreach ($collection as $item) {
+            $indexedCol->set($item->getId()->toRfc4122(), $item);
+        }
+
+        return $indexedCol;
+    }
 }

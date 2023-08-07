@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace AnzuSystems\CommonBundle\Validator;
 
 use AnzuSystems\CommonBundle\Exception\ValidationException;
+use AnzuSystems\Contracts\Entity\Interfaces\IdentifiableByUuidInterface;
 use Symfony\Component\Validator\ConstraintViolation;
 use Symfony\Component\Validator\ConstraintViolationList;
 use Symfony\Component\Validator\ConstraintViolationListInterface;
@@ -49,6 +50,11 @@ final class Validator
             || false === method_exists($object, 'getId')
             || $object->getId() === $oldObject->getId()
         ) {
+            return;
+        }
+        if ($object instanceof IdentifiableByUuidInterface
+            && $oldObject instanceof IdentifiableByUuidInterface
+            && $object->getId()->equals($oldObject->getId())) {
             return;
         }
 
