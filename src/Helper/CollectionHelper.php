@@ -55,9 +55,10 @@ class CollectionHelper
     /**
      * @template T
      * @template TKey of array-key
-     * @param Collection<TKey, T> $collection
-     * @return Collection<string, T>
      *
+     * @param Collection<TKey, T> $collection
+     *
+     * @return Collection<string, T>
      */
     public static function getIndexedByUuid(Collection $collection): Collection
     {

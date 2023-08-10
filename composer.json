@@ -16,7 +16,7 @@
     "ext-mongodb": "*",
     "ext-redis": "*",
     "ext-zend-opcache": "*",
-    "anzusystems/contracts": "^2.2",
+    "anzusystems/contracts": "^3.0",
     "anzusystems/serializer-bundle": "^2.0",
     "doctrine/dbal": ">=3.0",
     "doctrine/orm": ">=2.10",
@@ -36,6 +36,7 @@
     "symfony/polyfill-uuid": "^1.23",
     "symfony/runtime": ">=5.3|^6.0",
     "symfony/security-bundle": ">=5.3.12|^6.0",
+    "symfony/uid": ">=5.3.12|^6.0",
     "symfony/validator": ">=5.3|^6.0",
     "symfony/yaml": ">=5.3|^6.0"
   },

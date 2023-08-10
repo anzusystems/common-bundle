@@ -13,6 +13,12 @@ use RuntimeException;
 use Symfony\Component\Security\Core\Authentication\Token\TokenInterface;
 use Symfony\Component\Security\Core\Authorization\Voter\Voter;
 
+/**
+ * @template TAttribute of string
+ * @template TSubject of mixed
+ *
+ * @template-extends Voter<TAttribute, TSubject>
+ */
 abstract class AbstractVoter extends Voter
 {
     use SecurityAwareTrait;

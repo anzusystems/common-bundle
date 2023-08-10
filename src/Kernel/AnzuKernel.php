@@ -33,6 +33,7 @@ class AnzuKernel extends Kernel
     private string $contextId = '';
 
     public function __construct(
+        private readonly string $appNamespace,
         private readonly string $appSystem,
         private readonly string $appVersion,
         private readonly bool $appReadOnlyMode,
@@ -51,6 +52,7 @@ class AnzuKernel extends Kernel
     public function boot(): void
     {
         AnzuApp::init(
+            appNamespace: $this->appNamespace,
             appSystem: $this->appSystem,
             appVersion: $this->appVersion,
             appReadOnlyMode: $this->appReadOnlyMode,

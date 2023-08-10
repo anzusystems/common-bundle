@@ -18,7 +18,7 @@ final class CacheControllerTest extends AbstractControllerTest
             self::$client->getResponse()->headers->get('xkey')
         );
         self::assertStringContainsString(
-            UserCacheSettings::getSystemXkey(),
+            UserCacheSettings::getProjectXkey(),
             self::$client->getResponse()->headers->get('xkey')
         );
         self::assertSame(

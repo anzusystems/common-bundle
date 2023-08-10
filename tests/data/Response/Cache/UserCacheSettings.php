@@ -16,6 +16,7 @@ final class UserCacheSettings extends AbstractCacheSettings
     ) {
         parent::__construct(60);
     }
+
     public static function buildXKeyFromObject(object $data): string
     {
         if ($data instanceof AnzuUser) {
@@ -23,6 +24,7 @@ final class UserCacheSettings extends AbstractCacheSettings
         }
         return self::XKEY_PREFIX;
     }
+
     protected function getXKeys(): array
     {
         return [
