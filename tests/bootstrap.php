@@ -18,6 +18,7 @@ AnnotationReader::addGlobalIgnoredNamespace('OpenApi');
 AnnotationReader::addGlobalIgnoredNamespace('Nelmio');
 
 $kernel = new AnzuTestKernel(
+    appNamespace: 'petitpress',
     appSystem: 'commonbundle',
     appVersion: 'dev',
     appReadOnlyMode: false,
