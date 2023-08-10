@@ -94,7 +94,9 @@ class ApiQuery
         $iter = 0;
         foreach ($this->apiParams->getFilter() as $filterVariant => $filter) {
             foreach ($filter as $field => $value) {
-                $paramName = str_replace('.', '_', $field) . '_' . ++$iter;
+                /** @var string $fieldName */
+                $fieldName = str_replace('.', '_', $field);
+                $paramName = $fieldName . '_' . ++$iter;
                 switch ($filterVariant) {
                     case ApiParams::FILTER_CUSTOM:
                         foreach ($this->customFilters as $customFilter) {
