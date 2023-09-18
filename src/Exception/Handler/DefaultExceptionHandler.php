@@ -12,12 +12,17 @@ final class DefaultExceptionHandler implements ExceptionHandlerInterface
 {
     public const ERROR = 'unknown_error';
 
+    public function __construct(
+        private readonly bool $debug
+    ) {
+    }
+
     public function getErrorResponse(Throwable $exception): JsonResponse
     {
         return new JsonResponse(
             [
                 'error' => self::ERROR,
-                'detail' => $exception->getMessage(),
+                'detail' => $this->debug ? $exception->getMessage() : 'An unexpected error occurred',
                 'contextId' => AnzuApp::getContextId(),
             ],
             JsonResponse::HTTP_INTERNAL_SERVER_ERROR

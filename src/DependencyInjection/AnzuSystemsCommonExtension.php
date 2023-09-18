@@ -262,6 +262,7 @@ final class AnzuSystemsCommonExtension extends Extension implements PrependExten
 
         if (DefaultExceptionHandler::class === $errors['default_exception_handler']) {
             $definition = new Definition(DefaultExceptionHandler::class);
+            $definition->addArgument($container->getParameter('kernel.environment') !== 'prod');
             $container->setDefinition(DefaultExceptionHandler::class, $definition);
         }
 
