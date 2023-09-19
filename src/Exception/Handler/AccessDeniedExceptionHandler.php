@@ -14,6 +14,11 @@ final class AccessDeniedExceptionHandler implements ExceptionHandlerInterface
 {
     private const ERROR = 'access_denied';
 
+    public function __construct(
+        private readonly bool $debug = false
+    ) {
+    }
+
     /**
      * @param AccessDeniedException|AccessDeniedHttpException $exception
      */
@@ -22,7 +27,7 @@ final class AccessDeniedExceptionHandler implements ExceptionHandlerInterface
         return new JsonResponse(
             [
                 'error' => self::ERROR,
-                'detail' => $exception->getMessage(),
+                'detail' => $this->debug ? $exception->getMessage() : 'Access denied',
                 'contextId' => AnzuApp::getContextId(),
             ],
             JsonResponse::HTTP_FORBIDDEN
