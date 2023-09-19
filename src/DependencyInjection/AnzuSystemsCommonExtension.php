@@ -259,14 +259,17 @@ final class AnzuSystemsCommonExtension extends Extension implements PrependExten
 
         /** @psalm-var callable(class-string<ExceptionHandlerInterface>):bool $hasHandler */
         $hasHandler = static fn (string $handler): bool => in_array($handler, $handlers, true);
+        $debug = $container->getParameter('kernel.environment') !== 'prod';
 
         if (DefaultExceptionHandler::class === $errors['default_exception_handler']) {
             $definition = new Definition(DefaultExceptionHandler::class);
+            $definition->addArgument($debug);
             $container->setDefinition(DefaultExceptionHandler::class, $definition);
         }
 
         if ($hasHandler(AccessDeniedExceptionHandler::class)) {
             $definition = new Definition(AccessDeniedExceptionHandler::class);
+            $definition->addArgument($debug);
             $definition->addTag(AnzuSystemsCommonBundle::TAG_EXCEPTION_HANDLER);
             $container->setDefinition(AccessDeniedExceptionHandler::class, $definition);
         }
@@ -291,6 +294,7 @@ final class AnzuSystemsCommonExtension extends Extension implements PrependExten
 
         if ($hasHandler(SerializerExceptionHandler::class)) {
             $definition = new Definition(SerializerExceptionHandler::class);
+            $definition->addArgument($debug);
             $definition->addTag(AnzuSystemsCommonBundle::TAG_EXCEPTION_HANDLER);
             $container->setDefinition(SerializerExceptionHandler::class, $definition);
         }

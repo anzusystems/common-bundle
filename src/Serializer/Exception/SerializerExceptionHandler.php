@@ -12,6 +12,13 @@ use Throwable;
 
 final class SerializerExceptionHandler implements ExceptionHandlerInterface
 {
+    private const ERROR = 'serializer_error';
+
+    public function __construct(
+        private readonly bool $debug = false
+    ) {
+    }
+
     /**
      * @param SerializerException $exception
      */
@@ -19,7 +26,8 @@ final class SerializerExceptionHandler implements ExceptionHandlerInterface
     {
         return new JsonResponse(
             [
-                'error' => $exception->getMessage(),
+                'error' => self::ERROR,
+                'detail' => $this->debug ? $exception->getMessage() : 'Serialization error',
                 'contextId' => AnzuApp::getContextId(),
             ],
             JsonResponse::HTTP_BAD_REQUEST
