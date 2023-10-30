@@ -6,6 +6,10 @@ namespace AnzuSystems\CommonBundle\Model\HttpClient;
 
 final class HttpClientResponse
 {
+    private const STATUS_REDIRECTION_FROM = 300;
+    private const STATUS_CLIENT_ERROR_FROM = 400;
+    private const STATUS_SERVER_ERROR_FROM = 500;
+
     public function __construct(
         private readonly string $content = '',
         private readonly int $statusCode = 0
@@ -24,6 +28,16 @@ final class HttpClientResponse
 
     public function hasError(): bool
     {
-        return 0 === $this->statusCode || $this->statusCode >= 300;
+        return 0 === $this->statusCode || $this->statusCode >= self::STATUS_REDIRECTION_FROM;
+    }
+
+    public function hasClientError(): bool
+    {
+        return $this->statusCode >= self::STATUS_CLIENT_ERROR_FROM && $this->statusCode < self::STATUS_SERVER_ERROR_FROM;
+    }
+
+    public function hasServerError(): bool
+    {
+        return $this->statusCode >= self::STATUS_SERVER_ERROR_FROM;
     }
 }
