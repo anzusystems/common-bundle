@@ -29,6 +29,7 @@ anzu_systems_common:
             - AnzuSystems\CommonBundle\Exception\Handler\ValidationExceptionHandler
             - AnzuSystems\CommonBundle\Exception\Handler\AppReadOnlyModeExceptionHandler
             - AnzuSystems\CommonBundle\Exception\Handler\AccessDeniedExceptionHandler
+            - AnzuSystems\CommonBundle\Serializer\Exception\SerializerExceptionHandler
     logs:
         enabled: true
         messenger_transport:

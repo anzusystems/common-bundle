@@ -6,6 +6,7 @@ namespace AnzuSystems\CommonBundle\Serializer\Exception;
 
 use AnzuSystems\CommonBundle\Exception\Handler\ExceptionHandlerInterface;
 use AnzuSystems\Contracts\AnzuApp;
+use AnzuSystems\SerializerBundle\Exception\DeserializationException;
 use AnzuSystems\SerializerBundle\Exception\SerializerException;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Throwable;
@@ -30,12 +31,14 @@ final class SerializerExceptionHandler implements ExceptionHandlerInterface
                 'detail' => $this->debug ? $exception->getMessage() : 'Serialization error',
                 'contextId' => AnzuApp::getContextId(),
             ],
-            JsonResponse::HTTP_BAD_REQUEST
+            ($exception instanceof DeserializationException)
+                ? JsonResponse::HTTP_UNPROCESSABLE_ENTITY
+                : JsonResponse::HTTP_BAD_REQUEST
         );
     }
 
     public function getSupportedExceptionClasses(): array
     {
-        return [SerializerException::class];
+        return [SerializerException::class, DeserializationException::class];
     }
 }

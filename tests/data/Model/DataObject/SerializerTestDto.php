@@ -14,10 +14,10 @@ use Doctrine\Common\Collections\Collection;
 final class SerializerTestDto
 {
     #[Serialize]
-    private string $name;
+    private string $name = '';
 
     #[Serialize]
-    private int $position;
+    private int $position = 0;
 
     #[Serialize]
     private DummyDto $dummyDto;
@@ -32,7 +32,7 @@ final class SerializerTestDto
     private DummyValueObject $dummyValueObject;
 
     #[Serialize]
-    private DummyEnum $dummyEnum;
+    private DummyEnum $dummyEnum = DummyEnum::Default;
 
     #[Serialize(type: DummyDto::class)]
     private Collection $items;
@@ -41,24 +41,19 @@ final class SerializerTestDto
     private Collection $itemsKeysValues;
 
     #[Serialize(type: DummyDto::class)]
-    private array $itemsArray;
+    private array $itemsArray = [];
 
     #[Serialize(type: DummyDto::class, strategy: Serialize::KEYS_VALUES)]
-    private array $itemsArrayKeysValues;
+    private array $itemsArrayKeysValues = [];
 
     public function __construct()
     {
         $this
-            ->setName('')
-            ->setPosition(0)
             ->setDummyDto(new DummyDto())
             ->setCreatedAt(new DateTimeImmutable())
             ->setDummyValueObject(new DummyValueObject())
-            ->setDummyEnum(DummyEnum::Default)
             ->setItems(new ArrayCollection())
-            ->setItemsArray([])
             ->setItemsKeysValues(new ArrayCollection())
-            ->setItemsArrayKeysValues([])
         ;
     }
 

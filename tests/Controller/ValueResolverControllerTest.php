@@ -8,6 +8,7 @@ use AnzuSystems\CommonBundle\ApiFilter\ApiParams;
 use AnzuSystems\CommonBundle\Tests\Data\Model\DataObject\DummyDto;
 use AnzuSystems\CommonBundle\Tests\Data\Model\ValueObject\DummyValueObject;
 use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\HttpFoundation\Response;
 
 final class ValueResolverControllerTest extends AbstractControllerTest
 {
@@ -37,6 +38,16 @@ final class ValueResolverControllerTest extends AbstractControllerTest
         );
         self::assertResponseIsSuccessful();
         self::assertSame($content->getData(), $response->getData());
+    }
+
+    public function testSerializerFail(): void
+    {
+        self::$client->request(
+            Request::METHOD_POST,
+            '/dummy/serializer/test',
+            content: '{"dummyEnum":"state_invalid"}',
+        );
+        self::assertResponseStatusCodeSame(Response::HTTP_UNPROCESSABLE_ENTITY);
     }
 
     public function testApiFilterValueResolver(): void
