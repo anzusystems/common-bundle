@@ -8,6 +8,7 @@ use AnzuSystems\CommonBundle\ApiFilter\ApiParams;
 use AnzuSystems\CommonBundle\Controller\AbstractAnzuApiController;
 use AnzuSystems\CommonBundle\Model\Attributes\ArrayStringParam;
 use AnzuSystems\CommonBundle\Tests\Data\Model\DataObject\DummyDto;
+use AnzuSystems\CommonBundle\Tests\Data\Model\DataObject\SerializerTestDto;
 use AnzuSystems\CommonBundle\Tests\Data\Model\ValueObject\DummyValueObject;
 use AnzuSystems\CommonBundle\Tests\Data\Response\Cache\UserCacheSettings;
 use AnzuSystems\SerializerBundle\Attributes\SerializeParam;
@@ -35,6 +36,12 @@ final class DummyController extends AbstractAnzuApiController
     public function serializerValueResolverTest(#[SerializeParam] DummyDto $dummy): JsonResponse
     {
         return $this->okResponse($dummy);
+    }
+
+    #[Route('/serializer/test', methods: [Request::METHOD_POST])]
+    public function serializerTest(#[SerializeParam] SerializerTestDto $test): JsonResponse
+    {
+        return $this->okResponse($test);
     }
 
     #[Route('/value-resolver/api-filter', methods: [Request::METHOD_GET])]
