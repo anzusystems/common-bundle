@@ -5,17 +5,22 @@ declare(strict_types=1);
 namespace AnzuSystems\CommonBundle\Messenger\Handler;
 
 use AnzuSystems\CommonBundle\Messenger\Message\AuditLogMessage;
-use Symfony\Bridge\Monolog\Logger;
+use Monolog\Logger;
+use Psr\Log\LoggerInterface;
 
 final class AuditLogMessageHandler
 {
     public function __construct(
-        private readonly Logger $auditSyncLogger,
+        private readonly LoggerInterface $auditSyncLogger,
     ) {
     }
 
     public function __invoke(AuditLogMessage $logMessage): void
     {
+        if (false === ($this->auditSyncLogger instanceof Logger)) {
+            return;
+        }
+
         foreach ($this->auditSyncLogger->getHandlers() as $handler) {
             $handler->handle($logMessage->getRecord());
         }
