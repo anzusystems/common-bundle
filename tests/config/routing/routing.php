@@ -60,5 +60,5 @@ return static function (RoutingConfigurator $routes): void {
         ->controller([DebugController::class, 'getLeadTime'])
     ;
 
-    $routes->import(resource: '../../data/Controller', type: 'annotation');
+    $routes->import(resource: '../../data/Controller', type: 'attribute');
 };
