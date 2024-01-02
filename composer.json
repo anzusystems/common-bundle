@@ -17,7 +17,7 @@
     "ext-redis": "*",
     "ext-zend-opcache": "*",
     "anzusystems/contracts": "^3.0",
-    "anzusystems/serializer-bundle": "dev-symfony_7_compat",
+    "anzusystems/serializer-bundle": "^3.0",
     "doctrine/annotations": "^2.0",
     "doctrine/dbal": ">=3.0",
     "doctrine/orm": ">=2.10",
