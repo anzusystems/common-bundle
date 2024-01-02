@@ -69,4 +69,19 @@ class CollectionHelper
 
         return $indexedCol;
     }
+
+    /**
+     * @template TItem
+     *
+     * @param array<array-key, TItem> $items
+     *
+     * @return ArrayCollection<array-key, TItem>
+     */
+    public static function newCollection(array $items): ArrayCollection
+    {
+        /** @var ArrayCollection<array-key, TItem> $new */
+        $new = new ArrayCollection($items);
+
+        return $new;
+    }
 }
