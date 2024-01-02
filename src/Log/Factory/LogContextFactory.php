@@ -81,9 +81,15 @@ final class LogContextFactory
      */
     public function buildFromRequestToArray(Request $request, Response $response = null): array
     {
-        return $this->serializer->toArray(
+        $context = $this->serializer->toArray(
             $this->buildFromRequest($request, $response)
         );
+
+        if (is_array($context)) {
+            return $context;
+        }
+
+        return [];
     }
 
     /**
@@ -91,9 +97,15 @@ final class LogContextFactory
      */
     public function buildFromConsoleErrorEventToArray(ConsoleErrorEvent $event): array
     {
-        return $this->serializer->toArray(
+        $context = $this->serializer->toArray(
             $this->buildFromConsoleErrorEvent($event)
         );
+
+        if (is_array($context)) {
+            return $context;
+        }
+
+        return [];
     }
 
     public function buildFromConsoleErrorEvent(ConsoleErrorEvent $event): LogContext
