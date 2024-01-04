@@ -9,11 +9,11 @@ use Monolog\LogRecord;
 abstract class AbstractLogMessage
 {
     public function __construct(
-        private readonly LogRecord $record,
+        private readonly array|LogRecord $record,
     ) {
     }
 
-    public function getRecord(): LogRecord
+    public function getRecord(): array|LogRecord
     {
         return $this->record;
     }
