@@ -12,6 +12,14 @@ use DateTimeImmutable;
 
 interface JobInterface extends IdentifiableInterface, UserTrackingInterface, TimeTrackingInterface
 {
+    public function getScheduledAt(): DateTimeImmutable;
+
+    public function setScheduledAt(DateTimeImmutable $scheduledAt): static;
+
+    public function getPriority(): int;
+
+    public function setPriority(int $priority): static;
+
     public function getStatus(): JobStatus;
 
     public function setStatus(JobStatus $status): static;

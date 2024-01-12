@@ -22,21 +22,14 @@ class JobUserDataDelete extends Job
     #[AppAssert\EntityExists(entity: AnzuUser::class)]
     #[Assert\NotBlank]
     #[Serialize]
-    protected int $targetUserId;
+    protected int $targetUserId = 0;
 
     /**
      * If true, user's personal data like email or name will be anonymized.
      */
     #[ORM\Column(type: Types::BOOLEAN)]
     #[Serialize]
-    protected bool $anonymizeUser;
-
-    public function __construct()
-    {
-        parent::__construct();
-        $this->setTargetUserId(0);
-        $this->setAnonymizeUser(false);
-    }
+    protected bool $anonymizeUser = false;
 
     public function getTargetUserId(): int
     {

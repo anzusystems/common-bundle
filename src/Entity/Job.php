@@ -7,6 +7,7 @@ namespace AnzuSystems\CommonBundle\Entity;
 use AnzuSystems\CommonBundle\Entity\Interfaces\JobInterface;
 use AnzuSystems\CommonBundle\Model\Enum\JobStatus;
 use AnzuSystems\CommonBundle\Repository\JobRepository;
+use AnzuSystems\Contracts\AnzuApp;
 use AnzuSystems\Contracts\Entity\Interfaces\TimeTrackingInterface;
 use AnzuSystems\Contracts\Entity\Interfaces\UserTrackingInterface;
 use AnzuSystems\Contracts\Entity\Traits\IdentityTrait;
@@ -18,64 +19,99 @@ use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 
 #[ORM\Entity(repositoryClass: JobRepository::class)]
-#[ORM\InheritanceType('SINGLE_TABLE')]
+#[ORM\InheritanceType('JOINED')]
 #[ORM\DiscriminatorColumn(name: 'discr', type: 'string')]
 abstract class Job implements UserTrackingInterface, TimeTrackingInterface, JobInterface
 {
+    const PRIORITY_LOW = 0;
+
     use IdentityTrait;
     use TimeTrackingTrait;
     use UserTrackingTrait;
+
+    /**
+     * Time after which the job can be processed.
+     */
+    #[ORM\Column(type: Types::DATETIME_IMMUTABLE)]
+    #[Serialize]
+    protected DateTimeImmutable $scheduledAt;
+
+    /**
+     * Priority of the job.
+     */
+    #[ORM\Column(type: Types::SMALLINT)]
+    #[Serialize]
+    protected int $priority = self::PRIORITY_LOW;
 
     /**
      * Status of job.
      */
     #[ORM\Column(enumType: JobStatus::class)]
     #[Serialize]
-    protected JobStatus $status;
+    protected JobStatus $status = JobStatus::Default;
 
     /**
      * Start date of job.
      */
     #[ORM\Column(type: Types::DATETIME_IMMUTABLE, nullable: true)]
     #[Serialize]
-    protected ?DateTimeImmutable $startedAt;
+    protected ?DateTimeImmutable $startedAt = null;
 
     /**
      * Finish date of job.
      */
     #[ORM\Column(type: Types::DATETIME_IMMUTABLE, nullable: true)]
     #[Serialize]
-    protected ?DateTimeImmutable $finishedAt;
+    protected ?DateTimeImmutable $finishedAt = null;
 
     /**
      * In case of batch processing, it might contain a needle from which should the batch processing continue.
      */
     #[ORM\Column(type: Types::STRING)]
     #[Serialize]
-    protected string $lastBatchProcessedRecord;
+    protected string $lastBatchProcessedRecord = '';
 
     /**
      * In case of batch processing, it counts total number of batch processed iterations.
      */
     #[ORM\Column(type: Types::INTEGER)]
     #[Serialize]
-    protected int $batchProcessedIterationCount;
+    protected int $batchProcessedIterationCount = 0;
 
     /**
      * Optional result data.
      */
     #[ORM\Column(type: Types::STRING, length: 255)]
     #[Serialize]
-    protected string $result;
+    protected string $result = '';
 
     public function __construct()
     {
-        $this->setStatus(JobStatus::Default);
-        $this->setResult('');
-        $this->setStartedAt(null);
-        $this->setFinishedAt(null);
-        $this->setLastBatchProcessedRecord('');
-        $this->setBatchProcessedIterationCount(0);
+        $this->setScheduledAt(AnzuApp::getAppDate());
+    }
+
+    public function getScheduledAt(): DateTimeImmutable
+    {
+        return $this->scheduledAt;
+    }
+
+    public function setScheduledAt(DateTimeImmutable $scheduledAt): static
+    {
+        $this->scheduledAt = $scheduledAt;
+
+        return $this;
+    }
+
+    public function getPriority(): int
+    {
+        return $this->priority;
+    }
+
+    public function setPriority(int $priority): static
+    {
+        $this->priority = $priority;
+
+        return $this;
     }
 
     public function getStatus(): JobStatus

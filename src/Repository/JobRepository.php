@@ -7,17 +7,37 @@ namespace AnzuSystems\CommonBundle\Repository;
 use AnzuSystems\CommonBundle\Entity\Interfaces\JobInterface;
 use AnzuSystems\CommonBundle\Entity\Job;
 use AnzuSystems\CommonBundle\Model\Enum\JobStatus;
+use AnzuSystems\Contracts\AnzuApp;
+use Doctrine\Common\Collections\Criteria;
 
 /**
  * @extends AbstractAnzuRepository<Job>
  */
 final class JobRepository extends AbstractAnzuRepository
 {
-    public function findOneProcessableJob(): ?JobInterface
+    /**
+     * @return JobInterface[]
+     */
+    public function findProcessableJobs(int $maxResults): array
     {
-        return $this->findOneBy([
-            'status' => JobStatus::PROCESSABLE_STATUSES,
-        ]);
+        $dqb = $this->createQueryBuilder('job');
+        $dqb
+            ->select('job')
+            ->where('status in (:processableStatuses) AND scheduledAt >= :scheduledAt')
+            ->setParameters([
+                'processableStatuses' => JobStatus::PROCESSABLE_STATUSES,
+                'scheduledAt' => AnzuApp::getAppDate(),
+            ])
+            ->orderBy('priority', Criteria::DESC)
+            ->setMaxResults($maxResults)
+        ;
+
+        $results = $dqb->getQuery()->getResult();
+        if (is_array($results)) {
+            return $results;
+        }
+
+        return [];
     }
 
     protected function getEntityClass(): string
