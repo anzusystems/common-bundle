@@ -33,6 +33,9 @@ final class JobRunner
         do {
             $jobs = $this->jobRepo->findProcessableJobs(self::BATCH_SIZE);
             if (empty($jobs)) {
+                $output->writeln(
+                    sprintf('No jobs found, waiting %d seconds to retry.', self::NO_JOB_IDLE_TIME)
+                );
                 sleep(self::NO_JOB_IDLE_TIME);
 
                 continue;
@@ -50,7 +53,7 @@ final class JobRunner
        if (empty($jobs)) {
            return;
        }
-       $progress = new ProgressBar($output, self::BATCH_SIZE);
+       $progress = new ProgressBar($output, count($jobs));
        $progress->setFormat('debug');
 
        foreach ($jobs as $job) {

@@ -23,13 +23,13 @@ final class JobRepository extends AbstractAnzuRepository
         $dqb = $this->createQueryBuilder('job');
         $dqb
             ->select('job')
-            ->where('status in (:processableStatuses) AND scheduledAt >= :scheduledAt')
+            ->where('job.status in (:processableStatuses) AND job.scheduledAt <= :scheduledAt')
             ->setParameters([
                 'processableStatuses' => JobStatus::PROCESSABLE_STATUSES,
                 'scheduledAt' => AnzuApp::getAppDate(),
             ])
-            ->orderBy('priority', Criteria::DESC)
-            ->addOrderBy('scheduledAt', Criteria::ASC)
+            ->orderBy('job.priority', Criteria::DESC)
+            ->addOrderBy('job.scheduledAt', Criteria::ASC)
             ->setMaxResults($maxResults)
         ;
 
