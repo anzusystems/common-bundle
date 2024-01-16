@@ -20,7 +20,8 @@ use Doctrine\ORM\Mapping as ORM;
 
 #[ORM\Entity(repositoryClass: JobRepository::class)]
 #[ORM\InheritanceType('JOINED')]
-#[ORM\DiscriminatorColumn(name: 'discr', type: 'string')]
+#[ORM\DiscriminatorColumn(name: 'discriminator', type: 'string')]
+#[ORM\Index(fields: ['status', 'scheduledAt', 'priority'], name: 'IDX_job')]
 abstract class Job implements UserTrackingInterface, TimeTrackingInterface, JobInterface
 {
     const PRIORITY_LOW = 0;

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace AnzuSystems\CommonBundle\Domain\Job;
 
+use AnzuSystems\CommonBundle\Entity\Interfaces\JobInterface;
 use AnzuSystems\CommonBundle\Repository\JobRepository;
 use AnzuSystems\Contracts\AnzuApp;
 use Symfony\Component\Console\Helper\ProgressBar;
@@ -14,6 +15,7 @@ final class JobRunner
     const BATCH_SIZE = 50;
     const MAX_TIME = 50;
     const MAX_MEMORY = 100_000_000;
+    const NO_JOB_IDLE_TIME = 10;
 
     private bool $sigtermReceived = false;
 
@@ -23,9 +25,31 @@ final class JobRunner
     ) {
     }
 
+    /**
+     * @return JobInterface[]
+     */
+    private function getJobs(OutputInterface $output): array
+    {
+        do {
+            $jobs = $this->jobRepo->findProcessableJobs(self::BATCH_SIZE);
+            if (empty($jobs)) {
+                sleep(self::NO_JOB_IDLE_TIME);
+
+                continue;
+            }
+
+            return $jobs;
+        } while (false === $this->stopProcessingJobs($output));
+
+        return [];
+    }
+
     public function run(OutputInterface $output): void
     {
-       $jobs = $this->jobRepo->findProcessableJobs(self::BATCH_SIZE);
+       $jobs = $this->getJobs($output);
+       if (empty($jobs)) {
+           return;
+       }
        $progress = new ProgressBar($output, self::BATCH_SIZE);
        $progress->setFormat('debug');
 

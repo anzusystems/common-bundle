@@ -29,6 +29,7 @@ final class JobRepository extends AbstractAnzuRepository
                 'scheduledAt' => AnzuApp::getAppDate(),
             ])
             ->orderBy('priority', Criteria::DESC)
+            ->addOrderBy('scheduledAt', Criteria::ASC)
             ->setMaxResults($maxResults)
         ;
 
