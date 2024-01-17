@@ -85,6 +85,7 @@ return static function (ContainerConfigurator $configurator): void {
     $services->set(JobRunner::class)
         ->arg('$jobRepo', service(JobRepository::class))
         ->arg('$jobProcessor', service(JobProcessor::class))
+        ->arg('$entityManager', service(EntityManagerInterface::class))
     ;
 
     $services->set(ProcessJobCommand::class)

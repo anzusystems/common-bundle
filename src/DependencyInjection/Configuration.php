@@ -63,6 +63,7 @@ final class Configuration implements ConfigurationInterface
                 ->append($this->addLogSection())
                 ->append($this->addHealthCheckSection())
                 ->append($this->addPermissionsSection())
+                ->append($this->addJobsSection())
             ->end()
         ;
 
@@ -280,6 +281,19 @@ final class Configuration implements ConfigurationInterface
                 ->scalarNode('database')->isRequired()->end()
                 ->scalarNode('ssl')->defaultFalse()->end()
                 ->scalarNode('collection')->defaultValue($collection)->end()
+            ->end()
+        ;
+    }
+
+    private function addJobsSection(): NodeDefinition
+    {
+        return (new TreeBuilder('jobs'))->getRootNode()
+            ->addDefaultsIfNotSet()
+            ->children()
+                ->integerNode('batch_size')->defaultValue(50)->end()
+                ->integerNode('max_exec_time')->defaultValue(50)->end()
+                ->integerNode('max_memory')->defaultValue(100_000_000)->end()
+                ->integerNode('no_job_idle_time')->defaultValue(10)->end()
             ->end()
         ;
     }

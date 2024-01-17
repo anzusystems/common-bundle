@@ -7,21 +7,22 @@ namespace AnzuSystems\CommonBundle\Domain\Job;
 use AnzuSystems\CommonBundle\Entity\Interfaces\JobInterface;
 use AnzuSystems\CommonBundle\Repository\JobRepository;
 use AnzuSystems\Contracts\AnzuApp;
+use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\Console\Helper\ProgressBar;
 use Symfony\Component\Console\Output\OutputInterface;
 
 final class JobRunner
 {
-    const BATCH_SIZE = 50;
-    const MAX_TIME = 50;
-    const MAX_MEMORY = 100_000_000;
-    const NO_JOB_IDLE_TIME = 10;
-
     private bool $sigtermReceived = false;
 
     public function __construct(
         private readonly JobRepository $jobRepo,
         private readonly JobProcessor $jobProcessor,
+        private readonly EntityManagerInterface $entityManager,
+        private readonly int $batchSize,
+        private readonly int $maxExecTime,
+        private readonly int $maxMemory,
+        private readonly int $noJobIdleTime,
     ) {
     }
 
@@ -31,12 +32,12 @@ final class JobRunner
     private function getJobs(OutputInterface $output): array
     {
         do {
-            $jobs = $this->jobRepo->findProcessableJobs(self::BATCH_SIZE);
+            $jobs = $this->jobRepo->findProcessableJobs($this->batchSize);
             if (empty($jobs)) {
                 $output->writeln(
-                    sprintf('No jobs found, waiting %d seconds to retry.', self::NO_JOB_IDLE_TIME)
+                    sprintf('No jobs found, waiting %d seconds to retry.', $this->noJobIdleTime)
                 );
-                sleep(self::NO_JOB_IDLE_TIME);
+                sleep($this->noJobIdleTime);
 
                 continue;
             }
@@ -60,6 +61,7 @@ final class JobRunner
            if ($this->stopProcessingJobs($output)) {
                break;
            }
+           $this->entityManager->clear();
            $this->jobProcessor->process($job);
            $progress->advance();
        }
@@ -76,12 +78,12 @@ final class JobRunner
      */
     private function stopProcessingJobs(OutputInterface $output): bool
     {
-        if (self::MAX_MEMORY < memory_get_usage(true)) {
+        if ($this->maxMemory < memory_get_usage(true)) {
             $output->writeln('Max memory reached.');
 
             return true;
         }
-        if (self::MAX_TIME < (time() - AnzuApp::getAppDate()->getTimestamp())) {
+        if ($this->maxExecTime< (time() - AnzuApp::getAppDate()->getTimestamp())) {
             $output->writeln('Max execution time reached.');
 
             return true;
