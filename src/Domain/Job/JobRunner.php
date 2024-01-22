@@ -22,6 +22,7 @@ final class JobRunner
         private readonly int $batchSize,
         private readonly int $maxExecTime,
         private readonly int $maxMemory,
+        /** @var int<0, max> */
         private readonly int $noJobIdleTime,
     ) {
     }
