@@ -5,10 +5,12 @@ declare(strict_types=1);
 namespace AnzuSystems\CommonBundle\Command;
 
 use AnzuSystems\CommonBundle\Domain\Job\JobProcessor;
+use AnzuSystems\CommonBundle\Domain\Job\JobRunner;
 use AnzuSystems\Contracts\AnzuApp;
 use AnzuSystems\Contracts\Exception\AppReadOnlyModeException;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
+use Symfony\Component\Console\Command\SignalableCommandInterface;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 
@@ -16,10 +18,10 @@ use Symfony\Component\Console\Output\OutputInterface;
     name: 'anzusystems:job:process',
     description: 'Process a job.',
 )]
-final class ProcessJobCommand extends Command
+final class ProcessJobCommand extends Command implements SignalableCommandInterface
 {
     public function __construct(
-        private readonly JobProcessor $jobProcessor,
+        private readonly JobRunner $jobRunner,
     ) {
         parent::__construct();
     }
@@ -31,8 +33,23 @@ final class ProcessJobCommand extends Command
     {
         AnzuApp::throwOnReadOnlyMode();
 
-        $this->jobProcessor->process();
+        $this->jobRunner->run($output);
 
         return self::SUCCESS;
+    }
+
+    /**
+     * @psalm-suppress UndefinedConstant - defined in pcntl extension.
+     */
+    public function getSubscribedSignals(): array
+    {
+        return [SIGTERM, SIGINT];
+    }
+
+    public function handleSignal(int $signal, false|int $previousExitCode = 0): int|false
+    {
+        $this->jobRunner->receiveSigterm();
+
+        return false;
     }
 }

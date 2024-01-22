@@ -5,14 +5,13 @@ declare(strict_types=1);
 namespace AnzuSystems\CommonBundle\Domain\Job;
 
 use AnzuSystems\CommonBundle\Domain\Job\Processor\JobProcessorInterface;
-use AnzuSystems\CommonBundle\Repository\JobRepository;
+use AnzuSystems\CommonBundle\Entity\Interfaces\JobInterface;
 use LogicException;
 use Symfony\Contracts\Service\ServiceProviderInterface;
 
 final class JobProcessor
 {
     public function __construct(
-        private readonly JobRepository $jobRepo,
         private readonly ServiceProviderInterface $processorProvider,
     ) {
     }
@@ -20,13 +19,8 @@ final class JobProcessor
     /**
      * @throws LogicException
      */
-    public function process(): void
+    public function process(JobInterface $job): void
     {
-        $job = $this->jobRepo->findOneProcessableJob();
-        if (null === $job) {
-            return;
-        }
-
         if (false === $this->processorProvider->has($job::class)) {
             throw new LogicException(sprintf('Not found a job processor for "%s"!', $job::class));
         }

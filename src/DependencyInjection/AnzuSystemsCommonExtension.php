@@ -13,6 +13,7 @@ use AnzuSystems\CommonBundle\DataFixtures\Interfaces\FixturesInterface;
 use AnzuSystems\CommonBundle\Doctrine\Query\AST\DateTime\Year;
 use AnzuSystems\CommonBundle\Doctrine\Query\AST\Numeric\Rand;
 use AnzuSystems\CommonBundle\Doctrine\Query\AST\String\Field;
+use AnzuSystems\CommonBundle\Domain\Job\JobRunner;
 use AnzuSystems\CommonBundle\Domain\Job\Processor\AbstractJobProcessor;
 use AnzuSystems\CommonBundle\Domain\PermissionGroup\PermissionGroupFacade;
 use AnzuSystems\CommonBundle\Domain\PermissionGroup\PermissionGroupManager;
@@ -173,6 +174,7 @@ final class AnzuSystemsCommonExtension extends Extension implements PrependExten
         $this->loadAnzuSerializer($container);
         $this->loadPermissions($container);
         $this->loadValueResolvers($container);
+        $this->loadJobs($container);
     }
 
     private function loadPermissions(ContainerBuilder $container): void
@@ -509,6 +511,17 @@ final class AnzuSystemsCommonExtension extends Extension implements PrependExten
                 ->addTag('request.param_converter', ['priority' => false, 'converter' => EnumParamConverter::class])
             ;
         }
+    }
+
+    private function loadJobs(ContainerBuilder $container): void
+    {
+        $jobs = $this->processedConfig['jobs'];
+        $container->getDefinition(JobRunner::class)
+            ->setArgument('$batchSize', $jobs['batch_size'])
+            ->setArgument('$maxExecTime', $jobs['max_exec_time'])
+            ->setArgument('$maxMemory', $jobs['max_memory'])
+            ->setArgument('$noJobIdleTime', $jobs['no_job_idle_time'])
+        ;
     }
 
     private function createControllerDefinition(string $class, array $arguments = []): Definition

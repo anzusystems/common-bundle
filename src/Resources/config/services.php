@@ -11,6 +11,7 @@ use AnzuSystems\CommonBundle\DataFixtures\FixturesLoader;
 use AnzuSystems\CommonBundle\Domain\Job\JobFacade;
 use AnzuSystems\CommonBundle\Domain\Job\JobManager;
 use AnzuSystems\CommonBundle\Domain\Job\JobProcessor;
+use AnzuSystems\CommonBundle\Domain\Job\JobRunner;
 use AnzuSystems\CommonBundle\Domain\User\CurrentAnzuUserProvider;
 use AnzuSystems\CommonBundle\Event\Listener\ConsoleExceptionListener;
 use AnzuSystems\CommonBundle\Event\Listener\ExceptionListener;
@@ -75,15 +76,20 @@ return static function (ContainerConfigurator $configurator): void {
     ;
 
     $services->set(JobProcessor::class)
-        ->arg('$jobRepo', service(JobRepository::class))
         ->arg('$processorProvider', tagged_locator(
             tag: AnzuSystemsCommonBundle::TAG_JOB_PROCESSOR,
             defaultIndexMethod: 'getSupportedJob',
         ))
     ;
 
-    $services->set(ProcessJobCommand::class)
+    $services->set(JobRunner::class)
+        ->arg('$jobRepo', service(JobRepository::class))
         ->arg('$jobProcessor', service(JobProcessor::class))
+        ->arg('$entityManager', service(EntityManagerInterface::class))
+    ;
+
+    $services->set(ProcessJobCommand::class)
+        ->arg('$jobRunner', service(JobRunner::class))
         ->tag('console.command')
     ;
 
