@@ -27,6 +27,31 @@ final class JobRunner
     ) {
     }
 
+    public function run(OutputInterface $output): void
+    {
+        $jobs = $this->getJobs($output);
+        if (empty($jobs)) {
+            return;
+        }
+        $progress = new ProgressBar($output, count($jobs));
+        $progress->setFormat('debug');
+
+        foreach ($jobs as $job) {
+            if ($this->stopProcessingJobs($output)) {
+                break;
+            }
+            $this->entityManager->clear();
+            $this->jobProcessor->process($job);
+            $progress->advance();
+        }
+        $progress->finish();
+    }
+
+    public function receiveSigterm(): void
+    {
+        $this->sigtermReceived = true;
+    }
+
     /**
      * @return JobInterface[]
      */
@@ -49,31 +74,6 @@ final class JobRunner
         return [];
     }
 
-    public function run(OutputInterface $output): void
-    {
-       $jobs = $this->getJobs($output);
-       if (empty($jobs)) {
-           return;
-       }
-       $progress = new ProgressBar($output, count($jobs));
-       $progress->setFormat('debug');
-
-       foreach ($jobs as $job) {
-           if ($this->stopProcessingJobs($output)) {
-               break;
-           }
-           $this->entityManager->clear();
-           $this->jobProcessor->process($job);
-           $progress->advance();
-       }
-       $progress->finish();
-    }
-
-    public function receiveSigterm(): void
-    {
-        $this->sigtermReceived = true;
-    }
-
     /**
      * Check thresholds for max time, memory, sigterm.
      */
@@ -84,7 +84,7 @@ final class JobRunner
 
             return true;
         }
-        if ($this->maxExecTime< (time() - AnzuApp::getAppDate()->getTimestamp())) {
+        if ($this->maxExecTime < (time() - AnzuApp::getAppDate()->getTimestamp())) {
             $output->writeln('Max execution time reached.');
 
             return true;

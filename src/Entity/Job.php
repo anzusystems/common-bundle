@@ -24,11 +24,11 @@ use Doctrine\ORM\Mapping as ORM;
 #[ORM\Index(fields: ['status', 'scheduledAt', 'priority'], name: 'IDX_job')]
 abstract class Job implements UserTrackingInterface, TimeTrackingInterface, JobInterface
 {
-    const PRIORITY_LOW = 0;
-
     use IdentityTrait;
     use TimeTrackingTrait;
     use UserTrackingTrait;
+    
+    public const PRIORITY_LOW = 0;
 
     /**
      * Time after which the job can be processed.
