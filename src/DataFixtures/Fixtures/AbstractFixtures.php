@@ -10,7 +10,7 @@ use Closure;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\ORM\Id\AbstractIdGenerator;
 use Doctrine\ORM\Id\AssignedGenerator;
-use Doctrine\ORM\Mapping\ClassMetadataInfo;
+use Doctrine\ORM\Mapping\ClassMetadata;
 use InvalidArgumentException;
 
 /**
@@ -29,7 +29,7 @@ abstract class AbstractFixtures implements FixturesInterface
     private AbstractIdGenerator $idGenerator;
 
     /**
-     * @psalm-var ClassMetadataInfo::GENERATOR_TYPE_*
+     * @psalm-var ClassMetadata::GENERATOR_TYPE_*
      */
     private int $generatorType;
 
@@ -108,7 +108,7 @@ abstract class AbstractFixtures implements FixturesInterface
         $this->idGenerator = $metadata->idGenerator;
         $this->generatorType = $metadata->generatorType;
         $metadata->setIdGenerator(new AssignedGenerator());
-        $metadata->setIdGeneratorType(ClassMetadataInfo::GENERATOR_TYPE_NONE);
+        $metadata->setIdGeneratorType(ClassMetadata::GENERATOR_TYPE_NONE);
     }
 
     public function disableAssignedGenerator(): void

@@ -27,7 +27,7 @@ final class Rand extends FunctionNode
         $parser->match(TokenType::T_IDENTIFIER);
         $parser->match(TokenType::T_OPEN_PARENTHESIS);
 
-        if ($lexer->lookahead->isA([TokenType::T_CLOSE_PARENTHESIS])) {
+        if (false === ($lexer->lookahead?->isA(TokenType::T_CLOSE_PARENTHESIS) ?? false)) {
             $this->expression = $parser->SimpleArithmeticExpression();
         }
 

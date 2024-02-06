@@ -17,12 +17,7 @@ abstract class AbstractValueObjectType extends Type
 
     public function getSQLDeclaration(array $column, AbstractPlatform $platform): string
     {
-        return $platform->getVarcharTypeDeclarationSQL($column);
-    }
-
-    public function requiresSQLCommentHint(AbstractPlatform $platform): bool
-    {
-        return true;
+        return $platform->getStringTypeDeclarationSQL($column);
     }
 
     public function convertToDatabaseValue(mixed $value, AbstractPlatform $platform): mixed
