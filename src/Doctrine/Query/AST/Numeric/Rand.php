@@ -6,15 +6,15 @@ namespace AnzuSystems\CommonBundle\Doctrine\Query\AST\Numeric;
 
 use Doctrine\ORM\Query\AST\ASTException;
 use Doctrine\ORM\Query\AST\Functions\FunctionNode;
-use Doctrine\ORM\Query\AST\SimpleArithmeticExpression;
-use Doctrine\ORM\Query\Lexer;
+use Doctrine\ORM\Query\AST\Node;
 use Doctrine\ORM\Query\Parser;
 use Doctrine\ORM\Query\QueryException;
 use Doctrine\ORM\Query\SqlWalker;
+use Doctrine\ORM\Query\TokenType;
 
 final class Rand extends FunctionNode
 {
-    private ?SimpleArithmeticExpression $expression = null;
+    private ?Node $expression = null;
 
     /**
      * @throws QueryException
@@ -24,14 +24,14 @@ final class Rand extends FunctionNode
     public function parse(Parser $parser): void
     {
         $lexer = $parser->getLexer();
-        $parser->match(Lexer::T_IDENTIFIER);
-        $parser->match(Lexer::T_OPEN_PARENTHESIS);
+        $parser->match(TokenType::T_IDENTIFIER);
+        $parser->match(TokenType::T_OPEN_PARENTHESIS);
 
-        if (Lexer::T_CLOSE_PARENTHESIS !== ($lexer->lookahead['type'] ?? null)) {
+        if ($lexer->lookahead->isA([TokenType::T_CLOSE_PARENTHESIS])) {
             $this->expression = $parser->SimpleArithmeticExpression();
         }
 
-        $parser->match(Lexer::T_CLOSE_PARENTHESIS);
+        $parser->match(TokenType::T_CLOSE_PARENTHESIS);
     }
 
     /**
