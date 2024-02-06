@@ -27,18 +27,6 @@ final class ProcessJobCommand extends Command implements SignalableCommandInterf
     }
 
     /**
-     * @throws AppReadOnlyModeException
-     */
-    protected function execute(InputInterface $input, OutputInterface $output): int
-    {
-        AnzuApp::throwOnReadOnlyMode();
-
-        $this->jobRunner->run($output);
-
-        return self::SUCCESS;
-    }
-
-    /**
      * @psalm-suppress UndefinedConstant - defined in pcntl extension.
      */
     public function getSubscribedSignals(): array
@@ -51,5 +39,17 @@ final class ProcessJobCommand extends Command implements SignalableCommandInterf
         $this->jobRunner->receiveSigterm();
 
         return false;
+    }
+
+    /**
+     * @throws AppReadOnlyModeException
+     */
+    protected function execute(InputInterface $input, OutputInterface $output): int
+    {
+        AnzuApp::throwOnReadOnlyMode();
+
+        $this->jobRunner->run($output);
+
+        return self::SUCCESS;
     }
 }
