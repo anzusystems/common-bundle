@@ -21,7 +21,7 @@ use Doctrine\ORM\Mapping as ORM;
 #[ORM\Entity(repositoryClass: JobRepository::class)]
 #[ORM\InheritanceType('JOINED')]
 #[ORM\DiscriminatorColumn(name: 'discriminator', type: 'string')]
-#[ORM\Index(name: 'IDX_job', fields: ['status', 'scheduledAt', 'priority'])]
+#[ORM\Index(fields: ['status', 'scheduledAt', 'priority'], name: 'IDX_job')]
 abstract class Job implements UserTrackingInterface, TimeTrackingInterface, JobInterface
 {
     use IdentityTrait;
