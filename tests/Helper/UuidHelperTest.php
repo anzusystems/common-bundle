@@ -39,16 +39,16 @@ final class UuidHelperTest extends AnzuKernelTestCase
     {
         return [
             [
-                'article0-core-0000-0000-000000000010',
+                'article0-cms0-0000-0000-000000000010',
                 'article',
-                'core',
+                'cms',
                 10,
                 0,
             ],
             [
-                'article0-core-0000-0001-000000000001',
+                'article0-cms0-0000-0001-000000000001',
                 'article',
-                'core',
+                'cms',
                 1,
                 1,
             ],
