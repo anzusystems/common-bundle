@@ -19,6 +19,7 @@ use AnzuSystems\CommonBundle\Event\Listener\LockReleaseListener;
 use AnzuSystems\CommonBundle\Event\Subscriber\CommandLockSubscriber;
 use AnzuSystems\CommonBundle\Repository\JobRepository;
 use AnzuSystems\CommonBundle\Repository\JobUserDataDeleteRepository;
+use AnzuSystems\CommonBundle\Router\AnzuDomainRouteLoader;
 use AnzuSystems\CommonBundle\Util\ResourceLocker;
 use AnzuSystems\CommonBundle\Validator\Constraints\EntityExistsValidator;
 use AnzuSystems\CommonBundle\Validator\Constraints\NotEmptyIdValidator;
@@ -61,6 +62,11 @@ return static function (ContainerConfigurator $configurator): void {
         ->arg('$appRedis', null)
         ->arg('$unlockedCommands', null)
         ->tag('kernel.event_subscriber')
+    ;
+
+    $services->set(AnzuDomainRouteLoader::class)
+        ->arg('$env', param('kernel.environment'))
+        ->tag('routing.loader')
     ;
 
     $services->set(FixturesLoader::class)

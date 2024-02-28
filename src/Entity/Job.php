@@ -27,7 +27,7 @@ abstract class Job implements UserTrackingInterface, TimeTrackingInterface, JobI
     use IdentityTrait;
     use TimeTrackingTrait;
     use UserTrackingTrait;
-    
+
     public const PRIORITY_LOW = 0;
 
     /**
