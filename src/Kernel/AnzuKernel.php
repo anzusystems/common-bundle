@@ -97,7 +97,7 @@ class AnzuKernel extends Kernel
     {
         $finder = Finder::create();
         $finder
-            ->in(__DIR__)
+            ->in($container->getParameter('kernel.project_dir') . '/src')
             ->name('Entity')
             ->directories()
         ;
@@ -105,7 +105,7 @@ class AnzuKernel extends Kernel
         $directories = [];
 
         foreach ($finder as $dir) {
-            $namespace = str_replace('/', '\\', sprintf('%s\%s', __NAMESPACE__, $dir->getRelativePathname()));
+            $namespace = str_replace('/', '\\', sprintf('App\%s', $dir->getRelativePathname()));
             $namespaces[] = $namespace;
             $directories[] = $dir->getPathname();
         }
