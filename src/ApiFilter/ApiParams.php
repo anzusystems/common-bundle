@@ -83,12 +83,12 @@ final class ApiParams
 
     public static function generateAllAvailableOAQueryParams(): Generator
     {
-        foreach (ApiParams::AVAILABLE_FILTERS as $filterName) {
-            yield new QueryParameter(name: ApiParams::FILTER . '_' . $filterName);
+        foreach (self::AVAILABLE_FILTERS as $filterName) {
+            yield new QueryParameter(name: self::FILTER . '_' . $filterName);
         }
-        yield new QueryParameter(name: ApiParams::LIMIT);
-        yield new QueryParameter(name: ApiParams::OFFSET);
-        yield new QueryParameter(name: ApiParams::ORDER);
+        yield new QueryParameter(name: self::LIMIT);
+        yield new QueryParameter(name: self::OFFSET);
+        yield new QueryParameter(name: self::ORDER);
     }
 
     public function setFromRequest(Request $request): self

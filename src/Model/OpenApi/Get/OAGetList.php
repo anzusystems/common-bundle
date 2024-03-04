@@ -1,4 +1,5 @@
 <?php
+
 declare(strict_types=1);
 
 namespace AnzuSystems\CommonBundle\Model\OpenApi\Get;
@@ -16,7 +17,8 @@ final class OAGetList extends Get
      * @param string $type
      * @param QueryParameter[] $customFilters
      */
-    public function __construct(string $type, array $customFilters = []) {
+    public function __construct(string $type, array $customFilters = [])
+    {
         parent::__construct(
             parameters: iterator_to_array(ApiParams::generateAllAvailableOAQueryParams()),
             responses: [new OAResponseList($type)]
