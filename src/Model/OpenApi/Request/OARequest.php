@@ -14,8 +14,10 @@ final class OARequest extends RequestBody
 {
     public function __construct(
         string $model,
+        ?string $description = null,
     ) {
         parent::__construct(
+            description: $description,
             content: new JsonContent(
                 ref: new Model(
                     type: $model
