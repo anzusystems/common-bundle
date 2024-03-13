@@ -7,6 +7,7 @@ namespace AnzuSystems\CommonBundle\Tests\Data\Controller;
 use AnzuSystems\CommonBundle\ApiFilter\ApiParams;
 use AnzuSystems\CommonBundle\Controller\AbstractAnzuApiController;
 use AnzuSystems\CommonBundle\Model\Attributes\ArrayStringParam;
+use AnzuSystems\CommonBundle\Tests\Data\Entity\Example;
 use AnzuSystems\CommonBundle\Tests\Data\Model\DataObject\DummyDto;
 use AnzuSystems\CommonBundle\Tests\Data\Model\DataObject\SerializerTestDto;
 use AnzuSystems\CommonBundle\Tests\Data\Model\ValueObject\DummyValueObject;
@@ -15,7 +16,7 @@ use AnzuSystems\SerializerBundle\Attributes\SerializeParam;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
-use Symfony\Component\Routing\Annotation\Route;
+use Symfony\Component\Routing\Attribute\Route;
 
 #[Route('/dummy')]
 final class DummyController extends AbstractAnzuApiController
@@ -61,5 +62,11 @@ final class DummyController extends AbstractAnzuApiController
     public function cacheTest(): JsonResponse
     {
         return $this->okResponse($this->getUser(), new UserCacheSettings($this->getUser()));
+    }
+
+    #[Route('/doctrine/type/enum/{example}', methods: [Request::METHOD_GET])]
+    public function doctrineTypeEnum(Example $example): Response
+    {
+        return $this->okResponse($example);
     }
 }
