@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace AnzuSystems\CommonBundle\Entity;
 
+use AnzuSystems\CommonBundle\Doctrine\Type\EnumType;
 use AnzuSystems\CommonBundle\Entity\Interfaces\JobInterface;
 use AnzuSystems\CommonBundle\Model\Enum\JobStatus;
 use AnzuSystems\CommonBundle\Repository\JobRepository;
@@ -47,7 +48,7 @@ abstract class Job implements UserTrackingInterface, TimeTrackingInterface, JobI
     /**
      * Status of job.
      */
-    #[ORM\Column(enumType: JobStatus::class)]
+    #[ORM\Column(type: EnumType::TYPE, enumType: JobStatus::class)]
     #[Serialize]
     protected JobStatus $status = JobStatus::Default;
 

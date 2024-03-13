@@ -10,7 +10,7 @@ use Doctrine\DBAL\Types\Type;
 
 final class EnumType extends Type
 {
-    public const TYPE = 'enum';
+    public const TYPE = 'enumType';
 
     /**
      * @throws ConversionException
@@ -30,5 +30,10 @@ final class EnumType extends Type
     public function getName(): string
     {
         return self::TYPE;
+    }
+
+    public function requiresSQLCommentHint(AbstractPlatform $platform): bool
+    {
+        return true;
     }
 }
