@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace AnzuSystems\CommonBundle\Tests\Data\Entity;
 
-use AnzuSystems\CommonBundle\Doctrine\Type\EnumType;
 use AnzuSystems\CommonBundle\Tests\Data\Model\Enum\DummyEnum;
 use AnzuSystems\SerializerBundle\Attributes\Serialize;
 use DateTimeImmutable;
@@ -30,7 +29,7 @@ class Example
     #[Serialize]
     private DateTimeImmutable $createdAt;
 
-    #[ORM\Column(type: EnumType::TYPE, enumType: DummyEnum::class)]
+    #[ORM\Column(type: 'DummyEnumType')]
     #[Serialize]
     private DummyEnum $dummyEnum = DummyEnum::Default;
 
