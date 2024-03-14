@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace AnzuSystems\CommonBundle\Tests\Data\Entity;
 
+use AnzuSystems\CommonBundle\Tests\Data\Model\Enum\DummyEnum;
+use AnzuSystems\SerializerBundle\Attributes\Serialize;
 use DateTimeImmutable;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
@@ -12,19 +14,28 @@ use Doctrine\ORM\Mapping as ORM;
 #[ORM\Table('example')]
 class Example
 {
+    public const EXAMPLE_INSTANCE_ID = 1;
+
     #[ORM\Column(type: Types::INTEGER)]
     #[ORM\Id]
+    #[Serialize]
     private int $id;
 
     #[ORM\Column(type: Types::STRING)]
+    #[Serialize]
     private string $name;
 
     #[ORM\Column(name: 'created_at', type: Types::DATETIME_IMMUTABLE)]
+    #[Serialize]
     private DateTimeImmutable $createdAt;
+
+    #[ORM\Column(type: 'DummyEnumType')]
+    #[Serialize]
+    private DummyEnum $dummyEnum = DummyEnum::Default;
 
     public function __construct()
     {
-        $this->setId(0);
+        $this->setId(self::EXAMPLE_INSTANCE_ID);
         $this->setName('');
         $this->setCreatedAt(new DateTimeImmutable());
     }
@@ -61,6 +72,18 @@ class Example
     public function setCreatedAt(DateTimeImmutable $createdAt): self
     {
         $this->createdAt = $createdAt;
+
+        return $this;
+    }
+
+    public function getDummyEnum(): DummyEnum
+    {
+        return $this->dummyEnum;
+    }
+
+    public function setDummyEnum(DummyEnum $dummyEnum): self
+    {
+        $this->dummyEnum = $dummyEnum;
 
         return $this;
     }

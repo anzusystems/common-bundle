@@ -33,14 +33,14 @@ abstract class Job implements UserTrackingInterface, TimeTrackingInterface, JobI
     /**
      * Time after which the job can be processed.
      */
-    #[ORM\Column(type: Types::DATETIME_IMMUTABLE)]
+    #[ORM\Column(type: Types::DATETIME_IMMUTABLE, options: ['default' => 'CURRENT_TIMESTAMP'])]
     #[Serialize]
     protected DateTimeImmutable $scheduledAt;
 
     /**
      * Priority of the job.
      */
-    #[ORM\Column(type: Types::SMALLINT)]
+    #[ORM\Column(type: Types::SMALLINT, options: ['default' => self::PRIORITY_LOW])]
     #[Serialize]
     protected int $priority = self::PRIORITY_LOW;
 

@@ -5,7 +5,11 @@ declare(strict_types=1);
 namespace AnzuSystems\CommonBundle\Kernel;
 
 use AnzuSystems\Contracts\AnzuApp;
+use App\DependencyInjection\Compiler\DoctrineServiceTypeCompilerPass;
+use Doctrine\Bundle\DoctrineBundle\DependencyInjection\Compiler\DoctrineOrmMappingsPass;
 use Symfony\Bundle\FrameworkBundle\Kernel\MicroKernelTrait;
+use Symfony\Component\DependencyInjection\ContainerBuilder;
+use Symfony\Component\Finder\Finder;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\HttpKernelInterface;
@@ -82,5 +86,33 @@ class AnzuKernel extends Kernel
         $this->contextId = (string) $request->headers->get(self::CONTEXT_IDENTITY_HEADER);
 
         return parent::handle($request, $type, $catch);
+    }
+
+    protected function build(ContainerBuilder $container): void
+    {
+        $this->registerORMMapping($container);
+    }
+
+    private function registerORMMapping(ContainerBuilder $container): void
+    {
+        $finder = Finder::create();
+        $finder
+            ->in($container->getParameter('kernel.project_dir') . '/src')
+            ->name('Entity')
+            ->directories()
+        ;
+        $namespaces = [];
+        $directories = [];
+
+        foreach ($finder as $dir) {
+            $namespace = str_replace('/', '\\', sprintf('App\%s', $dir->getRelativePathname()));
+            $namespaces[] = $namespace;
+            $directories[] = $dir->getPathname();
+        }
+
+        $container->addCompilerPass(DoctrineOrmMappingsPass::createAttributeMappingDriver(
+            $namespaces,
+            $directories,
+        ));
     }
 }

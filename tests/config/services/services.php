@@ -9,6 +9,7 @@ use AnzuSystems\CommonBundle\DataFixtures\FixturesLoader;
 use AnzuSystems\CommonBundle\Tests\Data\Controller\DummyController;
 use AnzuSystems\CommonBundle\Tests\Data\Controller\JobController;
 use AnzuSystems\CommonBundle\Tests\Data\Domain\Job\Processor\JobUserDataDeleteProcessor;
+use AnzuSystems\CommonBundle\Tests\Data\Fixtures\ExampleFixtures;
 use AnzuSystems\CommonBundle\Tests\Data\Fixtures\UserFixtures;
 use AnzuSystems\CommonBundle\Tests\Data\Repository\UserRepository;
 use AnzuSystems\CommonBundle\Util\ResourceLocker;
@@ -46,6 +47,11 @@ return static function (ContainerConfigurator $configurator): void {
     $services->alias('security.token_storage.test', 'security.untracked_token_storage');
 
     $services->set(UserFixtures::class)
+        ->call('setEntityManager', [service(EntityManagerInterface::class)])
+        ->tag(AnzuSystemsCommonBundle::TAG_DATA_FIXTURE)
+    ;
+
+    $services->set(ExampleFixtures::class)
         ->call('setEntityManager', [service(EntityManagerInterface::class)])
         ->tag(AnzuSystemsCommonBundle::TAG_DATA_FIXTURE)
     ;

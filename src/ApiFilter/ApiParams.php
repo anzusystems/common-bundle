@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace AnzuSystems\CommonBundle\ApiFilter;
 
 use AnzuSystems\SerializerBundle\Attributes\Serialize;
+use Generator;
+use OpenApi\Attributes\QueryParameter;
 use Symfony\Component\HttpFoundation\Request;
 
 final class ApiParams
@@ -77,6 +79,16 @@ final class ApiParams
         $this->filter = self::DEFAULTS[self::FILTER];
         $this->order = self::DEFAULTS[self::ORDER];
         $this->bigTable = self::DEFAULTS[self::BIG_TABLE];
+    }
+
+    public static function generateAllAvailableOAQueryParams(): Generator
+    {
+        foreach (self::AVAILABLE_FILTERS as $filterName) {
+            yield new QueryParameter(name: self::FILTER . '_' . $filterName);
+        }
+        yield new QueryParameter(name: self::LIMIT);
+        yield new QueryParameter(name: self::OFFSET);
+        yield new QueryParameter(name: self::ORDER);
     }
 
     public function setFromRequest(Request $request): self
