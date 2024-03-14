@@ -101,6 +101,11 @@ final class AnzuSystemsCommonExtension extends Extension implements PrependExten
                     ],
                 ],
             ],
+            'dbal' => [
+                'mapping_types' => [
+                    'enum' => 'string',
+                ],
+            ],
         ]);
 
         $logs = $this->processedConfig['logs'];

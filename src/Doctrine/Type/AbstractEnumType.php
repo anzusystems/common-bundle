@@ -43,6 +43,10 @@ abstract class AbstractEnumType extends Type
             return null;
         }
 
+        if (is_string($value)) {
+            return $value;
+        }
+
         if (false === ($value instanceof EnumInterface)) {
             throw ConversionException::conversionFailed($value, $this->getName());
         }
