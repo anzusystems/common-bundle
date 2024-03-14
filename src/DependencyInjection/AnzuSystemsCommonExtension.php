@@ -13,7 +13,7 @@ use AnzuSystems\CommonBundle\DataFixtures\Interfaces\FixturesInterface;
 use AnzuSystems\CommonBundle\Doctrine\Query\AST\DateTime\Year;
 use AnzuSystems\CommonBundle\Doctrine\Query\AST\Numeric\Rand;
 use AnzuSystems\CommonBundle\Doctrine\Query\AST\String\Field;
-use AnzuSystems\CommonBundle\Doctrine\Type\EnumType;
+use AnzuSystems\CommonBundle\Doctrine\Type\AbstractEnumType;
 use AnzuSystems\CommonBundle\Domain\Job\JobRunner;
 use AnzuSystems\CommonBundle\Domain\Job\Processor\AbstractJobProcessor;
 use AnzuSystems\CommonBundle\Domain\PermissionGroup\PermissionGroupFacade;
@@ -102,8 +102,8 @@ final class AnzuSystemsCommonExtension extends Extension implements PrependExten
                 ],
             ],
             'dbal' => [
-                'types' => [
-                    EnumType::TYPE => EnumType::class,
+                'mapping_types' => [
+                    'enum' => 'string',
                 ],
             ],
         ]);
