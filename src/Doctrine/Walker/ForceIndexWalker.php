@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace AnzuSystems\CommonBundle\Doctrine\Walker;
 
+use Doctrine\ORM\Query\AST\FromClause;
 use Doctrine\ORM\Query\SqlWalker;
 
 final class ForceIndexWalker extends SqlWalker
@@ -11,7 +12,7 @@ final class ForceIndexWalker extends SqlWalker
     public const HINT_FORCE_INDEX_FOR_FROM = 'ForceIndexWalker.ForceIndex';
     public const HINT_FORCE_INDEX_FOR_JOIN = 'ForceIndexWalker.ForceIndexForJoin';
 
-    public function walkFromClause($fromClause): string
+    public function walkFromClause(FromClause $fromClause): string
     {
         $result = parent::walkFromClause($fromClause);
 

@@ -4,7 +4,7 @@ namespace AnzuSystems\CommonBundle\Doctrine\Type;
 
 use AnzuSystems\Contracts\Model\Enum\EnumInterface;
 use Doctrine\DBAL\Platforms\AbstractPlatform;
-use Doctrine\DBAL\Types\ConversionException;
+use Doctrine\DBAL\Types\Exception\ValueNotConvertible;
 use Doctrine\DBAL\Types\Type;
 
 abstract class AbstractEnumType extends Type
@@ -29,7 +29,7 @@ abstract class AbstractEnumType extends Type
         }
 
         if (false === is_string($value)) {
-            throw ConversionException::conversionFailed($value, $this->getName());
+            throw ValueNotConvertible::new($value, self::class);
         }
         /** @var class-string<EnumInterface> $enumClass */
         $enumClass = $this->getEnumClass();
@@ -48,19 +48,9 @@ abstract class AbstractEnumType extends Type
         }
 
         if (false === ($value instanceof EnumInterface)) {
-            throw ConversionException::conversionFailed($value, $this->getName());
+            throw ValueNotConvertible::new($value, self::class);
         }
 
         return $value->toString();
-    }
-
-    public function getName(): string
-    {
-        return substr((string) strrchr(static::class, '\\'), 1);
-    }
-
-    public function requiresSQLCommentHint(AbstractPlatform $platform): bool
-    {
-        return true;
     }
 }

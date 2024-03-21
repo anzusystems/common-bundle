@@ -7,7 +7,7 @@ namespace AnzuSystems\CommonBundle\Doctrine\Type;
 use AnzuSystems\CommonBundle\Model\ValueObject\Geolocation;
 use Doctrine\DBAL\ParameterType;
 use Doctrine\DBAL\Platforms\AbstractPlatform;
-use Doctrine\DBAL\Types\ConversionException;
+use Doctrine\DBAL\Types\Exception\ValueNotConvertible;
 
 final class GeolocationType extends AbstractValueObjectType
 {
@@ -34,7 +34,7 @@ final class GeolocationType extends AbstractValueObjectType
             return new Geolocation((float) $geolocation[1], (float) $geolocation[0]);
         }
 
-        throw ConversionException::conversionFailed($value, $this->getName());
+        throw ValueNotConvertible::new($value, $this->getName());
     }
 
     public function convertToDatabaseValue($value, AbstractPlatform $platform): string
@@ -46,22 +46,17 @@ final class GeolocationType extends AbstractValueObjectType
         return $value;
     }
 
-    public function canRequireSQLConversion(): bool
-    {
-        return true;
-    }
-
-    public function convertToPHPValueSQL($sqlExpr, $platform): string
+    public function convertToPHPValueSQL(string $sqlExpr, AbstractPlatform $platform): string
     {
         return sprintf('ST_AsText(%s)', $sqlExpr);
     }
 
-    public function convertToDatabaseValueSQL($sqlExpr, AbstractPlatform $platform): string
+    public function convertToDatabaseValueSQL(string $sqlExpr, AbstractPlatform $platform): string
     {
         return sprintf('ST_PointFromText(%s, %d)', $sqlExpr, self::SRID_ID);
     }
 
-    public function getBindingType(): int
+    public function getBindingType(): ParameterType
     {
         return ParameterType::STRING;
     }
