@@ -6,7 +6,7 @@ namespace AnzuSystems\CommonBundle\ApiFilter;
 
 use AnzuSystems\Contracts\Document\Attributes\PersistedName;
 use DateTimeImmutable;
-use Doctrine\Common\Collections\Criteria;
+use Doctrine\Common\Collections\Order;
 use MongoDB\BSON\ObjectId;
 use MongoDB\BSON\Regex;
 use MongoDB\BSON\UTCDateTime;
@@ -91,7 +91,7 @@ final class ApiQueryMongo
         if ($order) {
             $sort = [];
             foreach ($order as $field => $direction) {
-                $sort[$this->getPersistedName($field)] = Criteria::ASC === strtoupper($direction) ? 1 : -1;
+                $sort[$this->getPersistedName($field)] = Order::Ascending->value === strtoupper($direction) ? 1 : -1;
             }
             $options['sort'] = $sort;
         }

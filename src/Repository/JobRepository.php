@@ -8,7 +8,9 @@ use AnzuSystems\CommonBundle\Entity\Interfaces\JobInterface;
 use AnzuSystems\CommonBundle\Entity\Job;
 use AnzuSystems\CommonBundle\Model\Enum\JobStatus;
 use AnzuSystems\Contracts\AnzuApp;
-use Doctrine\Common\Collections\Criteria;
+use Doctrine\Common\Collections\ArrayCollection;
+use Doctrine\Common\Collections\Order;
+use Doctrine\ORM\Query\Parameter;
 
 /**
  * @extends AbstractAnzuRepository<Job>
@@ -24,12 +26,13 @@ final class JobRepository extends AbstractAnzuRepository
         $dqb
             ->select('job')
             ->where('job.status in (:processableStatuses) AND job.scheduledAt <= :scheduledAt')
-            ->setParameters([
-                'processableStatuses' => JobStatus::PROCESSABLE_STATUSES,
+            ->setParameters(new ArrayCollection([
+                new Parameter('processableStatuses', JobStatus::PROCESSABLE_STATUSES),
+                new Parameter('scheduledAt', AnzuApp::getAppDate()),
                 'scheduledAt' => AnzuApp::getAppDate(),
-            ])
-            ->orderBy('job.priority', Criteria::DESC)
-            ->addOrderBy('job.scheduledAt', Criteria::ASC)
+            ]))
+            ->orderBy('job.priority', Order::Descending->value)
+            ->addOrderBy('job.scheduledAt', Order::Ascending->value)
             ->setMaxResults($maxResults)
         ;
 
