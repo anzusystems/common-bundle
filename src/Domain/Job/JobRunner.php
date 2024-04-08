@@ -36,14 +36,17 @@ final class JobRunner
         $progress = new ProgressBar($output, count($jobs));
         $progress->setFormat('debug');
 
-        foreach ($jobs as $job) {
-            if ($this->stopProcessingJobs($output)) {
-                break;
+        do {
+            $jobs = $this->getJobs($output);
+            foreach ($jobs as $job) {
+                if ($this->stopProcessingJobs($output)) {
+                    break 2;
+                }
+                $this->entityManager->clear();
+                $this->jobProcessor->process($job);
+                $progress->advance();
             }
-            $this->entityManager->clear();
-            $this->jobProcessor->process($job);
-            $progress->advance();
-        }
+        } while (false === empty($jobs));
         $progress->finish();
     }
 
