@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace AnzuSystems\CommonBundle\Command;
 
-use AnzuSystems\CommonBundle\Domain\Job\JobProcessor;
 use AnzuSystems\CommonBundle\Domain\Job\JobRunner;
 use AnzuSystems\Contracts\AnzuApp;
 use AnzuSystems\Contracts\Exception\AppReadOnlyModeException;
