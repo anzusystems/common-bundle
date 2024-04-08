@@ -29,7 +29,6 @@ final class JobRepository extends AbstractAnzuRepository
             ->setParameters(new ArrayCollection([
                 new Parameter('processableStatuses', JobStatus::PROCESSABLE_STATUSES),
                 new Parameter('scheduledAt', AnzuApp::getAppDate()),
-                'scheduledAt' => AnzuApp::getAppDate(),
             ]))
             ->orderBy('job.priority', Order::Descending->value)
             ->addOrderBy('job.scheduledAt', Order::Ascending->value)
