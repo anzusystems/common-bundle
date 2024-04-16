@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace AnzuSystems\CommonBundle\Event;
 
-
 use AnzuSystems\CommonBundle\Entity\Interfaces\JobInterface;
 use Symfony\Contracts\EventDispatcher\Event;
 
