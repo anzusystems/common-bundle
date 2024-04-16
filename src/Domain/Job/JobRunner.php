@@ -29,11 +29,7 @@ final class JobRunner
 
     public function run(OutputInterface $output): void
     {
-        $jobs = $this->getJobs($output);
-        if (empty($jobs)) {
-            return;
-        }
-        $progress = new ProgressBar($output, count($jobs));
+        $progress = new ProgressBar($output);
         $progress->setFormat('debug');
 
         do {
@@ -47,6 +43,7 @@ final class JobRunner
                 $progress->advance();
             }
         } while (false === empty($jobs));
+
         $progress->finish();
     }
 
