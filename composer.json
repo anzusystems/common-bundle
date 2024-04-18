@@ -29,6 +29,7 @@
     "symfony/console": "^6.0|^7.0",
     "symfony/dependency-injection": "^6.0|^7.0",
     "symfony/dotenv": "^6.0|^7.0",
+    "symfony/event-dispatcher": "^6.0|^7.0",
     "symfony/expression-language": "^6.0|^7.0",
     "symfony/framework-bundle": "^6.0|^7.0",
     "symfony/http-client-contracts": "^3.1",
