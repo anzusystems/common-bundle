@@ -60,9 +60,6 @@ final class JobRunner
         do {
             $jobs = $this->jobRepo->findProcessableJobs($this->batchSize);
             if (empty($jobs)) {
-                $output->writeln(
-                    sprintf('No jobs found, waiting %d seconds to retry.', $this->noJobIdleTime)
-                );
                 sleep($this->noJobIdleTime);
 
                 continue;
