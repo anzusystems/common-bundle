@@ -60,7 +60,7 @@ abstract class AbstractJobProcessor implements JobProcessorInterface
     protected function start(JobInterface $job): void
     {
         $this->currentAnzuUserProvider->setConsoleCurrentUser();
-        $this->getManagedJob($job)
+        $job = $this->getManagedJob($job)
             ->setStartedAt(new DateTimeImmutable())
             ->setStatus(JobStatus::Processing)
         ;
@@ -71,7 +71,7 @@ abstract class AbstractJobProcessor implements JobProcessorInterface
     protected function finishSuccess(JobInterface $job): void
     {
         $this->currentAnzuUserProvider->setConsoleCurrentUser();
-        $this->getManagedJob($job)
+        $job = $this->getManagedJob($job)
             ->setFinishedAt(new DateTimeImmutable())
             ->setStatus(JobStatus::Done)
         ;
@@ -83,7 +83,7 @@ abstract class AbstractJobProcessor implements JobProcessorInterface
     protected function toAwaitingBatchProcess(JobInterface $job, string $lastProcessedRecord = ''): void
     {
         $this->currentAnzuUserProvider->setConsoleCurrentUser();
-        $this->getManagedJob($job)
+        $job = $this->getManagedJob($job)
             ->setStatus(JobStatus::AwaitingBatchProcess)
             ->setLastBatchProcessedRecord($lastProcessedRecord)
             ->increaseBatchProcessedIterationCount()
@@ -105,7 +105,7 @@ abstract class AbstractJobProcessor implements JobProcessorInterface
             $this->entityManager = $entityManager;
         }
         $this->currentAnzuUserProvider->setConsoleCurrentUser();
-        $this->getManagedJob($job)
+        $job = $this->getManagedJob($job)
             ->setResult((new UnicodeString($error->getMessage()))->truncate(255)->toString())
             ->setFinishedAt(new DateTimeImmutable())
             ->setStatus(JobStatus::Error)
