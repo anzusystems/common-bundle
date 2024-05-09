@@ -18,7 +18,7 @@
     "ext-redis": "*",
     "ext-zend-opcache": "*",
     "anzusystems/contracts": "^3.0",
-    "anzusystems/serializer-bundle": "^3.0",
+    "anzusystems/serializer-bundle": "^4.0",
     "doctrine/dbal": "^4.0",
     "doctrine/lexer": "^3.0",
     "doctrine/orm": "^3.1",

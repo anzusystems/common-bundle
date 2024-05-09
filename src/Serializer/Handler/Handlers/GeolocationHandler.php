@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace AnzuSystems\CommonBundle\Serializer\Handler\Handlers;
 
 use AnzuSystems\CommonBundle\Model\ValueObject\Geolocation;
+use AnzuSystems\SerializerBundle\Context\SerializationContext;
 use AnzuSystems\SerializerBundle\Exception\SerializerException;
 use AnzuSystems\SerializerBundle\Handler\Handlers\AbstractHandler;
 use AnzuSystems\SerializerBundle\Helper\SerializerHelper;
@@ -25,7 +26,7 @@ final class GeolocationHandler extends AbstractHandler
     /**
      * @param Geolocation $value
      */
-    public function serialize(mixed $value, Metadata $metadata): array
+    public function serialize(mixed $value, Metadata $metadata, SerializationContext $context): array
     {
         return [
             self::LAT => $value->getLatitude(),
