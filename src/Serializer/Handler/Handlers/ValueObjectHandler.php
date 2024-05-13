@@ -6,6 +6,7 @@ namespace AnzuSystems\CommonBundle\Serializer\Handler\Handlers;
 
 use AnzuSystems\Contracts\Model\ValueObject\AbstractValueObject;
 use AnzuSystems\Contracts\Model\ValueObject\ValueObjectInterface;
+use AnzuSystems\SerializerBundle\Context\SerializationContext;
 use AnzuSystems\SerializerBundle\Handler\Handlers\AbstractHandler;
 use AnzuSystems\SerializerBundle\Metadata\Metadata;
 use Symfony\Component\PropertyInfo\Type;
@@ -20,7 +21,7 @@ final class ValueObjectHandler extends AbstractHandler
     /**
      * @param ValueObjectInterface $value
      */
-    public function serialize(mixed $value, Metadata $metadata): string
+    public function serialize(mixed $value, Metadata $metadata, SerializationContext $context): string
     {
         return $value->toString();
     }
