@@ -34,7 +34,7 @@ final class BsonConverter
     {
         $objectMetadata = $this->metadataRegistry->get($className);
         $object = new $className();
-        foreach ($objectMetadata as $name => $metadata) {
+        foreach ($objectMetadata->getAll() as $name => $metadata) {
             $persistedName = $metadata->persistedName ?? $name;
             if (null === $metadata->setter || false === $data->offsetExists($persistedName)) {
                 continue;
