@@ -64,6 +64,7 @@ final class Configuration implements ConfigurationInterface
                 ->append($this->addHealthCheckSection())
                 ->append($this->addPermissionsSection())
                 ->append($this->addJobsSection())
+                ->append($this->addUsersSection())
             ->end()
         ;
 
@@ -294,6 +295,23 @@ final class Configuration implements ConfigurationInterface
                 ->integerNode('max_exec_time')->defaultValue(50)->end()
                 ->integerNode('max_memory')->defaultValue(100_000_000)->end()
                 ->integerNode('no_job_idle_time')->defaultValue(10)->end()
+            ->end()
+        ;
+    }
+
+    private function addUsersSection(): NodeDefinition
+    {
+        return (new TreeBuilder('users'))->getRootNode()
+            ->addDefaultsIfNotSet()
+            ->children()
+                ->scalarNode('sync_data')->isRequired()->end()
+//                ->arrayNode('sync_data')
+//                    ->defaultValue([])
+//                    ->prototype('scalar')->end()
+//                ->end()
+//                ->arrayNode('sync_data')
+//                    ->prototype('scalar')->end()
+//                ->end()
             ->end()
         ;
     }

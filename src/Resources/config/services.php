@@ -7,6 +7,7 @@ namespace Symfony\Component\DependencyInjection\Loader\Configurator;
 use AnzuSystems\CommonBundle\AnzuSystemsCommonBundle;
 use AnzuSystems\CommonBundle\Command\GenerateFixturesCommand;
 use AnzuSystems\CommonBundle\Command\ProcessJobCommand;
+use AnzuSystems\CommonBundle\Command\SyncBaseUsersCommand;
 use AnzuSystems\CommonBundle\DataFixtures\FixturesLoader;
 use AnzuSystems\CommonBundle\Domain\Job\JobFacade;
 use AnzuSystems\CommonBundle\Domain\Job\JobManager;
@@ -26,6 +27,7 @@ use AnzuSystems\CommonBundle\Validator\Constraints\NotEmptyIdValidator;
 use AnzuSystems\CommonBundle\Validator\Constraints\UniqueEntityDtoValidator;
 use AnzuSystems\CommonBundle\Validator\Constraints\UniqueEntityValidator;
 use AnzuSystems\CommonBundle\Validator\Validator;
+use AnzuSystems\SerializerBundle\Serializer;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\Persistence\ManagerRegistry;
 use Symfony\Component\Console\ConsoleEvents;
@@ -92,6 +94,11 @@ return static function (ContainerConfigurator $configurator): void {
         ->arg('$jobRepo', service(JobRepository::class))
         ->arg('$jobProcessor', service(JobProcessor::class))
         ->arg('$entityManager', service(EntityManagerInterface::class))
+    ;
+
+    $services->set(SyncBaseUsersCommand::class)
+        ->arg('$serializer', service(Serializer::class))
+        ->tag('console.command')
     ;
 
     $services->set(ProcessJobCommand::class)

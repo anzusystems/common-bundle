@@ -11,6 +11,7 @@ use AnzuSystems\CommonBundle\ApiFilter\ApiResponseList;
 use AnzuSystems\CommonBundle\ApiFilter\CustomFilterInterface;
 use AnzuSystems\Contracts\Entity\AnzuUser;
 use AnzuSystems\Contracts\Entity\Interfaces\UserTrackingInterface;
+use Closure;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\ORM\Exception\ORMException;
@@ -70,6 +71,7 @@ abstract class AbstractAnzuRepository extends ServiceEntityRepository implements
         ApiParams $apiParams,
         #[Deprecated] ?CustomFilterInterface $customFilter = null,
         array $customFilters = [],
+        ?Closure $mapDataFn = null,
     ): ApiResponseList {
         if ($customFilter instanceof CustomFilterInterface && empty($customFilters)) {
             $customFilters = [$customFilter];
@@ -89,6 +91,13 @@ abstract class AbstractAnzuRepository extends ServiceEntityRepository implements
             $totalCount = $itemsCount + $apiParams->getOffset();
         }
 
+        if ($mapDataFn) {
+            $data = array_map(
+                $mapDataFn(),
+                $data
+            );
+        }
+
         return (new ApiResponseList())
             ->setBigTable($apiParams->isBigTable())
             ->setTotalCount($totalCount)
@@ -106,6 +115,7 @@ abstract class AbstractAnzuRepository extends ServiceEntityRepository implements
         ApiParams $apiParams,
         #[Deprecated] ?CustomFilterInterface $customFilter = null,
         array $customFilters = [],
+        ?Closure $mapDataFn = null,
     ): ApiInfiniteResponseList {
         if ($customFilter instanceof CustomFilterInterface && empty($customFilters)) {
             $customFilters = [$customFilter];
@@ -122,6 +132,10 @@ abstract class AbstractAnzuRepository extends ServiceEntityRepository implements
         $totalCount = $apiParams->getLimit() + $apiParams->getOffset() + 1;
         if (empty($data)) {
             $totalCount = 0;
+        }
+
+        if ($mapDataFn) {
+            $data = array_map($mapDataFn, $data);
         }
 
         return (new ApiInfiniteResponseList())
