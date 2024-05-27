@@ -46,6 +46,7 @@ class UserDto extends BaseUserDto
 
     public static function createFromUser(AnzuUser $user): static
     {
+        /** @psalm-suppress UndefinedMethod */
         return parent::createFromUser($user)
             ->setRoles($user->getRoles())
             ->setPermissions($user->getPermissions())
