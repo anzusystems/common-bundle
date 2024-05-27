@@ -304,14 +304,7 @@ final class Configuration implements ConfigurationInterface
         return (new TreeBuilder('users'))->getRootNode()
             ->addDefaultsIfNotSet()
             ->children()
-                ->scalarNode('sync_data')->isRequired()->end()
-//                ->arrayNode('sync_data')
-//                    ->defaultValue([])
-//                    ->prototype('scalar')->end()
-//                ->end()
-//                ->arrayNode('sync_data')
-//                    ->prototype('scalar')->end()
-//                ->end()
+                ->scalarNode('sync_data')->defaultValue('[]')->end()
             ->end()
         ;
     }

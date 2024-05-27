@@ -34,7 +34,7 @@ abstract class AbstractVoter extends Voter
         $user = $token->getUser();
 
         // If role admin, grant access
-        if ($this->security->isGranted(AnzuUser::ROLE_ADMIN)) {
+        if ($this->security->isGranted(AnzuUser::ROLE_SUPER_ADMIN)) {
             return true;
         }
 
