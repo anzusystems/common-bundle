@@ -184,7 +184,6 @@ final class AnzuSystemsCommonExtension extends Extension implements PrependExten
         $this->loadPermissions($container);
         $this->loadValueResolvers($container);
         $this->loadJobs($container);
-        $this->loadUsers($container);
     }
 
     private function loadPermissions(ContainerBuilder $container): void
@@ -258,6 +257,30 @@ final class AnzuSystemsCommonExtension extends Extension implements PrependExten
         $container
             ->registerForAutoconfiguration(AbstractJobProcessor::class)
             ->addTag(AnzuSystemsCommonBundle::TAG_JOB_PROCESSOR);
+
+        $container->setDefinition(
+            UserSyncManager::class,
+            (new Definition(UserSyncManager::class))
+                ->setMethodCalls([
+                    ['setCurrentAnzuUserProvider', [new Reference(CurrentAnzuUserProvider::class)]],
+                    ['setEntityManager', [new Reference(EntityManagerInterface::class)]],
+                ])
+        );
+
+        $container->setDefinition(
+            UserSyncFacade::class,
+            (new Definition(UserSyncFacade::class))
+                ->setArgument('$entityManager', new Reference(EntityManagerInterface::class))
+                ->setArgument('$userEntityClass', $settings['user_entity_class'])
+                ->setArgument('$validator', new Reference(Validator::class))
+                ->setArgument('$userSyncManager', new Reference(UserSyncManager::class))
+        );
+
+        $container->getDefinition(SyncBaseUsersCommand::class)
+            ->setArgument('$usersData', $settings['user_sync_data'])
+            ->setArgument('$serializer', new Reference(Serializer::class))
+            ->setArgument('$userFacade', new Reference(UserSyncFacade::class))
+        ;
     }
 
     private function loadErrors(ContainerBuilder $container): void
@@ -521,36 +544,6 @@ final class AnzuSystemsCommonExtension extends Extension implements PrependExten
                 ->addTag('request.param_converter', ['priority' => false, 'converter' => EnumParamConverter::class])
             ;
         }
-    }
-
-    private function loadUsers(ContainerBuilder $container): void
-    {
-        $users = $this->processedConfig['users'];
-        $settings = $this->processedConfig['settings'];
-
-        $container->setDefinition(
-            UserSyncManager::class,
-            (new Definition(UserSyncManager::class))
-                ->setMethodCalls([
-                    ['setCurrentAnzuUserProvider', [new Reference(CurrentAnzuUserProvider::class)]],
-                    ['setEntityManager', [new Reference(EntityManagerInterface::class)]],
-                ])
-        );
-
-        $container->setDefinition(
-            UserSyncFacade::class,
-            (new Definition(UserSyncFacade::class))
-                ->setArgument('$entityManager', new Reference(EntityManagerInterface::class))
-                ->setArgument('$userEntityClass', $settings['user_entity_class'])
-                ->setArgument('$validator', new Reference(Validator::class))
-                ->setArgument('$userSyncManager', new Reference(UserSyncManager::class))
-        );
-
-        $container->getDefinition(SyncBaseUsersCommand::class)
-            ->setArgument('$usersData', $users['sync_data'])
-            ->setArgument('$serializer', new Reference(Serializer::class))
-            ->setArgument('$userFacade', new Reference(UserSyncFacade::class))
-        ;
     }
 
     private function loadJobs(ContainerBuilder $container): void

@@ -13,6 +13,7 @@ use AnzuSystems\Contracts\Entity\Embeds\Person;
 use AnzuSystems\SerializerBundle\Attributes\Serialize;
 use AnzuSystems\SerializerBundle\Handler\Handlers\EntityIdHandler;
 use AnzuSystems\SerializerBundle\Metadata\ContainerParam;
+use DateTimeImmutable;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 use Symfony\Component\Validator\Constraints as Assert;
@@ -38,6 +39,14 @@ class UserDto extends BaseUserDto
 
     protected array $resolvedPermissions = [];
 
+    protected DateTimeImmutable $createdAt;
+
+    protected DateTimeImmutable $modifiedAt;
+
+    protected AnzuUser $createdBy;
+
+    protected AnzuUser $modifiedBy;
+
     public function __construct()
     {
         parent::__construct();
@@ -53,6 +62,10 @@ class UserDto extends BaseUserDto
             ->setResolvedPermissions($user->getResolvedPermissions())
             ->setPermissionGroups($user->getPermissionGroups())
             ->setEnabled($user->isEnabled())
+            ->setCreatedAt($user->getCreatedAt())
+            ->setModifiedAt($user->getModifiedAt())
+            ->setCreatedBy($user->getCreatedBy())
+            ->setModifiedBy($user->getModifiedBy())
         ;
     }
 
@@ -128,6 +141,58 @@ class UserDto extends BaseUserDto
     public function setEnabled(bool $enabled): static
     {
         $this->enabled = $enabled;
+
+        return $this;
+    }
+
+    #[Serialize]
+    public function getCreatedAt(): DateTimeImmutable
+    {
+        return $this->createdAt;
+    }
+
+    public function setCreatedAt(DateTimeImmutable $createdAt): static
+    {
+        $this->createdAt = $createdAt;
+
+        return $this;
+    }
+
+    #[Serialize]
+    public function getModifiedAt(): DateTimeImmutable
+    {
+        return $this->modifiedAt;
+    }
+
+    public function setModifiedAt(DateTimeImmutable $modifiedAt): static
+    {
+        $this->modifiedAt = $modifiedAt;
+
+        return $this;
+    }
+
+    #[Serialize(handler: EntityIdHandler::class, type: new ContainerParam(AnzuUser::class))]
+    public function getCreatedBy(): AnzuUser
+    {
+        return $this->createdBy;
+    }
+
+    public function setCreatedBy(AnzuUser $createdBy): self
+    {
+        $this->createdBy = $createdBy;
+
+        return $this;
+    }
+
+    #[Serialize(handler: EntityIdHandler::class, type: new ContainerParam(AnzuUser::class))]
+    public function getModifiedBy(): AnzuUser
+    {
+        return $this->modifiedBy;
+    }
+
+    public function setModifiedBy(AnzuUser $modifiedBy): self
+    {
+        $this->modifiedBy = $modifiedBy;
 
         return $this;
     }
