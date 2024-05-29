@@ -34,6 +34,9 @@ final class ExceptionListener
     public function __invoke(ExceptionEvent $event): void
     {
         $exception = $event->getThrowable();
+
+        dump($exception);
+
         $handler = $this->getHandler($exception);
 
         if ($this->isRequestMatchForAllowedHandling($event->getRequest())) {
