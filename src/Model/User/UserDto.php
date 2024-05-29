@@ -31,9 +31,6 @@ class UserDto extends BaseUserDto
     #[Serialize(handler: EntityIdHandler::class, type: new ContainerParam(AnzuPermissionGroup::class))]
     protected Collection $permissionGroups;
 
-    #[Serialize(strategy: Serialize::KEYS_VALUES)]
-    protected array $data = [];
-
     #[Serialize]
     protected bool $enabled = true;
 
@@ -67,18 +64,6 @@ class UserDto extends BaseUserDto
             ->setCreatedBy($user->getCreatedBy())
             ->setModifiedBy($user->getModifiedBy())
         ;
-    }
-
-    public function getData(): array
-    {
-        return $this->data;
-    }
-
-    public function setData(array $data): static
-    {
-        $this->data = $data;
-
-        return $this;
     }
 
     public function getRoles(): array
