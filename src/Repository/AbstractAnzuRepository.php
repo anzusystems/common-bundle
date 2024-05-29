@@ -92,10 +92,7 @@ abstract class AbstractAnzuRepository extends ServiceEntityRepository implements
         }
 
         if ($mapDataFn) {
-            $data = array_map(
-                $mapDataFn(),
-                $data
-            );
+            $data = array_map($mapDataFn, $data);
         }
 
         return (new ApiResponseList())
