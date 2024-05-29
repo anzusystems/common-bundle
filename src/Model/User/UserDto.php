@@ -13,123 +13,57 @@ use AnzuSystems\Contracts\Entity\Embeds\Person;
 use AnzuSystems\SerializerBundle\Attributes\Serialize;
 use AnzuSystems\SerializerBundle\Handler\Handlers\EntityIdHandler;
 use AnzuSystems\SerializerBundle\Metadata\ContainerParam;
+use DateTimeImmutable;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 use Symfony\Component\Validator\Constraints as Assert;
 
 #[UniqueEntityDto(entity: AnzuUser::class, fields: ['id'])]
 #[UniqueEntityDto(entity: AnzuUser::class, fields: ['email'])]
-final class UserDto
+class UserDto extends BaseUserDto
 {
     #[Serialize]
-    private ?int $id = null;
-
-    #[Assert\Email(message: ValidationException::ERROR_FIELD_INVALID)]
-    #[Assert\Length(max: 256, maxMessage: ValidationException::ERROR_FIELD_LENGTH_MAX)]
-    #[Assert\NotBlank(message: ValidationException::ERROR_FIELD_EMPTY)]
-    #[Serialize]
-    private string $email = '';
-
-    #[Assert\Valid]
-    #[Serialize]
-    private Person $person;
-
-    #[Assert\Valid]
-    #[Serialize]
-    private Avatar $avatar;
-
-    #[Serialize]
-    private bool $enabled = true;
-
-    #[Serialize]
-    private array $roles = [AnzuUser::ROLE_USER];
+    protected array $roles = [AnzuUser::ROLE_USER];
 
     #[Serialize(strategy: Serialize::KEYS_VALUES)]
-    private array $permissions = [];
+    protected array $permissions = [];
 
     #[Serialize(handler: EntityIdHandler::class, type: new ContainerParam(AnzuPermissionGroup::class))]
-    private Collection $permissionGroups;
+    protected Collection $permissionGroups;
 
-    #[Serialize(strategy: Serialize::KEYS_VALUES)]
-    private array $data = [];
+    #[Serialize]
+    protected bool $enabled = true;
+
+    protected array $resolvedPermissions = [];
+
+    protected DateTimeImmutable $createdAt;
+
+    protected DateTimeImmutable $modifiedAt;
+
+    protected AnzuUser $createdBy;
+
+    protected AnzuUser $modifiedBy;
 
     public function __construct()
     {
+        parent::__construct();
         $this->setPermissionGroups(new ArrayCollection());
-        $this->setPerson(new Person());
-        $this->setAvatar(new Avatar());
     }
 
-    public function getId(): ?int
+    public static function createFromUser(AnzuUser $user): static
     {
-        return $this->id;
-    }
-
-    public function setId(?int $id): self
-    {
-        $this->id = $id;
-
-        return $this;
-    }
-
-    public function getEmail(): string
-    {
-        return $this->email;
-    }
-
-    public function setEmail(string $email): self
-    {
-        $this->email = $email;
-
-        return $this;
-    }
-
-    public function getPerson(): Person
-    {
-        return $this->person;
-    }
-
-    public function setPerson(Person $person): self
-    {
-        $this->person = $person;
-
-        return $this;
-    }
-
-    public function getAvatar(): Avatar
-    {
-        return $this->avatar;
-    }
-
-    public function setAvatar(Avatar $avatar): self
-    {
-        $this->avatar = $avatar;
-
-        return $this;
-    }
-
-    public function getData(): array
-    {
-        return $this->data;
-    }
-
-    public function setData(array $data): self
-    {
-        $this->data = $data;
-
-        return $this;
-    }
-
-    public function isEnabled(): bool
-    {
-        return $this->enabled;
-    }
-
-    public function setEnabled(bool $enabled): self
-    {
-        $this->enabled = $enabled;
-
-        return $this;
+        /** @psalm-suppress UndefinedMethod */
+        return parent::createFromUser($user)
+            ->setRoles($user->getRoles())
+            ->setPermissions($user->getPermissions())
+            ->setResolvedPermissions($user->getResolvedPermissions())
+            ->setPermissionGroups($user->getPermissionGroups())
+            ->setEnabled($user->isEnabled())
+            ->setCreatedAt($user->getCreatedAt())
+            ->setModifiedAt($user->getModifiedAt())
+            ->setCreatedBy($user->getCreatedBy())
+            ->setModifiedBy($user->getModifiedBy())
+        ;
     }
 
     public function getRoles(): array
@@ -137,7 +71,7 @@ final class UserDto
         return $this->roles;
     }
 
-    public function setRoles(array $roles): self
+    public function setRoles(array $roles): static
     {
         $this->roles = $roles;
 
@@ -149,9 +83,22 @@ final class UserDto
         return $this->permissions;
     }
 
-    public function setPermissions(array $permissions): self
+    public function setPermissions(array $permissions): static
     {
         $this->permissions = $permissions;
+
+        return $this;
+    }
+
+    #[Serialize(strategy: Serialize::KEYS_VALUES)]
+    public function getResolvedPermissions(): array
+    {
+        return $this->resolvedPermissions;
+    }
+
+    public function setResolvedPermissions(array $resolvedPermissions): static
+    {
+        $this->resolvedPermissions = $resolvedPermissions;
 
         return $this;
     }
@@ -164,9 +111,73 @@ final class UserDto
         return $this->permissionGroups;
     }
 
-    public function setPermissionGroups(Collection $permissionGroups): self
+    public function setPermissionGroups(Collection $permissionGroups): static
     {
         $this->permissionGroups = $permissionGroups;
+
+        return $this;
+    }
+
+    public function isEnabled(): bool
+    {
+        return $this->enabled;
+    }
+
+    public function setEnabled(bool $enabled): static
+    {
+        $this->enabled = $enabled;
+
+        return $this;
+    }
+
+    #[Serialize]
+    public function getCreatedAt(): DateTimeImmutable
+    {
+        return $this->createdAt;
+    }
+
+    public function setCreatedAt(DateTimeImmutable $createdAt): static
+    {
+        $this->createdAt = $createdAt;
+
+        return $this;
+    }
+
+    #[Serialize]
+    public function getModifiedAt(): DateTimeImmutable
+    {
+        return $this->modifiedAt;
+    }
+
+    public function setModifiedAt(DateTimeImmutable $modifiedAt): static
+    {
+        $this->modifiedAt = $modifiedAt;
+
+        return $this;
+    }
+
+    #[Serialize(handler: EntityIdHandler::class, type: new ContainerParam(AnzuUser::class))]
+    public function getCreatedBy(): AnzuUser
+    {
+        return $this->createdBy;
+    }
+
+    public function setCreatedBy(AnzuUser $createdBy): self
+    {
+        $this->createdBy = $createdBy;
+
+        return $this;
+    }
+
+    #[Serialize(handler: EntityIdHandler::class, type: new ContainerParam(AnzuUser::class))]
+    public function getModifiedBy(): AnzuUser
+    {
+        return $this->modifiedBy;
+    }
+
+    public function setModifiedBy(AnzuUser $modifiedBy): self
+    {
+        $this->modifiedBy = $modifiedBy;
 
         return $this;
     }

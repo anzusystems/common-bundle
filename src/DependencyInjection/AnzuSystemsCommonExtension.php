@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace AnzuSystems\CommonBundle\DependencyInjection;
 
 use AnzuSystems\CommonBundle\AnzuSystemsCommonBundle;
+use AnzuSystems\CommonBundle\Command\SyncBaseUsersCommand;
 use AnzuSystems\CommonBundle\Controller\DebugController;
 use AnzuSystems\CommonBundle\Controller\HealthCheckController;
 use AnzuSystems\CommonBundle\Controller\LogController;
@@ -19,6 +20,8 @@ use AnzuSystems\CommonBundle\Domain\Job\Processor\AbstractJobProcessor;
 use AnzuSystems\CommonBundle\Domain\PermissionGroup\PermissionGroupFacade;
 use AnzuSystems\CommonBundle\Domain\PermissionGroup\PermissionGroupManager;
 use AnzuSystems\CommonBundle\Domain\User\CurrentAnzuUserProvider;
+use AnzuSystems\CommonBundle\Domain\User\UserSyncFacade;
+use AnzuSystems\CommonBundle\Domain\User\UserSyncManager;
 use AnzuSystems\CommonBundle\Event\Listener\ConsoleExceptionListener;
 use AnzuSystems\CommonBundle\Event\Listener\ContextIdOnResponseListener;
 use AnzuSystems\CommonBundle\Event\Listener\ExceptionListener;
@@ -254,6 +257,30 @@ final class AnzuSystemsCommonExtension extends Extension implements PrependExten
         $container
             ->registerForAutoconfiguration(AbstractJobProcessor::class)
             ->addTag(AnzuSystemsCommonBundle::TAG_JOB_PROCESSOR);
+
+        $container->setDefinition(
+            UserSyncManager::class,
+            (new Definition(UserSyncManager::class))
+                ->setMethodCalls([
+                    ['setCurrentAnzuUserProvider', [new Reference(CurrentAnzuUserProvider::class)]],
+                    ['setEntityManager', [new Reference(EntityManagerInterface::class)]],
+                ])
+        );
+
+        $container->setDefinition(
+            UserSyncFacade::class,
+            (new Definition(UserSyncFacade::class))
+                ->setArgument('$entityManager', new Reference(EntityManagerInterface::class))
+                ->setArgument('$userEntityClass', $settings['user_entity_class'])
+                ->setArgument('$validator', new Reference(Validator::class))
+                ->setArgument('$userSyncManager', new Reference(UserSyncManager::class))
+        );
+
+        $container->getDefinition(SyncBaseUsersCommand::class)
+            ->setArgument('$usersData', $settings['user_sync_data'])
+            ->setArgument('$serializer', new Reference(Serializer::class))
+            ->setArgument('$userFacade', new Reference(UserSyncFacade::class))
+        ;
     }
 
     private function loadErrors(ContainerBuilder $container): void

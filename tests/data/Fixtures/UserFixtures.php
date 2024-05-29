@@ -33,18 +33,35 @@ final class UserFixtures extends AbstractFixtures
      */
     private function getData(): Generator
     {
+        $consoleUser = (new User())
+            ->setEmail('console@anzusystems.sk')
+            ->setId(AnzuApp::getUserIdConsole())
+            ->setCreatedAt(AnzuApp::getAppDate())
+            ->setModifiedAt(AnzuApp::getAppDate())
+        ;
+        $consoleUser
+            ->setCreatedBy($consoleUser)
+            ->setModifiedBy($consoleUser)
+        ;
+
+        yield $consoleUser;
+
+        yield (new User())
+            ->setEmail('anonymous@anzusystems.sk')
+            ->setId(AnzuApp::getUserIdAnonymous())
+            ->setCreatedAt(AnzuApp::getAppDate())
+            ->setModifiedAt(AnzuApp::getAppDate())
+            ->setCreatedBy($consoleUser)
+            ->setModifiedBy($consoleUser)
+        ;
         yield (new User())
             ->setId(AnzuApp::getUserIdAdmin())
             ->setEmail('admin@anzusystems.sk')
             ->setRoles([User::ROLE_ADMIN])
-        ;
-        yield (new User())
-            ->setEmail('console@anzusystems.sk')
-            ->setId(AnzuApp::getUserIdConsole())
-        ;
-        yield (new User())
-            ->setEmail('anonymous@anzusystems.sk')
-            ->setId(AnzuApp::getUserIdAnonymous())
+            ->setCreatedAt(AnzuApp::getAppDate())
+            ->setModifiedAt(AnzuApp::getAppDate())
+            ->setCreatedBy($consoleUser)
+            ->setModifiedBy($consoleUser)
         ;
     }
 }
