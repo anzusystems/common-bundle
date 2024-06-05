@@ -9,22 +9,22 @@ use AnzuSystems\SerializerBundle\Attributes\Serialize;
 /**
  * @template T
  */
-final class ApiInfiniteResponseList
+class ApiInfiniteResponseList
 {
     #[Serialize]
-    private bool $hasNextPage = false;
+    protected bool $hasNextPage = false;
 
     /**
      * @var array<int|string, T>
      */
     #[Serialize]
-    private array $data = [];
+    protected array $data = [];
 
     /**
      * @deprecated
      */
     #[Serialize]
-    private int $totalCount = 0;
+    protected int $totalCount = 0;
 
     public function isHasNextPage(): bool
     {
