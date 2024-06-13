@@ -18,6 +18,8 @@
 /public/bundles/*
 composer.lock
 
+src/Command/TestCommand.php
+
 # PHP Coding Standards
 .php_cs
 .php_cs.cache

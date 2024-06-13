@@ -14,7 +14,7 @@ use Symfony\Component\Lock\Store\RedisStore;
 
 final class ResourceLocker
 {
-    public const REDIS_LOCK_PREFIX = 'res_lock_';
+    public const string REDIS_LOCK_PREFIX = 'res_lock_';
 
     /**
      * @var array<string, LockInterface>

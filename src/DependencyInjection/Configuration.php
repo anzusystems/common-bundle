@@ -4,6 +4,20 @@ declare(strict_types=1);
 
 namespace AnzuSystems\CommonBundle\DependencyInjection;
 
+use AnzuSystems\CommonBundle\AnzuTap\Transformer\Mark\LinkNodeTransformer;
+use AnzuSystems\CommonBundle\AnzuTap\Transformer\Mark\MarkNodeTransformer;
+use AnzuSystems\CommonBundle\AnzuTap\Transformer\Node\AnchorTransformer;
+use AnzuSystems\CommonBundle\AnzuTap\Transformer\Node\BulletListTransformer;
+use AnzuSystems\CommonBundle\AnzuTap\Transformer\Node\HeadingTransformer;
+use AnzuSystems\CommonBundle\AnzuTap\Transformer\Node\HorizontalRuleTransformer;
+use AnzuSystems\CommonBundle\AnzuTap\Transformer\Node\LineBreakTransformer;
+use AnzuSystems\CommonBundle\AnzuTap\Transformer\Node\ListItemTransformer;
+use AnzuSystems\CommonBundle\AnzuTap\Transformer\Node\OrderedListTransformer;
+use AnzuSystems\CommonBundle\AnzuTap\Transformer\Node\ParagraphNodeTransformer;
+use AnzuSystems\CommonBundle\AnzuTap\Transformer\Node\TableCellTransformer;
+use AnzuSystems\CommonBundle\AnzuTap\Transformer\Node\TableRowTransformer;
+use AnzuSystems\CommonBundle\AnzuTap\Transformer\Node\TableTransformer;
+use AnzuSystems\CommonBundle\AnzuTap\Transformer\Node\TextNodeTransformer;
 use AnzuSystems\CommonBundle\Exception\Handler\AccessDeniedExceptionHandler;
 use AnzuSystems\CommonBundle\Exception\Handler\AppReadOnlyModeExceptionHandler;
 use AnzuSystems\CommonBundle\Exception\Handler\DefaultExceptionHandler;
@@ -31,6 +45,14 @@ use Symfony\Component\Messenger\Command\ConsumeMessagesCommand;
 
 final class Configuration implements ConfigurationInterface
 {
+    public const string EDITOR_NODE_TRANSFORMER_PROVIDER_CLASS = 'node_transformer_provider_class';
+    public const string EDITOR_NODE_DEFAULT_TRANSFORMER_CLASS = 'node_default_transformer';
+    public const string EDITOR_MARK_TRANSFORMER_PROVIDER_CLASS = 'mark_transformer_provider_class';
+    public const string EDITOR_ALLOWED_NODE_TRANSFORMERS = 'allowed_node_transformers';
+    public const string EDITOR_ALLOWED_MARK_TRANSFORMERS = 'allowed_mark_transformers';
+    public const string EDITOR_SKIP_NODES = 'skip_nodes';
+    public const string EDITOR_REMOVE_NODES = 'remove_nodes';
+
     private const EXCEPTION_HANDLERS = [
         NotFoundExceptionHandler::class,
         ValidationExceptionHandler::class,
@@ -52,6 +74,32 @@ final class Configuration implements ConfigurationInterface
         AssetsInstallCommand::class,
     ];
 
+    private const array DEFAULT_ALLOWED_NODE_TRANSFORMERS = [
+        TextNodeTransformer::class,
+        TableTransformer::class,
+        TableRowTransformer::class,
+        ParagraphNodeTransformer::class,
+        TableCellTransformer::class,
+        OrderedListTransformer::class,
+        BulletListTransformer::class,
+        ListItemTransformer::class,
+        LineBreakTransformer::class,
+        // ImageTransformer::class,
+        HorizontalRuleTransformer::class,
+        HeadingTransformer::class,
+        AnchorTransformer::class,
+    ];
+
+    private const array DEFAULT_ALLOWED_MARK_TRANSFORMERS = [
+        LinkNodeTransformer::class,
+        MarkNodeTransformer::class,
+    ];
+
+    private const array DEFAULT_SKIP_NODES = [
+        'span',
+        'style',
+    ];
+
     public function getConfigTreeBuilder(): TreeBuilder
     {
         $treeBuilder = new TreeBuilder('anzu_systems_common');
@@ -64,6 +112,7 @@ final class Configuration implements ConfigurationInterface
                 ->append($this->addHealthCheckSection())
                 ->append($this->addPermissionsSection())
                 ->append($this->addJobsSection())
+                ->append($this->addEditorSection())
             ->end()
         ;
 
@@ -297,5 +346,45 @@ final class Configuration implements ConfigurationInterface
                 ->integerNode('no_job_idle_time')->defaultValue(10)->end()
             ->end()
         ;
+    }
+
+    private function addEditorSection(): NodeDefinition
+    {
+        return (new TreeBuilder('editors'))->getRootNode()
+            ->useAttributeAsKey('name')
+            ->arrayPrototype()
+                ->performNoDeepMerging()
+                ->children()
+//                    ->scalarNode('adapter')->isRequired()->end()
+                    ->scalarNode('node_transformer_provider_class')
+                        // todo instance of validator
+                        ->defaultValue('AnzuSystems\\CommonBundle\\AnzuTap\\TransformerProvider\\AnzuTapNodeTransformerProvider')
+                    ->end()
+                    ->scalarNode('node_default_transformer')
+                        // todo instance of validator
+                        ->defaultValue('AnzuSystems\\CommonBundle\\AnzuTap\\Transformer\\Node\\XRemoveTransformer')
+                        ->end()
+                    ->scalarNode('mark_transformer_provider_class')
+                        // todo instance of validator
+                        ->defaultValue('AnzuSystems\\CommonBundle\\AnzuTap\\TransformerProvider\\AnzuTapMarkNodeTransformerProvider')
+                    ->end()
+                    ->arrayNode('allowed_node_transformers')
+                        ->defaultValue(self::DEFAULT_ALLOWED_NODE_TRANSFORMERS)
+                        ->prototype('scalar')->end()
+                    ->end()
+                    ->arrayNode('allowed_mark_transformers')
+                        ->defaultValue(self::DEFAULT_ALLOWED_MARK_TRANSFORMERS)
+                        ->prototype('scalar')->end()
+                    ->end()
+                    ->arrayNode(self::EDITOR_REMOVE_NODES)
+                        ->defaultValue([])
+                        ->prototype('scalar')->end()
+                    ->end()
+                    ->arrayNode(self::EDITOR_SKIP_NODES)
+                        ->defaultValue(self::DEFAULT_SKIP_NODES)
+                        ->prototype('scalar')->end()
+                    ->end()
+                ->end()
+            ->end();
     }
 }

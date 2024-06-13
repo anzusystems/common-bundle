@@ -11,11 +11,12 @@
     }
   ],
   "require": {
-    "php": ">=8.2",
+    "php": ">=8.3",
     "ext-json": "*",
     "ext-mongodb": "*",
     "ext-pcntl": "*",
     "ext-redis": "*",
+    "ext-dom": "*",
     "ext-zend-opcache": "*",
     "anzusystems/contracts": "^4.0",
     "anzusystems/serializer-bundle": "^4.0",
@@ -42,7 +43,8 @@
     "symfony/security-bundle": "^6.0|^7.0",
     "symfony/uid": "^6.0|^7.0",
     "symfony/validator": "^6.0|^7.0",
-    "symfony/yaml": "^6.0|^7.0"
+    "symfony/yaml": "^6.0|^7.0",
+    "ext-libxml": "*"
   },
   "require-dev": {
     "doctrine/doctrine-bundle": "^2.4",
