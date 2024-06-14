@@ -11,7 +11,6 @@ use DOMElement;
 
 final class OrderedListTransformer extends AbstractNodeTransformer
 {
-    private const string NODE_NAME = 'orderedList';
     public static function getSupportedNodeNames(): array
     {
         return [
@@ -28,7 +27,7 @@ final class OrderedListTransformer extends AbstractNodeTransformer
     public function transform(DOMElement $element, EmbedContainer $embedContainer, AnzuTapNodeInterface $parent): AnzuTapNodeInterface
     {
         return new AnzuTapNode(
-            type: self::NODE_NAME,
+            type: AnzuTapNodeInterface::ORDERED_LIST,
             attrs:  [
                 'start' => 1,
             ]

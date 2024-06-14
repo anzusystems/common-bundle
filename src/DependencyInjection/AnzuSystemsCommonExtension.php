@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace AnzuSystems\CommonBundle\DependencyInjection;
 
 use AnzuSystems\CommonBundle\AnzuSystemsCommonBundle;
+use AnzuSystems\CommonBundle\AnzuTap\AnzuTapBodyPreprocessor;
 use AnzuSystems\CommonBundle\AnzuTap\Transformer\Mark\AnzuMarkTransformerInterface;
 use AnzuSystems\CommonBundle\AnzuTap\Transformer\Mark\LinkNodeTransformer;
 use AnzuSystems\CommonBundle\AnzuTap\Transformer\Mark\MarkNodeTransformer;
@@ -590,6 +591,10 @@ final class AnzuSystemsCommonExtension extends Extension implements PrependExten
         $editors = $this->processedConfig['editors'];
 
         // MarkTransformerProviderInterface
+        $definition = new Definition(AnzuTapBodyPreprocessor::class);
+        $container->setDefinition(AnzuTapBodyPreprocessor::class, $definition);
+
+        // MarkTransformerProviderInterface
         $definition = new Definition(AnzuTapMarkNodeTransformerProvider::class);
         $definition->addTag(AnzuSystemsCommonBundle::TAG_EDITOR_MARK_TRANSFORMER_PROVIDER);
         $container->setDefinition(AnzuTapMarkNodeTransformerProvider::class, $definition);
@@ -666,25 +671,14 @@ final class AnzuSystemsCommonExtension extends Extension implements PrependExten
         $container->setDefinition(TextNodeTransformer::class, $definition);
 
         foreach ($editors as $editorName => $editorConfig) {
-//            $definitionName = 'anzu_systems_common.editor.'.$editorName;
             $alias = sprintf('%s $%sEditor', AnzuTapEditor::class, $editorName);
-
             $definition = new Definition(AnzuTapEditor::class);
             $definition->setArgument('$transformerProvider', new Reference($editorConfig['node_transformer_provider_class']));
             $definition->setArgument('$markTransformerProvider', new Reference($editorConfig['mark_transformer_provider_class']));
             $definition->setArgument('$defaultTransformer', new Reference($editorConfig['node_default_transformer']));
-//            $definition->setArgument('$resolvedNodeTransformers', []);
+            $definition->setArgument('$preprocessor', new Reference(AnzuTapBodyPreprocessor::class));
             $container->setDefinition($alias, $definition);
-//            $container->setDefinition(sprintf('%s $%sEditor', AnzuTapEditor::class, $editorName), $definition);
-
-//            foreach ($editorConfig['allowed_node_transformers'] as $nodeTransformer) {
-//                $definition = new Definition();
-//            }
         }
-
-//        foreach (array_keys($container->findTaggedServiceIds(AnzuSystemsCommonBundle::TAG_EDITOR_NODE_TRANSFORMER)) as $service) {
-//            dump($service);
-//        }
 
         $container
             ->registerForAutoconfiguration(AnzuNodeTransformerInterface::class)

@@ -6,8 +6,6 @@ namespace AnzuSystems\CommonBundle\Model\AnzuTap\Node;
 
 class AnzuTapTableCellNode extends AnzuTapNode
 {
-    public const string NODE_NAME = 'tableCell';
-
     public function __construct(?array $attrs = null)
     {
         parent::__construct(
@@ -29,6 +27,6 @@ class AnzuTapTableCellNode extends AnzuTapNode
 
     protected function getNodeName(): string
     {
-        return self::NODE_NAME;
+        return self::TABLE_CELL;
     }
 }

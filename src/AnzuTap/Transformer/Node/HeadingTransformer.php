@@ -11,8 +11,6 @@ use DOMElement;
 
 final class HeadingTransformer extends AbstractNodeTransformer
 {
-    public const string NODE_NAME = 'heading';
-
     public static function getSupportedNodeNames(): array
     {
         return [
@@ -34,7 +32,7 @@ final class HeadingTransformer extends AbstractNodeTransformer
         }
 
         return new AnzuTapNode(
-            type: self::NODE_NAME,
+            type: AnzuTapNodeInterface::HEADING,
             attrs: [
                 'level' => $level,
             ]

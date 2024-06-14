@@ -11,7 +11,6 @@ use DOMElement;
 
 final class LineBreakTransformer extends AbstractNodeTransformer
 {
-    private const string NODE_NAME = 'hardBreak';
     public static function getSupportedNodeNames(): array
     {
         return [
@@ -22,7 +21,7 @@ final class LineBreakTransformer extends AbstractNodeTransformer
     public function transform(DOMElement $element, EmbedContainer $embedContainer, AnzuTapNodeInterface $parent): AnzuTapNodeInterface
     {
         return new AnzuTapNode(
-            type: self::NODE_NAME,
+            type: AnzuTapNodeInterface::HARD_BREAK,
         );
     }
 }

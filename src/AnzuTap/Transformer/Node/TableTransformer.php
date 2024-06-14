@@ -14,8 +14,6 @@ final class TableTransformer extends AbstractNodeTransformer
 {
     use AttributesTrait;
 
-    public const string NODE_NAME = 'table';
-
     public function removeWhenEmpty(): bool
     {
         return true;

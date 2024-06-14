@@ -11,8 +11,6 @@ use DOMElement;
 
 final class TableRowTransformer extends AbstractNodeTransformer
 {
-    public const string NODE_NAME = 'tableRow';
-
     public function removeWhenEmpty(): bool
     {
         return true;

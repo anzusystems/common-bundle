@@ -22,12 +22,4 @@ trait TextNodeTrait
 
         return preg_replace('/(\xc2\xa0\s)+/', "\xc2\xa0", $text);
     }
-
-//    protected function getTextNode(string $text): array
-//    {
-//        return [
-//            'type' => 'text',
-//            'text' => $text,
-//        ];
-//    }
 }

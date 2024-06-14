@@ -11,7 +11,6 @@ use DOMElement;
 
 final class BulletListTransformer extends AbstractNodeTransformer
 {
-    private const string NODE_NAME = 'bulletList';
     public static function getSupportedNodeNames(): array
     {
         return [
@@ -27,7 +26,7 @@ final class BulletListTransformer extends AbstractNodeTransformer
     public function transform(DOMElement $element, EmbedContainer $embedContainer, AnzuTapNodeInterface $parent): AnzuTapNodeInterface
     {
         return new AnzuTapNode(
-            type: self::NODE_NAME,
+            type: AnzuTapNodeInterface::BULLET_LIST,
         );
     }
 }

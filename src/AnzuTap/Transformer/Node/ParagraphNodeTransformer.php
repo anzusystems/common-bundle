@@ -11,8 +11,6 @@ use DOMElement;
 
 class ParagraphNodeTransformer extends AbstractNodeTransformer
 {
-    public const string NODE_NAME = 'paragraph';
-
     public static function getSupportedNodeNames(): array
     {
         return [

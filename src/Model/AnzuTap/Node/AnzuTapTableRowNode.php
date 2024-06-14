@@ -6,12 +6,10 @@ namespace AnzuSystems\CommonBundle\Model\AnzuTap\Node;
 
 final class AnzuTapTableRowNode extends AnzuTapNode
 {
-    public const string NODE_NAME = 'tableRow';
-
     public function __construct(?array $attrs = null)
     {
         parent::__construct(
-            type: self::NODE_NAME,
+            type: self::TABLE_ROW,
             attrs: $attrs
         );
     }

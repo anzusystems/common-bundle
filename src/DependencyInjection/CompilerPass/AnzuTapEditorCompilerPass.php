@@ -30,8 +30,6 @@ final class AnzuTapEditorCompilerPass implements CompilerPassInterface
     {
         $editors = $this->extension->getProcessedConfig()['editors'] ?? [];
 
-        dump('Processing compiler pass');
-
         foreach ($editors as $editorName => $editorConfig) {
             $definitionName = sprintf('%s $%sEditor', AnzuTapEditor::class, $editorName);
 

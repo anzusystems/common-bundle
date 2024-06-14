@@ -11,7 +11,6 @@ use DOMElement;
 
 final class HorizontalRuleTransformer extends AbstractNodeTransformer
 {
-    private const string NODE_NAME = 'horizontalRule';
     public static function getSupportedNodeNames(): array
     {
         return [
@@ -22,7 +21,7 @@ final class HorizontalRuleTransformer extends AbstractNodeTransformer
     public function transform(DOMElement $element, EmbedContainer $embedContainer, AnzuTapNodeInterface $parent): AnzuTapNodeInterface
     {
         return new AnzuTapNode(
-            type: self::NODE_NAME,
+            type: AnzuTapNodeInterface::HORIZONTAL_RULE,
         );
     }
 }

@@ -6,12 +6,11 @@ namespace AnzuSystems\CommonBundle\Model\AnzuTap\Node;
 
 final class AnzuTapTableNode extends AnzuTapNode
 {
-    public const string NODE_NAME = 'table';
-
+    public const string CAPTION_ATTR = 'caption';
     public function __construct(?array $attrs = null)
     {
         parent::__construct(
-            type: self::NODE_NAME,
+            type: self::TABLE,
             attrs: $attrs
         );
     }
@@ -19,11 +18,11 @@ final class AnzuTapTableNode extends AnzuTapNode
     public function addContent(AnzuTapNodeInterface $node): AnzuTapNodeInterface
     {
         if ($node instanceof AnzuTapParagraphNode) {
-            if (isset($this->attrs['caption']) && false === empty($this->attrs['caption'])) {
+            if (isset($this->attrs[self::CAPTION_ATTR]) && false === empty($this->attrs[self::CAPTION_ATTR])) {
                 return $this;
             }
 
-            $this->attrs['caption'] = (string) $node->getNodeText();
+            $this->attrs[self::CAPTION_ATTR] = (string) $node->getNodeText();
 
             return $this;
         }

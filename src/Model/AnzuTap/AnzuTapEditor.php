@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace AnzuSystems\CommonBundle\Model\AnzuTap;
 
+use AnzuSystems\CommonBundle\AnzuTap\AnzuTapBodyPreprocessor;
 use AnzuSystems\CommonBundle\AnzuTap\Transformer\Mark\AnzuMarkTransformerInterface;
 use AnzuSystems\CommonBundle\AnzuTap\Transformer\Node\AnzuNodeTransformerInterface;
 use AnzuSystems\CommonBundle\AnzuTap\TransformerProvider\MarkTransformerProviderInterface;
@@ -30,14 +31,12 @@ final class AnzuTapEditor
         private ServiceLocator $resolvedMarkTransformers,
         private ServiceLocator $resolvedNodeTransformers,
         private readonly AnzuNodeTransformerInterface $defaultTransformer,
+        private readonly AnzuTapBodyPreprocessor $preprocessor,
     ) {
     }
 
     public function transformNode(DOMNode $node): AnzuTapDocNode
     {
-        $this->storedMarks = [];
-        $this->embedContainer = new EmbedContainer();
-
         $this->clear();
 
         $body = new AnzuTapDocNode();
@@ -49,9 +48,9 @@ final class AnzuTapEditor
 
     public function transform(string $data): AnzuTapBody
     {
+        $data = $this->preprocessor->prepareBody($data);
         libxml_use_internal_errors(true);
         libxml_clear_errors();
-        // clear
         $this->clear();
 
         $document = new DOMDocument();

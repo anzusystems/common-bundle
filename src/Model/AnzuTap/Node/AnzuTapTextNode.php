@@ -6,14 +6,12 @@ namespace AnzuSystems\CommonBundle\Model\AnzuTap\Node;
 
 final class AnzuTapTextNode extends AbstractAnzuTapNode
 {
-    public const string NODE_NAME = 'text';
-
     public function __construct(
         private readonly string $text,
         ?array $marks = null,
     ) {
         parent::__construct(
-            type: self::NODE_NAME,
+            type: self::TEXT,
             marks: $marks
         );
     }
