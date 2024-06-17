@@ -8,18 +8,17 @@ final class AnzuTapParagraphNode extends AnzuTapNode
 {
     public const string NODE_NAME = 'paragraph';
 
+    // todo paragraph allowed content types config
+    public const array PARAGRAPH_ALLOWED_CONTENT_TYPES = ['text', 'hardBreak', 'embedExternalImageInline', 'embedImageInline', 'button'];
+
     public function __construct(
         ?array $attrs = null,
-    )
-    {
+    ) {
         parent::__construct(
             type: self::NODE_NAME,
             attrs: $attrs,
         );
     }
-
-    // todo paragraph allowed content types config
-    public const array PARAGRAPH_ALLOWED_CONTENT_TYPES = ['text', 'hardBreak', 'embedExternalImageInline', 'embedImageInline', 'button'];
 
 
     public function addContent(AnzuTapNodeInterface $node): AnzuTapNodeInterface

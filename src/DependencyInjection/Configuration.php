@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace AnzuSystems\CommonBundle\DependencyInjection;
 
+use AnzuSystems\CommonBundle\AnzuTap\AnzuTapBodyPreprocessor;
 use AnzuSystems\CommonBundle\AnzuTap\Transformer\Mark\LinkNodeTransformer;
 use AnzuSystems\CommonBundle\AnzuTap\Transformer\Mark\MarkNodeTransformer;
 use AnzuSystems\CommonBundle\AnzuTap\Transformer\Node\AnchorTransformer;
@@ -18,6 +19,9 @@ use AnzuSystems\CommonBundle\AnzuTap\Transformer\Node\TableCellTransformer;
 use AnzuSystems\CommonBundle\AnzuTap\Transformer\Node\TableRowTransformer;
 use AnzuSystems\CommonBundle\AnzuTap\Transformer\Node\TableTransformer;
 use AnzuSystems\CommonBundle\AnzuTap\Transformer\Node\TextNodeTransformer;
+use AnzuSystems\CommonBundle\AnzuTap\Transformer\Node\XRemoveTransformer;
+use AnzuSystems\CommonBundle\AnzuTap\TransformerProvider\AnzuTapMarkNodeTransformerProvider;
+use AnzuSystems\CommonBundle\AnzuTap\TransformerProvider\AnzuTapNodeTransformerProvider;
 use AnzuSystems\CommonBundle\Exception\Handler\AccessDeniedExceptionHandler;
 use AnzuSystems\CommonBundle\Exception\Handler\AppReadOnlyModeExceptionHandler;
 use AnzuSystems\CommonBundle\Exception\Handler\DefaultExceptionHandler;
@@ -48,6 +52,7 @@ final class Configuration implements ConfigurationInterface
     public const string EDITOR_NODE_TRANSFORMER_PROVIDER_CLASS = 'node_transformer_provider_class';
     public const string EDITOR_NODE_DEFAULT_TRANSFORMER_CLASS = 'node_default_transformer';
     public const string EDITOR_MARK_TRANSFORMER_PROVIDER_CLASS = 'mark_transformer_provider_class';
+    public const string EDITOR_BODY_PREPROCESSOR = 'body_preprocessor';
     public const string EDITOR_ALLOWED_NODE_TRANSFORMERS = 'allowed_node_transformers';
     public const string EDITOR_ALLOWED_MARK_TRANSFORMERS = 'allowed_mark_transformers';
     public const string EDITOR_SKIP_NODES = 'skip_nodes';
@@ -355,24 +360,26 @@ final class Configuration implements ConfigurationInterface
             ->arrayPrototype()
                 ->performNoDeepMerging()
                 ->children()
-//                    ->scalarNode('adapter')->isRequired()->end()
-                    ->scalarNode('node_transformer_provider_class')
+                    ->scalarNode(self::EDITOR_NODE_TRANSFORMER_PROVIDER_CLASS)
                         // todo instance of validator
-                        ->defaultValue('AnzuSystems\\CommonBundle\\AnzuTap\\TransformerProvider\\AnzuTapNodeTransformerProvider')
+                        ->defaultValue(AnzuTapNodeTransformerProvider::class)
                     ->end()
-                    ->scalarNode('node_default_transformer')
+                    ->scalarNode(self::EDITOR_BODY_PREPROCESSOR)
+                        ->defaultValue(AnzuTapBodyPreprocessor::class)
+                    ->end()
+                    ->scalarNode(self::EDITOR_NODE_DEFAULT_TRANSFORMER_CLASS)
                         // todo instance of validator
-                        ->defaultValue('AnzuSystems\\CommonBundle\\AnzuTap\\Transformer\\Node\\XRemoveTransformer')
+                        ->defaultValue(XRemoveTransformer::class)
                         ->end()
-                    ->scalarNode('mark_transformer_provider_class')
+                    ->scalarNode(self::EDITOR_MARK_TRANSFORMER_PROVIDER_CLASS)
                         // todo instance of validator
-                        ->defaultValue('AnzuSystems\\CommonBundle\\AnzuTap\\TransformerProvider\\AnzuTapMarkNodeTransformerProvider')
+                        ->defaultValue(AnzuTapMarkNodeTransformerProvider::class)
                     ->end()
-                    ->arrayNode('allowed_node_transformers')
+                    ->arrayNode(self::EDITOR_ALLOWED_NODE_TRANSFORMERS)
                         ->defaultValue(self::DEFAULT_ALLOWED_NODE_TRANSFORMERS)
                         ->prototype('scalar')->end()
                     ->end()
-                    ->arrayNode('allowed_mark_transformers')
+                    ->arrayNode(self::EDITOR_ALLOWED_MARK_TRANSFORMERS)
                         ->defaultValue(self::DEFAULT_ALLOWED_MARK_TRANSFORMERS)
                         ->prototype('scalar')->end()
                     ->end()

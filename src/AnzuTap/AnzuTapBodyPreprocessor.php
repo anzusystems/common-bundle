@@ -2,7 +2,7 @@
 
 namespace AnzuSystems\CommonBundle\AnzuTap;
 
-final class AnzuTapBodyPreprocessor
+class AnzuTapBodyPreprocessor
 {
     public function prepareBody(string $body): string
     {

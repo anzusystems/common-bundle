@@ -28,7 +28,7 @@ final class OrderedListTransformer extends AbstractNodeTransformer
     {
         return new AnzuTapNode(
             type: AnzuTapNodeInterface::ORDERED_LIST,
-            attrs:  [
+            attrs: [
                 'start' => 1,
             ]
         );

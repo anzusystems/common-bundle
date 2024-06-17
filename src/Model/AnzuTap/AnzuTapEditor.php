@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace AnzuSystems\CommonBundle\Model\AnzuTap;
 
+use AnzuSystems\CommonBundle\AnzuTap\AnzuTapBodyPostprocessor;
 use AnzuSystems\CommonBundle\AnzuTap\AnzuTapBodyPreprocessor;
 use AnzuSystems\CommonBundle\AnzuTap\Transformer\Mark\AnzuMarkTransformerInterface;
 use AnzuSystems\CommonBundle\AnzuTap\Transformer\Node\AnzuNodeTransformerInterface;
@@ -26,12 +27,12 @@ final class AnzuTapEditor
 
     public function __construct(
         private readonly NodeTransformerProviderInterface $transformerProvider,
-//        private readonly AnzuTapBodyShaker $shaker,
         private readonly MarkTransformerProviderInterface $markTransformerProvider,
-        private ServiceLocator $resolvedMarkTransformers,
-        private ServiceLocator $resolvedNodeTransformers,
+        private readonly ServiceLocator $resolvedMarkTransformers,
+        private readonly ServiceLocator $resolvedNodeTransformers,
         private readonly AnzuNodeTransformerInterface $defaultTransformer,
         private readonly AnzuTapBodyPreprocessor $preprocessor,
+        private readonly AnzuTapBodyPostprocessor $postprocessor,
     ) {
     }
 
@@ -41,7 +42,7 @@ final class AnzuTapEditor
 
         $body = new AnzuTapDocNode();
         $this->processChildren($node, $body, $body);
-//        $this->shaker->shakeNodes($body); // todo
+        $this->postprocessor->shakeNodes($body);
 
         return $body;
     }
@@ -58,13 +59,36 @@ final class AnzuTapEditor
         $bodyNode = $document->getElementsByTagName('body')->item(0);
 
         $body = new AnzuTapDocNode();
-        $this->processChildren($bodyNode, $body, $body);
-//        $this->shaker->shakeNodes($body);
+        if (false === (null === $bodyNode)) {
+            $this->processChildren($bodyNode, $body, $body);
+            $this->postprocessor->shakeNodes($body);
+        }
 
         return new AnzuTapBody(
             $this->embedContainer,
             $body,
         );
+    }
+
+    public function getMarkTransformer(DOMElement | DOMText $element): ?AnzuMarkTransformerInterface
+    {
+        $key = $this->markTransformerProvider->getMarkTransformerKey($element);
+        if ($this->resolvedMarkTransformers->has($key)) {
+            return $this->resolvedMarkTransformers->get($key);
+        }
+
+        return null;
+    }
+
+    public function getNodeTransformer(DOMElement | DOMText $element): AnzuNodeTransformerInterface
+    {
+        $key = $this->transformerProvider->getNodeTransformerKey($element);
+
+        if ($this->resolvedNodeTransformers->has($key)) {
+            return $this->resolvedNodeTransformers->get($key);
+        }
+
+        return $this->defaultTransformer;
     }
 
     private function clear(): void
@@ -166,26 +190,5 @@ final class AnzuTapEditor
         }
 
         return $transformedNode;
-    }
-
-    public function getMarkTransformer(DOMElement | DOMText $element): ?AnzuMarkTransformerInterface
-    {
-        $key = $this->markTransformerProvider->getMarkTransformerKey($element);
-        if ($this->resolvedMarkTransformers->has($key)) {
-            return $this->resolvedMarkTransformers->get($key);
-        }
-
-        return null;
-    }
-
-    public function getNodeTransformer(DOMElement | DOMText $element): AnzuNodeTransformerInterface
-    {
-        $key = $this->transformerProvider->getNodeTransformerKey($element);
-
-        if ($this->resolvedNodeTransformers->has($key)) {
-            return$this->resolvedNodeTransformers->get($key);
-        }
-
-        return $this->defaultTransformer;
     }
 }

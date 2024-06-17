@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 namespace AnzuSystems\CommonBundle\AnzuTap\TransformerProvider;
+
 use DOMElement;
 use DOMText;
 

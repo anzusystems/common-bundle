@@ -28,13 +28,9 @@ final class TableTransformer extends AbstractNodeTransformer
 
     public function transform(DOMElement $element, EmbedContainer $embedContainer, AnzuTapNodeInterface $parent): AnzuTapNodeInterface
     {
-        // TODO override
-        $attrs = $this->getAttrs(['subtype' => 'variant'], $element, ['variant' => ['sportnetTvProgram']]);
-        $variant = $attrs['variant'] ?? 'default';
-
         return new AnzuTapTableNode(
-            attrs:[
-                'variant' => $variant,
+            attrs: [
+                'variant' => 'default',
                 'caption' => '',
             ],
         );

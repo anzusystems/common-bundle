@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace AnzuSystems\CommonBundle\DependencyInjection;
 
 use AnzuSystems\CommonBundle\AnzuSystemsCommonBundle;
+use AnzuSystems\CommonBundle\AnzuTap\AnzuTapBodyPostprocessor;
 use AnzuSystems\CommonBundle\AnzuTap\AnzuTapBodyPreprocessor;
 use AnzuSystems\CommonBundle\AnzuTap\Transformer\Mark\AnzuMarkTransformerInterface;
 use AnzuSystems\CommonBundle\AnzuTap\Transformer\Mark\LinkNodeTransformer;
@@ -590,9 +591,11 @@ final class AnzuSystemsCommonExtension extends Extension implements PrependExten
     {
         $editors = $this->processedConfig['editors'];
 
-        // MarkTransformerProviderInterface
         $definition = new Definition(AnzuTapBodyPreprocessor::class);
         $container->setDefinition(AnzuTapBodyPreprocessor::class, $definition);
+
+        $definition = new Definition(AnzuTapBodyPostprocessor::class);
+        $container->setDefinition(AnzuTapBodyPostprocessor::class, $definition);
 
         // MarkTransformerProviderInterface
         $definition = new Definition(AnzuTapMarkNodeTransformerProvider::class);
@@ -673,10 +676,11 @@ final class AnzuSystemsCommonExtension extends Extension implements PrependExten
         foreach ($editors as $editorName => $editorConfig) {
             $alias = sprintf('%s $%sEditor', AnzuTapEditor::class, $editorName);
             $definition = new Definition(AnzuTapEditor::class);
-            $definition->setArgument('$transformerProvider', new Reference($editorConfig['node_transformer_provider_class']));
-            $definition->setArgument('$markTransformerProvider', new Reference($editorConfig['mark_transformer_provider_class']));
-            $definition->setArgument('$defaultTransformer', new Reference($editorConfig['node_default_transformer']));
-            $definition->setArgument('$preprocessor', new Reference(AnzuTapBodyPreprocessor::class));
+            $definition->setArgument('$transformerProvider', new Reference($editorConfig[Configuration::EDITOR_NODE_TRANSFORMER_PROVIDER_CLASS]));
+            $definition->setArgument('$markTransformerProvider', new Reference($editorConfig[Configuration::EDITOR_MARK_TRANSFORMER_PROVIDER_CLASS]));
+            $definition->setArgument('$defaultTransformer', new Reference($editorConfig[Configuration::EDITOR_NODE_DEFAULT_TRANSFORMER_CLASS]));
+            $definition->setArgument('$preprocessor', new Reference($editorConfig[Configuration::EDITOR_BODY_PREPROCESSOR]));
+            $definition->setArgument('$postprocessor', new Reference(AnzuTapBodyPostprocessor::class));
             $container->setDefinition($alias, $definition);
         }
 

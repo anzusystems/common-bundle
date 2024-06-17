@@ -15,6 +15,7 @@ final class BulletListTransformer extends AbstractNodeTransformer
     {
         return [
             'ul',
+            'list',
         ];
     }
 

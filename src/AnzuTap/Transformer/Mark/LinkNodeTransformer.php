@@ -78,11 +78,13 @@ class LinkNodeTransformer extends AbstractMarkNodeTransformer
     {
         $attrs = $this->getAttrs(
             ['href', 'clickthrough', 'size', 'target', 'rel'],
-            $element, [
-            'size' => ['large', 'small'],
-            'target' => ['_blank'],
-            'rel' => ['nofollow'],
-        ]);
+            $element,
+            [
+                'size' => ['large', 'small'],
+                'target' => ['_blank'],
+                'rel' => ['nofollow'],
+            ]
+        );
 
         if (self::isUrlInvalid($attrs['href'] ?? '')) {
             return null;

@@ -24,7 +24,7 @@ interface AnzuTapNodeInterface
 
     public function setParent(?AnzuTapNode $parent): static;
 
-    public function getParent(): ?AnzuTapNodeInterface;
+    public function getParent(): ?self;
 
     public function addContent(self $node): self;
 
@@ -33,7 +33,7 @@ interface AnzuTapNodeInterface
      */
     public function getContent(): array;
 
-    public function setContent(array $content): AnzuTapNodeInterface;
+    public function setContent(array $content): self;
 
     public function getNodeText(): ?string;
 

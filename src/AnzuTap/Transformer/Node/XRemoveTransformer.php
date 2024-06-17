@@ -10,7 +10,6 @@ use DOMElement;
 
 final class XRemoveTransformer extends AbstractNodeTransformer
 {
-
     public function skipChildren(): bool
     {
         return true;
