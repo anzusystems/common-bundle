@@ -6,6 +6,7 @@ namespace Symfony\Component\DependencyInjection\Loader\Configurator;
 
 use AnzuSystems\CommonBundle\AnzuSystemsCommonBundle;
 use AnzuSystems\CommonBundle\DataFixtures\FixturesLoader;
+use AnzuSystems\CommonBundle\Tests\AnzuTap\TestAnzuTapEditor;
 use AnzuSystems\CommonBundle\Tests\Data\Controller\DummyController;
 use AnzuSystems\CommonBundle\Tests\Data\Controller\JobController;
 use AnzuSystems\CommonBundle\Tests\Data\Domain\Job\Processor\JobUserDataDeleteProcessor;
@@ -14,6 +15,7 @@ use AnzuSystems\CommonBundle\Tests\Data\Fixtures\UserFixtures;
 use AnzuSystems\CommonBundle\Tests\Data\Repository\UserRepository;
 use AnzuSystems\CommonBundle\Util\ResourceLocker;
 use AnzuSystems\SerializerBundle\Serializer;
+use App\Tests\AnzuTap\ArtemisAnzuTapEditor;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\Persistence\ManagerRegistry;
 use Redis;
@@ -73,4 +75,8 @@ return static function (ContainerConfigurator $configurator): void {
         ->args([service('security.token_storage'), service('security.access.decision_manager')])
         ->public()
     ;
+
+    $configurator->services()->set(TestAnzuTapEditor::class)
+        ->autowire()
+        ->public();
 };
