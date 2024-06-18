@@ -40,8 +40,6 @@ class LinkNodeTransformer extends AbstractMarkNodeTransformer
 
     public function transform(DOMElement $element): array|null
     {
-        // todo
-
         if (in_array($element->nodeName, [self::NODE_A, self::NODE_URL], true)) {
             $attrs = $this->getAnchorAttrs($element);
             if (is_array($attrs)) {
