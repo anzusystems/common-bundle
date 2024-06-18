@@ -8,7 +8,6 @@ use AnzuSystems\CommonBundle\AnzuSystemsCommonBundle;
 use DOMElement;
 use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
 
-#[AutoconfigureTag(name: AnzuSystemsCommonBundle::TAG_EDITOR_MARK_TRANSFORMER)]
 interface AnzuMarkTransformerInterface
 {
     public static function getSupportedNodeNames(): array;

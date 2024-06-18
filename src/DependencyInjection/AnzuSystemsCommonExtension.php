@@ -93,6 +93,7 @@ use Sensio\Bundle\FrameworkExtraBundle\Request\ParamConverter\ParamConverterInte
 use Symfony\Component\Config\FileLocator;
 use Symfony\Component\Config\Loader\LoaderInterface;
 use Symfony\Component\DependencyInjection\Argument\IteratorArgument;
+use Symfony\Component\DependencyInjection\Argument\ServiceLocatorArgument;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 use Symfony\Component\DependencyInjection\Definition;
@@ -106,11 +107,6 @@ use Symfony\Component\HttpKernel\KernelEvents;
 final class AnzuSystemsCommonExtension extends Extension implements PrependExtensionInterface
 {
     private array $processedConfig;
-
-    public function getProcessedConfig(): array
-    {
-        return $this->processedConfig;
-    }
 
     public function prepend(ContainerBuilder $container): void
     {
@@ -599,110 +595,102 @@ final class AnzuSystemsCommonExtension extends Extension implements PrependExten
 
         // MarkTransformerProviderInterface
         $definition = new Definition(AnzuTapMarkNodeTransformerProvider::class);
-        $definition->addTag(AnzuSystemsCommonBundle::TAG_EDITOR_MARK_TRANSFORMER_PROVIDER);
         $container->setDefinition(AnzuTapMarkNodeTransformerProvider::class, $definition);
 
         // MarkTransformerProviderInterface
         $definition = new Definition(AnzuTapNodeTransformerProvider::class);
-        $definition->addTag(AnzuSystemsCommonBundle::TAG_EDITOR_NODE_TRANSFORMER_PROVIDER);
         $container->setDefinition(AnzuTapNodeTransformerProvider::class, $definition);
 
         // AnzuMarkTransformerInterface
         $definition = new Definition(LinkNodeTransformer::class);
-        $definition->addTag(AnzuSystemsCommonBundle::TAG_EDITOR_NODE_TRANSFORMER_PROVIDER);
         $container->setDefinition(LinkNodeTransformer::class, $definition);
 
         $definition = new Definition(MarkNodeTransformer::class);
-        $definition->addTag(AnzuSystemsCommonBundle::TAG_EDITOR_NODE_TRANSFORMER_PROVIDER);
         $container->setDefinition(MarkNodeTransformer::class, $definition);
 
         // AnzuNodeTransformerInterface
         $definition = new Definition(XSkipTransformer::class);
-        $definition->addTag(AnzuSystemsCommonBundle::TAG_EDITOR_NODE_TRANSFORMER);
         $container->setDefinition(XSkipTransformer::class, $definition);
 
         $definition = new Definition(XRemoveTransformer::class);
-        $definition->addTag(AnzuSystemsCommonBundle::TAG_EDITOR_NODE_TRANSFORMER);
         $container->setDefinition(XRemoveTransformer::class, $definition);
 
         $definition = new Definition(AnchorTransformer::class);
-        $definition->addTag(AnzuSystemsCommonBundle::TAG_EDITOR_NODE_TRANSFORMER);
         $container->setDefinition(AnchorTransformer::class, $definition);
 
         $definition = new Definition(BulletListTransformer::class);
-        $definition->addTag(AnzuSystemsCommonBundle::TAG_EDITOR_NODE_TRANSFORMER);
         $container->setDefinition(BulletListTransformer::class, $definition);
 
         $definition = new Definition(HeadingTransformer::class);
-        $definition->addTag(AnzuSystemsCommonBundle::TAG_EDITOR_NODE_TRANSFORMER);
         $container->setDefinition(HeadingTransformer::class, $definition);
 
         $definition = new Definition(HorizontalRuleTransformer::class);
-        $definition->addTag(AnzuSystemsCommonBundle::TAG_EDITOR_NODE_TRANSFORMER);
         $container->setDefinition(HorizontalRuleTransformer::class, $definition);
 
         $definition = new Definition(LineBreakTransformer::class);
-        $definition->addTag(AnzuSystemsCommonBundle::TAG_EDITOR_NODE_TRANSFORMER);
         $container->setDefinition(LineBreakTransformer::class, $definition);
 
         $definition = new Definition(ListItemTransformer::class);
-        $definition->addTag(AnzuSystemsCommonBundle::TAG_EDITOR_NODE_TRANSFORMER);
         $container->setDefinition(ListItemTransformer::class, $definition);
 
         $definition = new Definition(OrderedListTransformer::class);
-        $definition->addTag(AnzuSystemsCommonBundle::TAG_EDITOR_NODE_TRANSFORMER);
         $container->setDefinition(OrderedListTransformer::class, $definition);
 
         $definition = new Definition(ParagraphNodeTransformer::class);
-        $definition->addTag(AnzuSystemsCommonBundle::TAG_EDITOR_NODE_TRANSFORMER);
         $container->setDefinition(ParagraphNodeTransformer::class, $definition);
 
         $definition = new Definition(TableCellTransformer::class);
-        $definition->addTag(AnzuSystemsCommonBundle::TAG_EDITOR_NODE_TRANSFORMER);
         $container->setDefinition(TableCellTransformer::class, $definition);
 
         $definition = new Definition(TableRowTransformer::class);
-        $definition->addTag(AnzuSystemsCommonBundle::TAG_EDITOR_NODE_TRANSFORMER);
         $container->setDefinition(TableRowTransformer::class, $definition);
 
         $definition = new Definition(TableTransformer::class);
-        $definition->addTag(AnzuSystemsCommonBundle::TAG_EDITOR_NODE_TRANSFORMER);
         $container->setDefinition(TableTransformer::class, $definition);
 
         $definition = new Definition(TextNodeTransformer::class);
-        $definition->addTag(AnzuSystemsCommonBundle::TAG_EDITOR_NODE_TRANSFORMER);
         $container->setDefinition(TextNodeTransformer::class, $definition);
 
         foreach ($editors as $editorName => $editorConfig) {
-            $alias = sprintf('%s $%sEditor', AnzuTapEditor::class, $editorName);
             $definition = new Definition(AnzuTapEditor::class);
             $definition->setArgument('$transformerProvider', new Reference($editorConfig[Configuration::EDITOR_NODE_TRANSFORMER_PROVIDER_CLASS]));
             $definition->setArgument('$markTransformerProvider', new Reference($editorConfig[Configuration::EDITOR_MARK_TRANSFORMER_PROVIDER_CLASS]));
             $definition->setArgument('$defaultTransformer', new Reference($editorConfig[Configuration::EDITOR_NODE_DEFAULT_TRANSFORMER_CLASS]));
             $definition->setArgument('$preprocessor', new Reference($editorConfig[Configuration::EDITOR_BODY_PREPROCESSOR]));
-            $definition->setArgument('$postprocessor', new Reference(AnzuTapBodyPostprocessor::class));
-            $container->setDefinition($alias, $definition);
+            $definition->setArgument('$postprocessor', new Reference($editorConfig[Configuration::EDITOR_BODY_POSTPROCESSOR]));
+
+            $allowedNodeTransformers = [];
+            /** @var class-string<AnzuNodeTransformerInterface> $serviceName */
+            foreach ($editorConfig[Configuration::EDITOR_ALLOWED_NODE_TRANSFORMERS] ?? [] as $serviceName) {
+                foreach ($serviceName::getSupportedNodeNames() as $supportedNodeName) {
+                    $allowedNodeTransformers[$supportedNodeName] = new Reference($serviceName);
+                }
+            }
+
+            foreach ($editorConfig[Configuration::EDITOR_REMOVE_NODES] ?? [] as $nodeName) {
+                $allowedNodeTransformers[$nodeName] = new Reference(XRemoveTransformer::class);
+            }
+
+            foreach ($editorConfig[Configuration::EDITOR_SKIP_NODES] ?? [] as $nodeName) {
+                $allowedNodeTransformers[$nodeName] = new Reference(XSkipTransformer::class);
+            }
+
+            $allowedMarkTransformers = [];
+            /** @var class-string<AnzuMarkTransformerInterface> $serviceName */
+            foreach ($editorConfig[Configuration::EDITOR_ALLOWED_MARK_TRANSFORMERS] ?? [] as $serviceName) {
+                foreach ($serviceName::getSupportedNodeNames() as $supportedNodeName) {
+                    $allowedMarkTransformers[$supportedNodeName] = new Reference($serviceName);
+                }
+            }
+
+            $definition
+                ->setArgument('$resolvedNodeTransformers', new ServiceLocatorArgument($allowedNodeTransformers))
+                ->setArgument('$resolvedMarkTransformers', new ServiceLocatorArgument($allowedMarkTransformers))
+            ;
+
+            $container->setDefinition(sprintf('%s $%sEditor', AnzuTapEditor::class, $editorName), $definition);
+            $container->setDefinition(sprintf('%s $%sEditor', AnzuTapEditor::class, $editorName), $definition);
         }
-
-        $container
-            ->registerForAutoconfiguration(AnzuNodeTransformerInterface::class)
-            ->addTag(AnzuSystemsCommonBundle::TAG_EDITOR_NODE_TRANSFORMER)
-        ;
-
-        $container
-            ->registerForAutoconfiguration(AnzuMarkTransformerInterface::class)
-            ->addTag(AnzuSystemsCommonBundle::TAG_EDITOR_MARK_TRANSFORMER)
-        ;
-
-        $container
-            ->registerForAutoconfiguration(NodeTransformerProviderInterface::class)
-            ->addTag(AnzuSystemsCommonBundle::TAG_EDITOR_NODE_TRANSFORMER_PROVIDER)
-        ;
-
-        $container
-            ->registerForAutoconfiguration(MarkTransformerProviderInterface::class)
-            ->addTag(AnzuSystemsCommonBundle::TAG_EDITOR_MARK_TRANSFORMER_PROVIDER)
-        ;
     }
 
     private function createControllerDefinition(string $class, array $arguments = []): Definition

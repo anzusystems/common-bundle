@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace AnzuSystems\CommonBundle\DependencyInjection;
 
+use AnzuSystems\CommonBundle\AnzuTap\AnzuTapBodyPostprocessor;
 use AnzuSystems\CommonBundle\AnzuTap\AnzuTapBodyPreprocessor;
 use AnzuSystems\CommonBundle\AnzuTap\Transformer\Mark\LinkNodeTransformer;
 use AnzuSystems\CommonBundle\AnzuTap\Transformer\Mark\MarkNodeTransformer;
@@ -53,6 +54,7 @@ final class Configuration implements ConfigurationInterface
     public const string EDITOR_NODE_DEFAULT_TRANSFORMER_CLASS = 'node_default_transformer';
     public const string EDITOR_MARK_TRANSFORMER_PROVIDER_CLASS = 'mark_transformer_provider_class';
     public const string EDITOR_BODY_PREPROCESSOR = 'body_preprocessor';
+    public const string EDITOR_BODY_POSTPROCESSOR = 'body_postprocessor';
     public const string EDITOR_ALLOWED_NODE_TRANSFORMERS = 'allowed_node_transformers';
     public const string EDITOR_ALLOWED_MARK_TRANSFORMERS = 'allowed_mark_transformers';
     public const string EDITOR_SKIP_NODES = 'skip_nodes';
@@ -366,6 +368,9 @@ final class Configuration implements ConfigurationInterface
                     ->end()
                     ->scalarNode(self::EDITOR_BODY_PREPROCESSOR)
                         ->defaultValue(AnzuTapBodyPreprocessor::class)
+                    ->end()
+                    ->scalarNode(self::EDITOR_BODY_POSTPROCESSOR)
+                        ->defaultValue(AnzuTapBodyPostprocessor::class)
                     ->end()
                     ->scalarNode(self::EDITOR_NODE_DEFAULT_TRANSFORMER_CLASS)
                         // todo instance of validator

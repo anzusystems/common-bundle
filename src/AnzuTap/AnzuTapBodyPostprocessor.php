@@ -6,7 +6,7 @@ use AnzuSystems\CommonBundle\Model\AnzuTap\Node\AnzuTapDocNode;
 use AnzuSystems\CommonBundle\Model\AnzuTap\Node\AnzuTapNodeInterface;
 use AnzuSystems\CommonBundle\Model\AnzuTap\Node\AnzuTapParagraphNode;
 
-final class AnzuTapBodyPostprocessor
+class AnzuTapBodyPostprocessor
 {
     // todo refactor configuration
     private const array NODES_TO_SHAKE = ['button'];

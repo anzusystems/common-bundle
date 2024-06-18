@@ -11,7 +11,6 @@ use AnzuSystems\CommonBundle\Model\AnzuTap\Node\AnzuTapNodeInterface;
 use DOMElement;
 use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
 
-#[AutoconfigureTag(name: AnzuSystemsCommonBundle::TAG_EDITOR_NODE_TRANSFORMER)]
 interface AnzuNodeTransformerInterface
 {
     public static function getSupportedNodeNames(): array;
