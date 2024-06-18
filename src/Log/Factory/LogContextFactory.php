@@ -17,7 +17,7 @@ use Symfony\Component\HttpFoundation\Response;
 
 final class LogContextFactory
 {
-    public const REQUEST_ORIGIN_VERSION_HEADER = 'X-App-Version';
+    public const string REQUEST_ORIGIN_VERSION_HEADER = 'X-App-Version';
 
     public function __construct(
         private readonly CurrentAnzuUserProvider $userProvider,

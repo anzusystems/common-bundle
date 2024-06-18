@@ -9,6 +9,7 @@ use AnzuSystems\CommonBundle\Entity\Interfaces\EmbedKindInterface;
 use AnzuSystems\CommonBundle\Model\AnzuTap\EmbedContainer;
 use AnzuSystems\CommonBundle\Model\AnzuTap\Node\AnzuTapNodeInterface;
 use DOMElement;
+use DOMText;
 use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
 
 interface AnzuNodeTransformerInterface

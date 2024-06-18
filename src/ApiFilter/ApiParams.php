@@ -11,20 +11,20 @@ use Symfony\Component\HttpFoundation\Request;
 
 final class ApiParams
 {
-    public const FILTER_LT = 'lt';
-    public const FILTER_IN = 'in';
-    public const FILTER_NIN = 'notIn';
-    public const FILTER_ENDS_WITH = 'endsWith';
-    public const FILTER_STARTS_WITH = 'startsWith';
-    public const FILTER_MEMBER_OF = 'memberOf';
-    public const FILTER_CONTAINS = 'contains';
-    public const FILTER_NEQ = 'neq';
-    public const FILTER_GTE = 'gte';
-    public const FILTER_GT = 'gt';
-    public const FILTER_EQ = 'eq';
-    public const FILTER_CUSTOM = 'custom';
-    public const FILTER_LTE = 'lte';
-    public const AVAILABLE_FILTERS = [
+    public const string FILTER_LT = 'lt';
+    public const string FILTER_IN = 'in';
+    public const string FILTER_NIN = 'notIn';
+    public const string FILTER_ENDS_WITH = 'endsWith';
+    public const string FILTER_STARTS_WITH = 'startsWith';
+    public const string FILTER_MEMBER_OF = 'memberOf';
+    public const string FILTER_CONTAINS = 'contains';
+    public const string FILTER_NEQ = 'neq';
+    public const string FILTER_GTE = 'gte';
+    public const string FILTER_GT = 'gt';
+    public const string FILTER_EQ = 'eq';
+    public const string FILTER_CUSTOM = 'custom';
+    public const string FILTER_LTE = 'lte';
+    public const array AVAILABLE_FILTERS = [
         self::FILTER_EQ,
         self::FILTER_NEQ,
         self::FILTER_IN,
@@ -39,17 +39,17 @@ final class ApiParams
         self::FILTER_MEMBER_OF,
         self::FILTER_CUSTOM,
     ];
-    public const ARRAY_FILTERS = [
+    public const array ARRAY_FILTERS = [
         self::FILTER_IN,
         self::FILTER_NIN,
     ];
-    private const LIMIT = 'limit';
-    private const OFFSET = 'offset';
-    private const FILTER = 'filter';
-    private const ORDER = 'order';
-    private const BIG_TABLE = 'bigTable';
+    private const string LIMIT = 'limit';
+    private const string OFFSET = 'offset';
+    private const string FILTER = 'filter';
+    private const string ORDER = 'order';
+    private const string BIG_TABLE = 'bigTable';
 
-    private const DEFAULTS = [
+    private const array DEFAULTS = [
         self::LIMIT => 20,
         self::OFFSET => 0,
         self::FILTER => [],

@@ -22,7 +22,7 @@ interface AnzuTapNodeInterface
 
     public function getType(): string;
 
-    public function setParent(?AnzuTapNode $parent): static;
+    public function setParent(?AnzuTapNodeInterface $parent): static;
 
     public function getParent(): ?self;
 

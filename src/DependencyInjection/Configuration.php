@@ -60,14 +60,14 @@ final class Configuration implements ConfigurationInterface
     public const string EDITOR_SKIP_NODES = 'skip_nodes';
     public const string EDITOR_REMOVE_NODES = 'remove_nodes';
 
-    private const EXCEPTION_HANDLERS = [
+    private const array EXCEPTION_HANDLERS = [
         NotFoundExceptionHandler::class,
         ValidationExceptionHandler::class,
         AppReadOnlyModeExceptionHandler::class,
         AccessDeniedExceptionHandler::class,
         SerializerExceptionHandler::class,
     ];
-    private const HEALTH_CHECK_MODULES = [
+    private const array HEALTH_CHECK_MODULES = [
         MysqlModule::class,
         MongoModule::class,
         RedisModule::class,
@@ -75,7 +75,7 @@ final class Configuration implements ConfigurationInterface
         ForwardIpModule::class,
         DataMountModule::class,
     ];
-    private const DEFAULT_UNLOCKED_COMMANDS = [
+    private const array DEFAULT_UNLOCKED_COMMANDS = [
         ConsumeMessagesCommand::class,
         CacheWarmupCommand::class,
         AssetsInstallCommand::class,

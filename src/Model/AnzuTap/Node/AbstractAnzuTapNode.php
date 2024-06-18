@@ -12,7 +12,7 @@ abstract class AbstractAnzuTapNode implements AnzuTapNodeInterface
     protected ?array $marks = null;
 
     /**
-     * @var array<int, AnzuTapNode>
+     * @var array<int, AnzuTapNodeInterface>
      */
     protected array $content = [];
 

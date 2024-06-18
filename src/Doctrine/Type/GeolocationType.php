@@ -15,7 +15,7 @@ final class GeolocationType extends AbstractValueObjectType
      * At this time, we use the default SRID 0. For more accurate results, the SRID ID 4326 defined in the WGS84 standard
      * used for GPS can be used. When using SRID 4326, the long/lat order in the POINT definition has changed.
      */
-    private const SRID_ID = 0;
+    private const int SRID_ID = 0;
 
     public function getSQLDeclaration(array $column, AbstractPlatform $platform): string
     {

@@ -2,15 +2,15 @@
 
 declare(strict_types=1);
 
-namespace AnzuSystems\CommonBundle\Model\AnzuTap;
+namespace AnzuSystems\CommonBundle\AnzuTap;
 
-use AnzuSystems\CommonBundle\AnzuTap\AnzuTapBodyPostprocessor;
-use AnzuSystems\CommonBundle\AnzuTap\AnzuTapBodyPreprocessor;
 use AnzuSystems\CommonBundle\AnzuTap\Transformer\Mark\AnzuMarkTransformerInterface;
 use AnzuSystems\CommonBundle\AnzuTap\Transformer\Node\AnzuNodeTransformerInterface;
 use AnzuSystems\CommonBundle\AnzuTap\TransformerProvider\MarkTransformerProviderInterface;
 use AnzuSystems\CommonBundle\AnzuTap\TransformerProvider\NodeTransformerProviderInterface;
 use AnzuSystems\CommonBundle\Entity\Interfaces\EmbedKindInterface;
+use AnzuSystems\CommonBundle\Model\AnzuTap\AnzuTapBody;
+use AnzuSystems\CommonBundle\Model\AnzuTap\EmbedContainer;
 use AnzuSystems\CommonBundle\Model\AnzuTap\Node\AnzuTapDocNode;
 use AnzuSystems\CommonBundle\Model\AnzuTap\Node\AnzuTapNode;
 use AnzuSystems\CommonBundle\Model\AnzuTap\Node\AnzuTapNodeInterface;
@@ -101,17 +101,20 @@ final class AnzuTapEditor
     {
         $nodes = [];
 
-        /** @var DOMNode $childNode */
         foreach ($node->childNodes as $childNode) {
-            $markTransformer = $this->getMarkTransformer($childNode);
-            if ($markTransformer && $markTransformer->supports($childNode)) {
-                $mark = $markTransformer->transform($childNode);
+            if (false === ($childNode instanceof DOMText || $childNode instanceof DOMElement)) {
+                continue;
+            }
 
-                if (null === $mark) {
-                    continue;
-                }
+            if ($childNode instanceof DOMElement) {
+                $markTransformer = $this->getMarkTransformer($childNode);
+                if ($markTransformer && $markTransformer->supports($childNode)) {
+                    $mark = $markTransformer->transform($childNode);
 
-                if (is_array($mark)) {
+                    if (null === $mark) {
+                        continue;
+                    }
+
                     $this->storedMarks[] = $mark;
 
                     if ($childNode->hasChildNodes()) {
@@ -127,7 +130,7 @@ final class AnzuTapEditor
             }
 
             $nodeTransformer = $this->getNodeTransformer($childNode);
-            $anzuTapNode = $this->processNode($childNode, $nodeTransformer, $anzuTapParentNode, $root);
+            $anzuTapNode = $this->processNode($childNode, $nodeTransformer, $anzuTapParentNode);
 
             if (null === $anzuTapNode) {
                 if ($childNode->hasChildNodes() && false === $nodeTransformer->skipChildren()) {
@@ -169,9 +172,7 @@ final class AnzuTapEditor
         DOMElement | DOMText $node,
         AnzuNodeTransformerInterface $nodeTransformer,
         AnzuTapNodeInterface $anzuTapParentNode,
-        AnzuTapDocNode $root
     ): ?AnzuTapNodeInterface {
-        // todo add root
         $transformedNode = $nodeTransformer->transform($node, $this->embedContainer, $anzuTapParentNode);
 
         if (null === $transformedNode) {

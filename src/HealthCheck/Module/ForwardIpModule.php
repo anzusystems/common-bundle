@@ -9,7 +9,7 @@ use Symfony\Component\HttpFoundation\RequestStack;
 
 final class ForwardIpModule implements ModuleInterface
 {
-    private const INTERNAL_USER_AGENT_PREFIX = 'kube-probe/';
+    private const string INTERNAL_USER_AGENT_PREFIX = 'kube-probe/';
 
     public function __construct(
         private readonly RequestStack $requestStack,

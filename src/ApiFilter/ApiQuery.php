@@ -16,7 +16,7 @@ use Symfony\Component\Uid\Uuid;
 
 class ApiQuery
 {
-    private const UUID_TYPE = 'uuid';
+    private const string UUID_TYPE = 'uuid';
 
     protected QueryBuilder $dqb;
 

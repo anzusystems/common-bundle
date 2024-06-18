@@ -10,7 +10,7 @@ use Symfony\Component\Routing\RouteCollection;
 
 final class AnzuDomainRouteLoader extends Loader
 {
-    public const TYPE = 'anzu_domain';
+    public const string TYPE = 'anzu_domain';
 
     public function load(mixed $resource, ?string $type = null): RouteCollection
     {

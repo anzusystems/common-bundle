@@ -22,14 +22,14 @@ class AnzuKernel extends Kernel
     /**
      * If this header is sent, application context uses this identity rather than generating a new one.
      */
-    public const CONTEXT_IDENTITY_HEADER = 'X-Context-ID';
+    public const string CONTEXT_IDENTITY_HEADER = 'X-Context-ID';
 
     /**
      * Load balancer IP is dynamic and can change anytime.
      * HAProxy is setting this header to each request and removes it on each response,
      * so we can trust it and append it to trusted proxies.
      */
-    private const LOAD_BALANCER_IP_HEADER = 'X-LoadBalancer-IP';
+    private const string LOAD_BALANCER_IP_HEADER = 'X-LoadBalancer-IP';
     protected int $userIdAdmin = 1;
     protected int $userIdConsole = 2;
     protected int $userIdAnonymous = 3;

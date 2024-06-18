@@ -10,7 +10,7 @@ use Throwable;
 
 final class DefaultExceptionHandler implements ExceptionHandlerInterface
 {
-    public const ERROR = 'unknown_error';
+    public const string ERROR = 'unknown_error';
 
     public function __construct(
         private readonly bool $debug = false

@@ -29,7 +29,6 @@ final class EditorsConfiguration
         BulletListTransformer::class,
         ListItemTransformer::class,
         LineBreakTransformer::class,
-        // ImageTransformer::class,
         HorizontalRuleTransformer::class,
         HeadingTransformer::class,
         AnchorTransformer::class,
