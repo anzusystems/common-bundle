@@ -42,7 +42,7 @@ final class AnzuTapEditor
 
         $body = new AnzuTapDocNode();
         $this->processChildren($node, $body, $body);
-        $this->postprocessor->shakeNodes($body);
+        $this->postprocessor->postprocess($body);
 
         return $body;
     }
@@ -61,7 +61,7 @@ final class AnzuTapEditor
         $body = new AnzuTapDocNode();
         if (false === (null === $bodyNode)) {
             $this->processChildren($bodyNode, $body, $body);
-            $this->postprocessor->shakeNodes($body);
+            $this->postprocessor->postprocess($body);
         }
 
         return new AnzuTapBody(

@@ -8,15 +8,22 @@ use AnzuSystems\CommonBundle\Model\AnzuTap\Node\AnzuTapParagraphNode;
 
 class AnzuTapBodyPostprocessor
 {
-    // todo refactor configuration
     private const array NODES_TO_SHAKE = ['button'];
 
-    public function shakeNodes(AnzuTapDocNode $body): void
+    public function postprocess(AnzuTapDocNode $body): void
+    {
+        $this->shakeNodes($body, self::NODES_TO_SHAKE);
+    }
+
+    /**
+     * @param array<int, string> $nodeTypesToShake
+     */
+    protected function shakeNodes(AnzuTapDocNode $body, array $nodeTypesToShake): void
     {
         $topLevelNodes = [];
 
         foreach ($body->getContent() as $node) {
-            $nodesToShake = $this->getNodesToShake($node);
+            $nodesToShake = $this->getNodesToShake($node, $nodeTypesToShake);
 
             // Check if root node was paragraph and after shaking, it lost content.
             if (false === (
@@ -38,22 +45,24 @@ class AnzuTapBodyPostprocessor
     }
 
     /**
+     * @param array<int, string> $nodeTypesToShake
+     *
      * @return array<int, AnzuTapNodeInterface>
      */
-    private function getNodesToShake(AnzuTapNodeInterface $rootNode): array
+    protected function getNodesToShake(AnzuTapNodeInterface $rootNode, array $nodeTypesToShake): array
     {
         $nodesToShake = [];
         $nodesToKeep = [];
 
         foreach ($rootNode->getContent() as $node) {
-            $isShakingNode = in_array($node->getType(), self::NODES_TO_SHAKE, true);
+            $isShakingNode = in_array($node->getType(), $nodeTypesToShake, true);
 
             if ($isShakingNode) {
                 $nodesToShake[] = $node;
             }
 
             if (false === empty($node->getContent())) {
-                $nodesToShake = array_merge($nodesToShake, $this->getNodesToShake($node));
+                $nodesToShake = array_merge($nodesToShake, $this->getNodesToShake($node, $nodeTypesToShake));
             }
 
             if (false === $isShakingNode) {
