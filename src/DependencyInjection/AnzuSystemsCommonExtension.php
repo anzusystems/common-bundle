@@ -687,7 +687,7 @@ final class AnzuSystemsCommonExtension extends Extension implements PrependExten
             ;
 
             $container->setDefinition(sprintf('%s $%sEditor', AnzuTapEditor::class, $editorName), $definition);
-            $container->setDefinition(sprintf('%s $%sEditor', AnzuTapEditor::class, $editorName), $definition);
+            $container->setDefinition(sprintf('anzu_systems_common.editor.%s', $editorName), $definition);
         }
     }
 

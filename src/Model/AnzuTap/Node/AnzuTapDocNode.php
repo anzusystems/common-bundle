@@ -13,7 +13,11 @@ final class AnzuTapDocNode extends AnzuTapNode
 
     public function addContent(AnzuTapNodeInterface $node): AnzuTapNodeInterface
     {
-        if (false === (self::PARAGRAPH === $node->getType())) {
+        if (self::HARD_BREAK === $node->getType()) {
+            return $this;
+        }
+
+        if (self::TEXT === $node->getType()) {
             $paragraph = $this->upsertFirstContentParagraph();
 
             return $paragraph->addContent($node);
