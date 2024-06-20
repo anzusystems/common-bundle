@@ -4,13 +4,10 @@ declare(strict_types=1);
 
 namespace AnzuSystems\CommonBundle\AnzuTap\Transformer\Node;
 
-use AnzuSystems\CommonBundle\AnzuSystemsCommonBundle;
 use AnzuSystems\CommonBundle\Entity\Interfaces\EmbedKindInterface;
 use AnzuSystems\CommonBundle\Model\AnzuTap\EmbedContainer;
 use AnzuSystems\CommonBundle\Model\AnzuTap\Node\AnzuTapNodeInterface;
 use DOMElement;
-use DOMText;
-use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
 
 interface AnzuNodeTransformerInterface
 {
@@ -21,6 +18,4 @@ interface AnzuNodeTransformerInterface
     public function skipChildren(): bool;
 
     public function removeWhenEmpty(): bool;
-
-    public function moveToRoot(): bool;
 }

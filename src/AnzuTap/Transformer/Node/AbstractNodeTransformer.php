@@ -20,9 +20,4 @@ abstract class AbstractNodeTransformer implements AnzuNodeTransformerInterface
     {
         return false;
     }
-
-    public function moveToRoot(): bool
-    {
-        return false;
-    }
 }

@@ -5,14 +5,55 @@ namespace AnzuSystems\CommonBundle\AnzuTap;
 use AnzuSystems\CommonBundle\Model\AnzuTap\Node\AnzuTapDocNode;
 use AnzuSystems\CommonBundle\Model\AnzuTap\Node\AnzuTapNodeInterface;
 use AnzuSystems\CommonBundle\Model\AnzuTap\Node\AnzuTapParagraphNode;
+use AnzuSystems\CommonBundle\Model\AnzuTap\Node\AnzuTapTextNode;
 
 class AnzuTapBodyPostprocessor
 {
+    public const array PARAGRAPH_ALLOWED_CONTENT_TYPES = [AnzuTapNodeInterface::TEXT, AnzuTapNodeInterface::HARD_BREAK, 'embedExternalImageInline', 'embedImageInline'];
     private const array NODES_TO_SHAKE = ['button'];
+
 
     public function postprocess(AnzuTapDocNode $body): void
     {
         $this->shakeNodes($body, self::NODES_TO_SHAKE);
+        $this->fixParagraphs($body);
+    }
+
+    protected function getParagraphAllowedNodes(): array
+    {
+        return self::PARAGRAPH_ALLOWED_CONTENT_TYPES;
+    }
+
+    protected function fixParagraphs(AnzuTapNodeInterface $body): void
+    {
+        foreach ($body->getContent() as $node) {
+            if ($node->getType() === AnzuTapParagraphNode::NODE_NAME) {
+                $this->fixNode($node, $this->getParagraphAllowedNodes());
+            }
+
+            $this->fixParagraphs($node);
+        }
+    }
+
+    protected function fixNode(AnzuTapNodeInterface $node, array $allowedNodes): void
+    {
+        $children = [];
+        foreach ($node->getContent() as $child) {
+            if (false === in_array($child->getType(), $allowedNodes, true)) {
+                $text = $node->getNodeText();
+                if (is_string($text)) {
+                    $textNode = new AnzuTapTextNode($text);
+                    $textNode->setParent($node);
+                    $children[] = $textNode;
+                }
+
+                continue;
+            }
+
+            $children[] = $child;
+        }
+
+        $node->setContent($children);
     }
 
     /**
