@@ -20,7 +20,7 @@ use Symfony\Component\Lock\Store\RedisStore;
 
 final class CommandLockSubscriber implements EventSubscriberInterface
 {
-    public const REDIS_LOCK_PREFIX = 'cmd_lock_';
+    public const string REDIS_LOCK_PREFIX = 'cmd_lock_';
 
     private ?LockInterface $lock = null;
     private string $lockName;

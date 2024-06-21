@@ -9,7 +9,7 @@ use MongoDB\Driver\Exception\Exception;
 
 final class MongoModule implements ModuleInterface
 {
-    private const MAX_OPERATION_TIME_MS = 3_000;
+    private const int MAX_OPERATION_TIME_MS = 3_000;
 
     /**
      * @param iterable<Collection> $collections

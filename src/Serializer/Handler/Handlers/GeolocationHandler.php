@@ -15,8 +15,8 @@ use Symfony\Component\PropertyInfo\Type;
 
 final class GeolocationHandler extends AbstractHandler
 {
-    private const LAT = 'lat';
-    private const LON = 'lon';
+    private const string LAT = 'lat';
+    private const string LON = 'lon';
 
     public static function supportsSerialize(mixed $value): bool
     {

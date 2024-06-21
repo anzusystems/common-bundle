@@ -13,7 +13,7 @@ use Throwable;
 
 final class AppReadOnlyModeExceptionHandler implements ExceptionHandlerInterface
 {
-    private const ERROR = AppReadOnlyModeException::MESSAGE;
+    private const string ERROR = AppReadOnlyModeException::MESSAGE;
 
     /**
      * @param AccessDeniedException|AccessDeniedHttpException $exception

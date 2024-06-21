@@ -17,7 +17,7 @@ final class HealthChecker
     /**
      * Number of seconds that triggers warning log for too long health check.
      */
-    private const WARNING_THRESHOLD_TIME_SECONDS = 5;
+    private const int WARNING_THRESHOLD_TIME_SECONDS = 5;
 
     /**
      * @var iterable<ModuleInterface>

@@ -12,7 +12,7 @@ use Throwable;
 
 final class AccessDeniedExceptionHandler implements ExceptionHandlerInterface
 {
-    private const ERROR = 'access_denied';
+    private const string ERROR = 'access_denied';
 
     public function __construct(
         private readonly bool $debug = false

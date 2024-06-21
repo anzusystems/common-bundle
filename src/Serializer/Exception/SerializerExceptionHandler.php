@@ -13,7 +13,7 @@ use Throwable;
 
 final class SerializerExceptionHandler implements ExceptionHandlerInterface
 {
-    private const ERROR = 'serializer_error';
+    private const string ERROR = 'serializer_error';
 
     public function __construct(
         private readonly bool $debug = false

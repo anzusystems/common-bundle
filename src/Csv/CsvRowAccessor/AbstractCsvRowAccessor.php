@@ -8,8 +8,8 @@ use SplFileObject;
 
 abstract class AbstractCsvRowAccessor implements CsvRowAccessorInterface
 {
-    protected const ID = 'id';
-    protected const HEADERS = [self::ID];
+    protected const string ID = 'id';
+    protected const array HEADERS = [self::ID];
 
     protected array $row = [];
     protected array $indexMap = [];

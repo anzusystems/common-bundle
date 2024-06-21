@@ -8,10 +8,10 @@ use AnzuSystems\SerializerBundle\Attributes\Serialize;
 
 final class PermissionConfig
 {
-    public const PRM_ROLES = 'roles';
-    public const PRM_DEFAULT_GRANTS = 'default_grants';
-    public const PRM_CONFIG = 'config';
-    public const PRM_TRANSLATION = 'translation';
+    public const string PRM_ROLES = 'roles';
+    public const string PRM_DEFAULT_GRANTS = 'default_grants';
+    public const string PRM_CONFIG = 'config';
+    public const string PRM_TRANSLATION = 'translation';
 
     public function __construct(
         private readonly array $config = [],

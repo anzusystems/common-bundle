@@ -11,7 +11,7 @@ use Throwable;
 
 final class NotFoundExceptionHandler implements ExceptionHandlerInterface
 {
-    public const ERROR = 'not_found';
+    public const string ERROR = 'not_found';
 
     public function getErrorResponse(Throwable $exception): JsonResponse
     {

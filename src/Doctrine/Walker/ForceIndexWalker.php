@@ -9,8 +9,8 @@ use Doctrine\ORM\Query\SqlWalker;
 
 final class ForceIndexWalker extends SqlWalker
 {
-    public const HINT_FORCE_INDEX_FOR_FROM = 'ForceIndexWalker.ForceIndex';
-    public const HINT_FORCE_INDEX_FOR_JOIN = 'ForceIndexWalker.ForceIndexForJoin';
+    public const string HINT_FORCE_INDEX_FOR_FROM = 'ForceIndexWalker.ForceIndex';
+    public const string HINT_FORCE_INDEX_FOR_JOIN = 'ForceIndexWalker.ForceIndexForJoin';
 
     public function walkFromClause(FromClause $fromClause): string
     {

@@ -8,9 +8,9 @@ use Symfony\Component\HttpFoundation\Response;
 
 final class HttpClientResponse
 {
-    private const STATUS_REDIRECTION_FROM = Response::HTTP_MULTIPLE_CHOICES;
-    private const STATUS_CLIENT_ERROR_FROM = Response::HTTP_BAD_REQUEST;
-    private const STATUS_SERVER_ERROR_FROM = Response::HTTP_INTERNAL_SERVER_ERROR;
+    private const int STATUS_REDIRECTION_FROM = Response::HTTP_MULTIPLE_CHOICES;
+    private const int STATUS_CLIENT_ERROR_FROM = Response::HTTP_BAD_REQUEST;
+    private const int STATUS_SERVER_ERROR_FROM = Response::HTTP_INTERNAL_SERVER_ERROR;
 
     public function __construct(
         private readonly string $content = '',

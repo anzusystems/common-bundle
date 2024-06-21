@@ -17,9 +17,9 @@ enum JobStatus: string implements EnumInterface
     case Done = 'done';
     case Error = 'error';
 
-    public const Default = self::Waiting;
+    public const JobStatus Default = self::Waiting;
 
-    public const PROCESSABLE_STATUSES = [
+    public const array PROCESSABLE_STATUSES = [
         self::Waiting,
         self::AwaitingBatchProcess,
     ];

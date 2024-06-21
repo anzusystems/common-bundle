@@ -11,7 +11,7 @@ use Throwable;
 
 final class ValidationExceptionHandler implements ExceptionHandlerInterface
 {
-    public const ERROR = ValidationException::ERROR_MESSAGE;
+    public const string ERROR = ValidationException::ERROR_MESSAGE;
 
     /**
      * @param ValidationException $exception
