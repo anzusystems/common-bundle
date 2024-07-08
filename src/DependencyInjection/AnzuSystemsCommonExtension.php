@@ -301,7 +301,6 @@ final class AnzuSystemsCommonExtension extends Extension implements PrependExten
         );
 
         $container->getDefinition(SyncBaseUsersCommand::class)
-            ->setArgument('$usersData', $settings['user_sync_data'])
             ->setArgument('$serializer', new Reference(Serializer::class))
             ->setArgument('$userFacade', new Reference(UserSyncFacade::class))
         ;

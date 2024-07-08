@@ -7,10 +7,12 @@ namespace AnzuSystems\CommonBundle\Command;
 use AnzuSystems\CommonBundle\Domain\User\UserSyncFacade;
 use AnzuSystems\CommonBundle\Exception\ValidationException;
 use AnzuSystems\CommonBundle\Model\User\UserDto;
+use AnzuSystems\Contracts\AnzuApp;
 use AnzuSystems\SerializerBundle\Serializer;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface;
+use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 use Throwable;
 
@@ -20,24 +22,45 @@ use Throwable;
 )]
 final class SyncBaseUsersCommand extends Command
 {
+    private const string USERS_FILE_PATH_OPT = 'file';
+    private const string USERS_FILE_PATH_DEFAULT = 'users.json';
+
     public function __construct(
-        private readonly string $usersData,
         private readonly Serializer $serializer,
         private readonly UserSyncFacade $userFacade,
     ) {
         parent::__construct();
     }
 
+    public function configure(): void
+    {
+        $this
+            ->addOption(
+                name: self::USERS_FILE_PATH_OPT,
+                mode: InputOption::VALUE_REQUIRED,
+                default: AnzuApp::getDataDir() . '/' . self::USERS_FILE_PATH_DEFAULT
+            );
+    }
+
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
-        if (empty($this->usersData)) {
-            $output->writeln('Users data contains empty string');
+        $filePath = $input->getOption(self::USERS_FILE_PATH_OPT);
 
-            return Command::SUCCESS;
+        if (false === file_exists($filePath)) {
+            $output->writeln("<error>File not found at path: ({$filePath})</error>");
+
+            return Command::FAILURE;
+        }
+
+        $contents = file_get_contents($filePath);
+        if (false === json_validate($contents)) {
+            $output->writeln("<error>Invalid json content at path: ({$filePath})</error>");
+
+            return Command::FAILURE;
         }
 
         /** @var UserDto[] $users */
-        $users = $this->serializer->deserializeIterable($this->usersData, UserDto::class, []);
+        $users = $this->serializer->deserializeIterable($contents, UserDto::class, []);
 
         foreach ($users as $userDto) {
             $output->writeln($userDto->getId() . ' ' . $userDto->getEmail());
@@ -65,7 +88,7 @@ final class SyncBaseUsersCommand extends Command
             }
         }
 
-        $output->writeln(PHP_EOL . 'Done');
+        $output->writeln('<info>Done</info>');
 
         return Command::SUCCESS;
     }
