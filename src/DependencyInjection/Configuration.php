@@ -186,7 +186,6 @@ final class Configuration implements ConfigurationInterface
                 ->scalarNode('app_redis')->cannotBeEmpty()->end()
                 ->scalarNode('app_cache_proxy_enabled')->defaultTrue()->end()
                 ->scalarNode('user_entity_class')->defaultValue('App\\Entity\\User')->end()
-                ->scalarNode('user_sync_data')->defaultValue('[]')->end()
                 ->scalarNode('app_entity_namespace')->defaultValue('App\\Entity')->end()
                 ->scalarNode('app_value_object_namespace')->defaultValue('App\\Model\\ValueObject')->end()
                 ->scalarNode('app_enum_namespace')->defaultValue('App\\Model\\Enum')->end()
