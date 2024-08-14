@@ -9,6 +9,7 @@ use AnzuSystems\CommonBundle\ApiFilter\ApiParams;
 use AnzuSystems\CommonBundle\ApiFilter\ApiQuery;
 use AnzuSystems\CommonBundle\ApiFilter\ApiResponseList;
 use AnzuSystems\CommonBundle\ApiFilter\CustomFilterInterface;
+use AnzuSystems\CommonBundle\ApiFilter\CustomOrderInterface;
 use AnzuSystems\Contracts\Entity\AnzuUser;
 use AnzuSystems\Contracts\Entity\Interfaces\UserTrackingInterface;
 use Closure;
@@ -64,6 +65,7 @@ abstract class AbstractAnzuRepository extends ServiceEntityRepository implements
 
     /**
      * @param list<CustomFilterInterface> $customFilters
+     * @param list<CustomOrderInterface> $customOrders
      *
      * @throws ORMException
      */
@@ -71,6 +73,7 @@ abstract class AbstractAnzuRepository extends ServiceEntityRepository implements
         ApiParams $apiParams,
         #[Deprecated] ?CustomFilterInterface $customFilter = null,
         array $customFilters = [],
+        array $customOrders = [],
         ?Closure $mapDataFn = null,
     ): ApiResponseList {
         if ($customFilter instanceof CustomFilterInterface && empty($customFilters)) {
@@ -81,7 +84,8 @@ abstract class AbstractAnzuRepository extends ServiceEntityRepository implements
             entityManager: $this->getEntityManager(),
             metadata: $this->getClassMetadata(),
             apiParams: $apiParams,
-            customFilters: $customFilters
+            customFilters: $customFilters,
+            customOrders: $customOrders,
         );
 
         $data = $apiQuery->getData();
@@ -104,6 +108,7 @@ abstract class AbstractAnzuRepository extends ServiceEntityRepository implements
 
     /**
      * @param list<CustomFilterInterface> $customFilters
+     * @param list<CustomOrderInterface> $customOrders
      * @param ?CustomFilterInterface $customFilter Deprecated
      *
      * @throws ORMException
@@ -112,6 +117,7 @@ abstract class AbstractAnzuRepository extends ServiceEntityRepository implements
         ApiParams $apiParams,
         #[Deprecated] ?CustomFilterInterface $customFilter = null,
         array $customFilters = [],
+        array $customOrders = [],
         ?Closure $mapDataFn = null,
     ): ApiInfiniteResponseList {
         if ($customFilter instanceof CustomFilterInterface && empty($customFilters)) {
@@ -124,6 +130,7 @@ abstract class AbstractAnzuRepository extends ServiceEntityRepository implements
             apiParams: $apiParams,
             fetchOneAdditionalRecord: true,
             customFilters: $customFilters,
+            customOrders: $customOrders,
         );
         $data = $apiQuery->getData();
         $totalCount = $apiParams->getLimit() + $apiParams->getOffset() + 1;

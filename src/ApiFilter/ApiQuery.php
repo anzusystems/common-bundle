@@ -22,6 +22,7 @@ class ApiQuery
 
     /**
      * @param list<CustomFilterInterface> $customFilters
+     * @param list<CustomOrderInterface> $customOrders
      *
      * @throws ORMException
      */
@@ -32,6 +33,7 @@ class ApiQuery
         #[Deprecated] protected ?CustomFilterInterface $customFilter = null,
         protected bool $fetchOneAdditionalRecord = false,
         protected array $customFilters = [],
+        protected array $customOrders = [],
     ) {
         if ($this->customFilter instanceof CustomFilterInterface && empty($this->customFilters)) {
             $this->customFilters = [$this->customFilter];
@@ -83,6 +85,10 @@ class ApiQuery
     {
         foreach ($this->apiParams->getOrder() as $field => $direction) {
             $this->dqb->addOrderBy('t.' . $field, $direction);
+        }
+
+        foreach ($this->customOrders as $customOrder) {
+            $customOrder->apply($this->dqb, $this->apiParams);
         }
     }
 
