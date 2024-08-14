@@ -38,17 +38,18 @@ abstract class AbstractVoter extends Voter
             return true;
         }
 
-        // If specific business logic allows, grant access
-        if ($this->businessLogicVote($attribute, $subject, $user)) {
-            return true;
+        // Allow to define custom business logic vote
+        $vote = $this->businessLogicVote($attribute, $subject, $user);
+        if (false === (null === $vote)) {
+            return $vote;
         }
 
         return $this->permissionVote($attribute, $subject, $user);
     }
 
-    protected function businessLogicVote(string $attribute, mixed $subject, AnzuUser $user): bool
+    protected function businessLogicVote(string $attribute, mixed $subject, AnzuUser $user): ?bool
     {
-        return false;
+        return null;
     }
 
     protected function permissionVote(string $attribute, mixed $subject, AnzuUser $user): bool
