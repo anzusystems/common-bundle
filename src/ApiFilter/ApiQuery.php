@@ -228,7 +228,7 @@ class ApiQuery
         return is_string($value) ? trim($value) : $value;
     }
 
-    private function applyFieldCallbacks(string $field, int|string $value): void
+    private function applyFieldCallbacks(string $field, mixed $value): void
     {
         if (false === isset($this->fieldCallbacks[$field])) {
             return;
