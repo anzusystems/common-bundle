@@ -69,7 +69,6 @@ class ApiQuery
             $this->fieldCallbacks[$fieldCallback->field()][] = $fieldCallback;
         }
 
-
         $this->setQueryBuilder();
         $this->applyFilters();
     }
@@ -175,10 +174,10 @@ class ApiQuery
                                 ':' . $paramName
                             )
                         );
-                    $this->dqb->setParameter(
-                        $paramName,
-                        $this->getFilterValue($filterVariant, $field, $value)
-                    );
+                        $this->dqb->setParameter(
+                            $paramName,
+                            $this->getFilterValue($filterVariant, $field, $value)
+                        );
                 }
             }
         }
@@ -248,7 +247,7 @@ class ApiQuery
 
         $applied = false;
         foreach ($this->customInnerFilters[$field] as $innerFilter) {
-            $applied = $innerFilter->apply($this->dqb, true) ?? $applied;
+            $applied = $innerFilter->apply($this->dqb, true) ?: $applied;
         }
         unset($this->customInnerFilters[$field]);
 

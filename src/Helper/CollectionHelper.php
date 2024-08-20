@@ -31,7 +31,7 @@ class CollectionHelper
     public static function arrayStringToArray(string $array, string $type = Type::BUILTIN_TYPE_INT): array
     {
         return array_map(
-            fn (string $item): string|int|float => match($type) {
+            fn (string $item): string|int|float => match ($type) {
                 Type::BUILTIN_TYPE_INT => (int) $item,
                 Type::BUILTIN_TYPE_FLOAT => (float) $item,
                 default => trim($item),
