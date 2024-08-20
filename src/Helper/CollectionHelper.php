@@ -8,6 +8,7 @@ use AnzuSystems\Contracts\Entity\Interfaces\BaseIdentifiableInterface;
 use Closure;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
+use Symfony\Component\PropertyInfo\Type;
 use Traversable;
 
 class CollectionHelper
@@ -24,6 +25,18 @@ class CollectionHelper
                 $getIdAction ?: static fn (BaseIdentifiableInterface $identifiable): mixed => $identifiable->getId(),
                 iterator_to_array($traversable)
             )
+        );
+    }
+
+    public static function arrayStringToArray(string $array, string $type = Type::BUILTIN_TYPE_INT): array
+    {
+        return array_map(
+            fn (string $item): string|int|float => match($type) {
+                Type::BUILTIN_TYPE_INT => (int) $item,
+                Type::BUILTIN_TYPE_FLOAT => (float) $item,
+                default => trim($item),
+            },
+            explode(',', $array)
         );
     }
 

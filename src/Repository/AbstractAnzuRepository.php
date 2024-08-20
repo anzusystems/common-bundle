@@ -9,7 +9,9 @@ use AnzuSystems\CommonBundle\ApiFilter\ApiParams;
 use AnzuSystems\CommonBundle\ApiFilter\ApiQuery;
 use AnzuSystems\CommonBundle\ApiFilter\ApiResponseList;
 use AnzuSystems\CommonBundle\ApiFilter\CustomFilterInterface;
+use AnzuSystems\CommonBundle\ApiFilter\CustomInnerFilterInterface;
 use AnzuSystems\CommonBundle\ApiFilter\CustomOrderInterface;
+use AnzuSystems\CommonBundle\ApiFilter\FieldCallbackInterface;
 use AnzuSystems\Contracts\Entity\AnzuUser;
 use AnzuSystems\Contracts\Entity\Interfaces\UserTrackingInterface;
 use Closure;
@@ -66,6 +68,8 @@ abstract class AbstractAnzuRepository extends ServiceEntityRepository implements
     /**
      * @param list<CustomFilterInterface> $customFilters
      * @param list<CustomOrderInterface> $customOrders
+     * @param list<CustomInnerFilterInterface> $customInnerFilters
+     * @param list<FieldCallbackInterface> $fieldCallbacks
      *
      * @throws ORMException
      */
@@ -74,6 +78,8 @@ abstract class AbstractAnzuRepository extends ServiceEntityRepository implements
         #[Deprecated] ?CustomFilterInterface $customFilter = null,
         array $customFilters = [],
         array $customOrders = [],
+        array $customInnerFilters = [],
+        array $fieldCallbacks = [],
         ?Closure $mapDataFn = null,
     ): ApiResponseList {
         if ($customFilter instanceof CustomFilterInterface && empty($customFilters)) {
@@ -86,6 +92,8 @@ abstract class AbstractAnzuRepository extends ServiceEntityRepository implements
             apiParams: $apiParams,
             customFilters: $customFilters,
             customOrders: $customOrders,
+            customInnerFilters: $customInnerFilters,
+            fieldCallbacks: $fieldCallbacks
         );
 
         $data = $apiQuery->getData();
@@ -109,7 +117,8 @@ abstract class AbstractAnzuRepository extends ServiceEntityRepository implements
     /**
      * @param list<CustomFilterInterface> $customFilters
      * @param list<CustomOrderInterface> $customOrders
-     * @param ?CustomFilterInterface $customFilter Deprecated
+     * @param list<CustomInnerFilterInterface> $customInnerFilters
+     * @param list<FieldCallbackInterface> $fieldCallbacks
      *
      * @throws ORMException
      */
@@ -118,6 +127,8 @@ abstract class AbstractAnzuRepository extends ServiceEntityRepository implements
         #[Deprecated] ?CustomFilterInterface $customFilter = null,
         array $customFilters = [],
         array $customOrders = [],
+        array $customInnerFilters = [],
+        array $fieldCallbacks = [],
         ?Closure $mapDataFn = null,
     ): ApiInfiniteResponseList {
         if ($customFilter instanceof CustomFilterInterface && empty($customFilters)) {
@@ -131,6 +142,8 @@ abstract class AbstractAnzuRepository extends ServiceEntityRepository implements
             fetchOneAdditionalRecord: true,
             customFilters: $customFilters,
             customOrders: $customOrders,
+            customInnerFilters: $customInnerFilters,
+            fieldCallbacks: $fieldCallbacks
         );
         $data = $apiQuery->getData();
         $totalCount = $apiParams->getLimit() + $apiParams->getOffset() + 1;
