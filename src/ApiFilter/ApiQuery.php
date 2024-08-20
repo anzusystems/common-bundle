@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace AnzuSystems\CommonBundle\ApiFilter;
 
+use Closure;
 use DateTime;
 use DateTimeImmutable;
 use Doctrine\DBAL\Types\Types;
@@ -21,8 +22,21 @@ class ApiQuery
     protected QueryBuilder $dqb;
 
     /**
+     * @var array<string, list<CustomInnerFilterInterface>>
+     */
+    protected array $customInnerFilters = [];
+
+
+    /**
+     * @var array<string, list<FieldCallbackInterface>>
+     */
+    protected array $fieldCallbacks = [];
+
+    /**
      * @param list<CustomFilterInterface> $customFilters
      * @param list<CustomOrderInterface> $customOrders
+     * @param list<CustomInnerFilterInterface> $customInnerFilters
+     * @param list<FieldCallbackInterface> $fieldCallbacks
      *
      * @throws ORMException
      */
@@ -34,9 +48,25 @@ class ApiQuery
         protected bool $fetchOneAdditionalRecord = false,
         protected array $customFilters = [],
         protected array $customOrders = [],
+        array $customInnerFilters = [],
+        array $fieldCallbacks = [],
     ) {
         if ($this->customFilter instanceof CustomFilterInterface && empty($this->customFilters)) {
             $this->customFilters = [$this->customFilter];
+        }
+
+        foreach ($customInnerFilters as $filter) {
+            if (false === isset($this->customInnerFilters[$filter->field()])) {
+                $this->customInnerFilters[$filter->field()] = [];
+            }
+            $this->customInnerFilters[$filter->field()][] = $filter;
+        }
+
+        foreach ($fieldCallbacks as $fieldCallback) {
+            if (false === isset($this->fieldCallbacks[$fieldCallback->field()])) {
+                $this->fieldCallbacks[$fieldCallback->field()] = [];
+            }
+            $this->fieldCallbacks[$fieldCallback->field()][] = $fieldCallback;
         }
 
         $this->setQueryBuilder();
@@ -103,6 +133,12 @@ class ApiQuery
                 /** @var string $fieldName */
                 $fieldName = str_replace('.', '_', $field);
                 $paramName = $fieldName . '_' . ++$iter;
+
+                $this->applyFieldCallbacks($field, $value);
+                if ($this->applyInnerFiltersOnField($field)) {
+                    continue;
+                }
+
                 switch ($filterVariant) {
                     case ApiParams::FILTER_CUSTOM:
                         foreach ($this->customFilters as $customFilter) {
@@ -145,6 +181,8 @@ class ApiQuery
                 }
             }
         }
+
+        $this->applyRemainingInnerFilters();
     }
 
     /**
@@ -188,5 +226,40 @@ class ApiQuery
         }
 
         return is_string($value) ? trim($value) : $value;
+    }
+
+    private function applyFieldCallbacks(string $field, mixed $value): void
+    {
+        if (false === isset($this->fieldCallbacks[$field])) {
+            return;
+        }
+
+        foreach ($this->fieldCallbacks[$field] as $fieldCallback) {
+            $fieldCallback($value);
+        }
+    }
+
+    private function applyInnerFiltersOnField(string $field): bool
+    {
+        if (false === isset($this->customInnerFilters[$field])) {
+            return false;
+        }
+
+        $applied = false;
+        foreach ($this->customInnerFilters[$field] as $innerFilter) {
+            $applied = $innerFilter->apply($this->dqb, true) ?: $applied;
+        }
+        unset($this->customInnerFilters[$field]);
+
+        return $applied;
+    }
+
+    private function applyRemainingInnerFilters(): void
+    {
+        foreach ($this->customInnerFilters as $customInnerFilters) {
+            foreach ($customInnerFilters as $innerFilter) {
+                $innerFilter->apply($this->dqb, false);
+            }
+        }
     }
 }
