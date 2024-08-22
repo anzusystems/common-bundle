@@ -63,6 +63,11 @@ abstract class AbstractManager
         $this->entityManager->rollback();
     }
 
+    public function isTransactionActive(): bool
+    {
+        return $this->entityManager->getConnection()->isTransactionActive();
+    }
+
     public function clear(): void
     {
         $this->entityManager->clear();
