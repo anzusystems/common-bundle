@@ -346,10 +346,10 @@ final class Configuration implements ConfigurationInterface
         return (new TreeBuilder('jobs'))->getRootNode()
             ->addDefaultsIfNotSet()
             ->children()
-                ->integerNode('batch_size')->defaultValue(50)->end()
-                ->integerNode('max_exec_time')->defaultValue(50)->end()
-                ->integerNode('max_memory')->defaultValue(100_000_000)->end()
-                ->integerNode('no_job_idle_time')->defaultValue(10)->end()
+                ->scalarNode('batch_size')->defaultValue(50)->end()
+                ->scalarNode('max_exec_time')->defaultValue(50)->end()
+                ->scalarNode('max_memory')->defaultValue(100_000_000)->end()
+                ->scalarNode('no_job_idle_time')->defaultValue(10)->end()
             ->end()
         ;
     }
