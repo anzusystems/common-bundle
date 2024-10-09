@@ -90,7 +90,7 @@ class LinkNodeTransformer extends AbstractMarkNodeTransformer
 
         $attrs['variant'] = str_starts_with($attrs['href'], 'http') ? 'link' : 'anchor';
         if ($attrs['variant'] === 'anchor') {
-            $attrs['href'] = '#' . self::getSanitizedAnchor($attrs['href']);
+            $attrs['href'] = self::getSanitizedAnchor($attrs['href']);
         }
 
         $attrs['nofollow'] = isset($attrs['rel']);
