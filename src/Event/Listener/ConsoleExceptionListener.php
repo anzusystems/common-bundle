@@ -9,8 +9,11 @@ use AnzuSystems\SerializerBundle\Exception\SerializerException;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Console\Event\ConsoleErrorEvent;
 
-final class ConsoleExceptionListener
+final readonly class ConsoleExceptionListener
 {
+    /**
+     *
+     */
     public function __construct(
         private readonly LoggerInterface $appLogger,
         private readonly array $ignoredExceptions = [],
@@ -24,8 +27,10 @@ final class ConsoleExceptionListener
     public function __invoke(ConsoleErrorEvent $event): void
     {
         $exception = $event->getError();
-        if (is_a($exception::class, $this->ignoredExceptions, true)) {
-            return;
+        foreach ($this->ignoredExceptions as $ignoredException) {
+            if (is_a($exception::class, $ignoredException, true)) {
+                return;
+            }
         }
 
         $context = [];
