@@ -39,8 +39,8 @@ final class AnzuTapTransformerTest extends AnzuWebTestCase
                         'content' => [
                             ['type' => 'text', 'marks' => [
                                 ['type' => 'link', 'attrs' => [
-                                    'href' => '#pp-1',
                                     'variant' => 'anchor',
+                                    'href' => 'pp-1',
                                     'nofollow' => false,
                                     'external' => false,
                                 ]],
