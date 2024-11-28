@@ -43,7 +43,7 @@ final class ExceptionListener
             $event->allowCustomResponseCode();
         }
 
-        if (in_array($exception::class, $this->ignoredExceptions, true)) {
+        if (is_a($exception::class, $this->ignoredExceptions, true)) {
             return;
         }
 

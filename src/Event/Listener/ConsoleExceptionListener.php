@@ -24,7 +24,7 @@ final class ConsoleExceptionListener
     public function __invoke(ConsoleErrorEvent $event): void
     {
         $exception = $event->getError();
-        if (in_array($exception::class, $this->ignoredExceptions, true)) {
+        if (is_a($exception::class, $this->ignoredExceptions, true)) {
             return;
         }
 
