@@ -48,6 +48,11 @@ abstract class AbstractFixtures implements FixturesInterface
         return $priority;
     }
 
+    public function getEnvironments(): array
+    {
+        return [FixturesInterface::DEFAULT_FIXTURES_ENVIRONMENT];
+    }
+
     public function getRegistry(): ArrayCollection
     {
         if (false === isset($this->registry)) {

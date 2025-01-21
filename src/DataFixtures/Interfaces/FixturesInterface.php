@@ -15,12 +15,16 @@ use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
 #[AutoconfigureTag(name: AnzuSystemsCommonBundle::TAG_DATA_FIXTURE)]
 interface FixturesInterface
 {
+    public const string DEFAULT_FIXTURES_ENVIRONMENT = 'dev';
+
     /**
      * @return class-string<E>
      */
     public static function getIndexKey(): string;
 
     public static function getPriority(): int;
+
+    public function getEnvironments(): array;
 
     /**
      * @template F of FixturesInterface
