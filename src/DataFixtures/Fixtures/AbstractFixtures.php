@@ -109,17 +109,26 @@ abstract class AbstractFixtures implements FixturesInterface
 
     public function configureAssignedGenerator(): void
     {
-        $metadata = $this->entityManager->getClassMetadata(static::getIndexKey());
-        $this->idGenerator = $metadata->idGenerator;
-        $this->generatorType = $metadata->generatorType;
-        $metadata->setIdGenerator(new AssignedGenerator());
-        $metadata->setIdGeneratorType(ClassMetadata::GENERATOR_TYPE_NONE);
+        foreach ($this->getAssignedGeneratorClasses() as $assignedGeneratorClass) {
+            $metadata = $this->entityManager->getClassMetadata($assignedGeneratorClass);
+            $this->idGenerator = $metadata->idGenerator;
+            $this->generatorType = $metadata->generatorType;
+            $metadata->setIdGenerator(new AssignedGenerator());
+            $metadata->setIdGeneratorType(ClassMetadata::GENERATOR_TYPE_NONE);
+        }
     }
 
     public function disableAssignedGenerator(): void
     {
-        $metadata = $this->entityManager->getClassMetadata(static::getIndexKey());
-        $metadata->setIdGenerator($this->idGenerator);
-        $metadata->setIdGeneratorType($this->generatorType);
+        foreach ($this->getAssignedGeneratorClasses() as $assignedGeneratorClass) {
+            $metadata = $this->entityManager->getClassMetadata($assignedGeneratorClass);
+            $metadata->setIdGenerator($this->idGenerator);
+            $metadata->setIdGeneratorType($this->generatorType);
+        }
+    }
+
+    protected function getAssignedGeneratorClasses(): array
+    {
+        return [static::getIndexKey()];
     }
 }
