@@ -80,7 +80,7 @@ abstract class AbstractFixtures implements FixturesInterface
     /**
      * @param E $object
      */
-    public function addToRegistry(object $object, string | int $key = null): self
+    public function addToRegistry(object $object, string | int | null $key = null): self
     {
         if ($key) {
             $this->getRegistry()->set($key, $object);
