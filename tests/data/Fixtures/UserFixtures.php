@@ -22,7 +22,7 @@ final class UserFixtures extends AbstractFixtures
 
     public function getEnvironments(): array
     {
-        return parent::getEnvironments() + ['test'];
+        return ['test'];
     }
 
     public function load(ProgressBar $progressBar): void

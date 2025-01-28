@@ -27,7 +27,7 @@ class ValidationException extends AnzuException
     private ConstraintViolationListInterface $errors;
     private array $errorsFormatted = [];
 
-    public function __construct(ConstraintViolationListInterface $errors = null)
+    public function __construct(?ConstraintViolationListInterface $errors = null)
     {
         parent::__construct(self::ERROR_MESSAGE);
         $this->errors = $errors ?? new ConstraintViolationList();

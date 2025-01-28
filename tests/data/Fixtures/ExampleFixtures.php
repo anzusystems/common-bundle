@@ -23,7 +23,7 @@ final class ExampleFixtures extends AbstractFixtures
 
     public function getEnvironments(): array
     {
-        return parent::getEnvironments() + ['test'];
+        return ['test'];
     }
 
     public function useCustomId(): bool
