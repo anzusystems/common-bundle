@@ -76,6 +76,7 @@ return static function (ContainerConfigurator $configurator): void {
             tag: AnzuSystemsCommonBundle::TAG_DATA_FIXTURE,
             defaultPriorityMethod: 'getPriority',
         ))
+        ->arg('$env', param('kernel.environment'))
     ;
 
     $services->set(GenerateFixturesCommand::class)

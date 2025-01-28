@@ -20,6 +20,11 @@ final class UserFixtures extends AbstractFixtures
         return User::class;
     }
 
+    public function getEnvironments(): array
+    {
+        return ['test'];
+    }
+
     public function load(ProgressBar $progressBar): void
     {
         foreach ($progressBar->iterate($this->getData()) as $user) {

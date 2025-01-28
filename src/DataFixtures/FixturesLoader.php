@@ -15,14 +15,19 @@ final class FixturesLoader
      */
     private iterable $fixtures;
 
-    public function __construct(iterable $fixtures)
-    {
+    public function __construct(
+        iterable $fixtures,
+        private readonly string $env,
+    ) {
         $this->fixtures = $fixtures;
     }
 
     public function load(OutputInterface $output): void
     {
         foreach ($this->fixtures as $fixtures) {
+            if (false === in_array($this->env, $fixtures->getEnvironments(), true)) {
+                continue;
+            }
             if ($fixtures->useCustomId()) {
                 $fixtures->configureAssignedGenerator();
             }

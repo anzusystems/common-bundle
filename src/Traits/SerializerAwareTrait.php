@@ -12,7 +12,7 @@ trait SerializerAwareTrait
     protected Serializer $serializer;
 
     #[Required]
-    public function setSerializer(Serializer $serializer = null): void
+    public function setSerializer(?Serializer $serializer = null): void
     {
         if ($serializer instanceof Serializer) {
             $this->serializer = $serializer;

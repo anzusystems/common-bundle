@@ -61,7 +61,7 @@ final class LogContextFactory
         ;
     }
 
-    public function buildFromRequest(Request $request, Response $response = null): LogContext
+    public function buildFromRequest(Request $request, ?Response $response = null): LogContext
     {
         return $this->buildBaseContext()
             ->setRequestOriginAppVersion((string) $request->headers->get(self::REQUEST_ORIGIN_VERSION_HEADER))
@@ -79,7 +79,7 @@ final class LogContextFactory
     /**
      * @throws SerializerException
      */
-    public function buildFromRequestToArray(Request $request, Response $response = null): array
+    public function buildFromRequestToArray(Request $request, ?Response $response = null): array
     {
         $context = $this->serializer->toArray(
             $this->buildFromRequest($request, $response)
