@@ -18,7 +18,7 @@ class CollectionHelper
      *
      * @param null|Closure(T): mixed $getIdAction
      */
-    public static function traversableToIds(Traversable $traversable, Closure $getIdAction = null): array
+    public static function traversableToIds(Traversable $traversable, ?Closure $getIdAction = null): array
     {
         return array_values(
             array_map(
@@ -51,7 +51,7 @@ class CollectionHelper
     public static function colDiff(
         Collection $collectionOne,
         Collection $collectionTwo,
-        Closure $colDiffFn = null
+        ?Closure $colDiffFn = null
     ): ArrayCollection {
         return new ArrayCollection(
             array_udiff(

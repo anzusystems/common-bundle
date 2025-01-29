@@ -48,6 +48,11 @@ abstract class AbstractFixtures implements FixturesInterface
         return $priority;
     }
 
+    public function getEnvironments(): array
+    {
+        return [FixturesInterface::DEFAULT_FIXTURES_ENVIRONMENT];
+    }
+
     public function getRegistry(): ArrayCollection
     {
         if (false === isset($this->registry)) {
@@ -75,7 +80,7 @@ abstract class AbstractFixtures implements FixturesInterface
     /**
      * @param E $object
      */
-    public function addToRegistry(object $object, string | int $key = null): self
+    public function addToRegistry(object $object, string | int | null $key = null): self
     {
         if ($key) {
             $this->getRegistry()->set($key, $object);
@@ -104,17 +109,26 @@ abstract class AbstractFixtures implements FixturesInterface
 
     public function configureAssignedGenerator(): void
     {
-        $metadata = $this->entityManager->getClassMetadata(static::getIndexKey());
-        $this->idGenerator = $metadata->idGenerator;
-        $this->generatorType = $metadata->generatorType;
-        $metadata->setIdGenerator(new AssignedGenerator());
-        $metadata->setIdGeneratorType(ClassMetadata::GENERATOR_TYPE_NONE);
+        foreach ($this->getAssignedGeneratorClasses() as $assignedGeneratorClass) {
+            $metadata = $this->entityManager->getClassMetadata($assignedGeneratorClass);
+            $this->idGenerator = $metadata->idGenerator;
+            $this->generatorType = $metadata->generatorType;
+            $metadata->setIdGenerator(new AssignedGenerator());
+            $metadata->setIdGeneratorType(ClassMetadata::GENERATOR_TYPE_NONE);
+        }
     }
 
     public function disableAssignedGenerator(): void
     {
-        $metadata = $this->entityManager->getClassMetadata(static::getIndexKey());
-        $metadata->setIdGenerator($this->idGenerator);
-        $metadata->setIdGeneratorType($this->generatorType);
+        foreach ($this->getAssignedGeneratorClasses() as $assignedGeneratorClass) {
+            $metadata = $this->entityManager->getClassMetadata($assignedGeneratorClass);
+            $metadata->setIdGenerator($this->idGenerator);
+            $metadata->setIdGeneratorType($this->generatorType);
+        }
+    }
+
+    protected function getAssignedGeneratorClasses(): array
+    {
+        return [static::getIndexKey()];
     }
 }

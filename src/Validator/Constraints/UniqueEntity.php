@@ -19,7 +19,7 @@ final class UniqueEntity extends Constraint
         /** @var list<string> */
         public readonly array $errorAtPath = [],
         mixed $options = null,
-        array $groups = null,
+        ?array $groups = null,
         mixed $payload = null,
     ) {
         parent::__construct($options, $groups, $payload);

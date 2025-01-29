@@ -20,8 +20,8 @@ final class EntityExists extends Constraint
     public function __construct(
         public string $entity,
         public bool $allowNull = false,
-        array $options = null,
-        array $groups = null,
+        ?array $options = null,
+        ?array $groups = null,
         mixed $payload = null
     ) {
         parent::__construct($options ?? [], $groups, $payload);

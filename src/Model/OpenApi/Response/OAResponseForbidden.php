@@ -8,13 +8,15 @@ use Attribute;
 use Symfony\Component\HttpFoundation\JsonResponse;
 
 #[Attribute(Attribute::TARGET_CLASS | Attribute::TARGET_METHOD | Attribute::IS_REPEATABLE)]
-final class OAResponseValidation extends OAResponse
+final class OAResponseForbidden extends OAResponseError
 {
     public function __construct()
     {
         parent::__construct(
-            description: 'List of validation errors.',
-            response: JsonResponse::HTTP_UNPROCESSABLE_ENTITY,
+            response: JsonResponse::HTTP_FORBIDDEN,
+            description: 'Access denied.',
+            errorExample: 'access_denied',
+            detailExample: 'Access denied',
         );
     }
 }

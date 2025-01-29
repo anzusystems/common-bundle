@@ -2,8 +2,6 @@
 
 namespace AnzuSystems\CommonBundle\Tests\AnzuTap;
 
-use AnzuSystems\CommonBundle\Model\AnzuTap\AnzuTapBody;
-use AnzuSystems\CommonBundle\Model\AnzuTap\EmbedContainer;
 use AnzuSystems\CommonBundle\Tests\AnzuWebTestCase;
 
 final class AnzuTapTransformerTest extends AnzuWebTestCase

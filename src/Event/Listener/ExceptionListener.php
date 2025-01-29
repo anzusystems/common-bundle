@@ -72,8 +72,10 @@ final readonly class ExceptionListener
         $handlers = iterator_to_array($this->exceptionHandlers);
 
         foreach ($handlers as $exceptionHandler) {
-            if (in_array($throwable::class, $exceptionHandler->getSupportedExceptionClasses(), true)) {
-                return $exceptionHandler;
+            foreach ($exceptionHandler->getSupportedExceptionClasses() as $supportedExceptionClass) {
+                if (is_a($throwable, $supportedExceptionClass, true)) {
+                    return $exceptionHandler;
+                }
             }
         }
 
