@@ -13,10 +13,11 @@ use Symfony\Component\HttpKernel\Event\ExceptionEvent;
 use Throwable;
 use Traversable;
 
-final class ExceptionListener
+final readonly class ExceptionListener
 {
     /**
      * @param Traversable<class-string<ExceptionHandlerInterface>, ExceptionHandlerInterface> $exceptionHandlers
+     * @param list<class-string> $ignoredExceptions
      */
     public function __construct(
         private readonly Traversable $exceptionHandlers,
@@ -43,8 +44,10 @@ final class ExceptionListener
             $event->allowCustomResponseCode();
         }
 
-        if (in_array($exception::class, $this->ignoredExceptions, true)) {
-            return;
+        foreach ($this->ignoredExceptions as $ignoredException) {
+            if (is_a($exception::class, $ignoredException, true)) {
+                return;
+            }
         }
 
         $context = [];
