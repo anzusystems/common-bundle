@@ -80,14 +80,16 @@ final class GeolocationHandler extends AbstractHandler
             new Property([
                 'property' => self::LON,
                 'title' => 'Longitude',
-                'type' => Type::BUILTIN_TYPE_FLOAT,
+                'type' => 'number',
+                'format' => Type::BUILTIN_TYPE_FLOAT,
                 'minimum' => -180,
                 'maximum' => 180,
             ]),
             new Property([
                 'property' => self::LAT,
                 'title' => 'Latitude',
-                'type' => Type::BUILTIN_TYPE_FLOAT,
+                'type' => 'number',
+                'format' => Type::BUILTIN_TYPE_FLOAT,
                 'minimum' => -90,
                 'maximum' => 90,
             ]),
