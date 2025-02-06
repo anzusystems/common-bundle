@@ -26,7 +26,7 @@ class CurrentAnzuUserProvider
 
     public function getCurrentUser(): AnzuUser
     {
-        if (null === $this->currentUser || 'test' === AnzuApp::getAppEnv()) {
+        if (null === $this->currentUser) {
             $this->currentUser = $this->security->getUser() instanceof AnzuUser
                 ? $this->security->getUser()
                 : $this->entityManager->find($this->userEntityClass, AnzuApp::getUserIdAnonymous());
