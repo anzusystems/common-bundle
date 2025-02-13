@@ -42,6 +42,12 @@ final class LogContext
     private string $response;
 
     #[Serialize]
+    private string $resourceName;
+
+    #[Serialize]
+    private array $resourceIds;
+
+    #[Serialize]
     private int $httpStatus;
 
     #[Serialize]
@@ -67,6 +73,8 @@ final class LogContext
             ->setContent('')
             ->setParams([])
             ->setResponse('')
+            ->setResourceName('')
+            ->setResourceIds([])
             ->setHttpStatus(0)
             ->setTimeout(0)
             ->setError('')
@@ -202,6 +210,30 @@ final class LogContext
     public function setResponse(string $response): self
     {
         $this->response = $response;
+
+        return $this;
+    }
+
+    public function getResourceName(): string
+    {
+        return $this->resourceName;
+    }
+
+    public function setResourceName(string $resourceName): self
+    {
+        $this->resourceName = $resourceName;
+
+        return $this;
+    }
+
+    public function getResourceIds(): array
+    {
+        return $this->resourceIds;
+    }
+
+    public function setResourceIds(array $resourceId): self
+    {
+        $this->resourceIds = $resourceId;
 
         return $this;
     }

@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace AnzuSystems\CommonBundle\Kernel;
 
 use AnzuSystems\Contracts\AnzuApp;
-use App\DependencyInjection\Compiler\DoctrineServiceTypeCompilerPass;
 use Doctrine\Bundle\DoctrineBundle\DependencyInjection\Compiler\DoctrineOrmMappingsPass;
 use Symfony\Bundle\FrameworkBundle\Kernel\MicroKernelTrait;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
