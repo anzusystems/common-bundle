@@ -36,7 +36,7 @@ final class LogControllerTest extends AbstractControllerTest
         $this->post(uri: '/dummy/audit');
 
         /** @var ApiResponseList<Log> $response */
-        $response = $this->getList(uri: '/log/audit', deserializationClass: Log::class);
+        $response = $this->getList(uri: '/log/audit?order[id]=desc', deserializationClass: Log::class);
         self::assertResponseIsSuccessful();
         self::assertNotEmpty($response->getData());
         self::assertContainsOnlyInstancesOf(Log::class, $response->getData());
@@ -45,7 +45,8 @@ final class LogControllerTest extends AbstractControllerTest
         $response = $this->get(uri: '/log/audit/' .$log->getId(), deserializationClass: Log::class);
         self::assertResponseIsSuccessful();
         self::assertSame($response->getId(), $log->getId());
-        $ss = null;
+        self::assertSame('test', $log->getContext()->getResourceName());
+        self::assertSame(['123'], $log->getContext()->getResourceIds());
     }
 
     public function testCustomLog(): void

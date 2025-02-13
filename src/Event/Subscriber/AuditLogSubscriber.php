@@ -11,12 +11,12 @@ use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 use Symfony\Component\HttpKernel\Event\TerminateEvent;
 use Symfony\Component\HttpKernel\KernelEvents;
 
-final class AuditLogSubscriber implements EventSubscriberInterface
+final readonly class AuditLogSubscriber implements EventSubscriberInterface
 {
     public function __construct(
-        private readonly LoggerInterface $auditLogger,
-        private readonly LogContextFactory $logContextFactory,
-        private readonly array $loggedMethods,
+        private LoggerInterface $auditLogger,
+        private LogContextFactory $logContextFactory,
+        private array $loggedMethods,
     ) {
     }
 
@@ -32,14 +32,16 @@ final class AuditLogSubscriber implements EventSubscriberInterface
      */
     public function onTerminate(TerminateEvent $event): void
     {
-        if (in_array($event->getRequest()->getMethod(), $this->loggedMethods, true)) {
-            $this->auditLogger->info(
-                (string) $event->getRequest()->attributes->get('_route'),
-                $this->logContextFactory->buildFromRequestToArray(
-                    $event->getRequest(),
-                    $event->getResponse()
-                )
-            );
+        if (false === in_array($event->getRequest()->getMethod(), $this->loggedMethods, true)) {
+            return;
         }
+
+        $this->auditLogger->info(
+            message: (string) $event->getRequest()->attributes->get('_route'),
+            context: $this->logContextFactory->buildFromRequestToArray(
+                $event->getRequest(),
+                $event->getResponse()
+            ),
+        );
     }
 }

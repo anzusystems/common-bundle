@@ -6,6 +6,7 @@ namespace AnzuSystems\CommonBundle\Tests\Data\Controller;
 
 use AnzuSystems\CommonBundle\ApiFilter\ApiParams;
 use AnzuSystems\CommonBundle\Controller\AbstractAnzuApiController;
+use AnzuSystems\CommonBundle\Log\Helper\AuditLogResourceHelper;
 use AnzuSystems\CommonBundle\Model\Attributes\ArrayStringParam;
 use AnzuSystems\CommonBundle\Tests\Data\Entity\Example;
 use AnzuSystems\CommonBundle\Tests\Data\Model\DataObject\DummyDto;
@@ -22,8 +23,10 @@ use Symfony\Component\Routing\Attribute\Route;
 final class DummyController extends AbstractAnzuApiController
 {
     #[Route('/audit', methods: [Request::METHOD_POST])]
-    public function auditLogTest(): JsonResponse
+    public function auditLogTest(Request $request): JsonResponse
     {
+        AuditLogResourceHelper::setResource(request: $request, resourceName: 'test', resourceId: 123);
+
         return $this->okResponse([]);
     }
 
