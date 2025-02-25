@@ -19,7 +19,7 @@
     "ext-dom": "*",
     "ext-zend-opcache": "*",
     "anzusystems/contracts": "^4.0",
-    "anzusystems/serializer-bundle": "^4.0",
+    "anzusystems/serializer-bundle": "^5.0",
     "doctrine/dbal": "^4.0",
     "doctrine/lexer": "^3.0",
     "doctrine/orm": "^3.1",
