@@ -33,6 +33,10 @@ interface AnzuTapNodeInterface
      */
     public function getContent(): array;
 
+    public function getAttrs(): ?array;
+
+    public function getAttr(string $key): mixed;
+
     public function setContent(array $content): self;
 
     public function getNodeText(): ?string;
