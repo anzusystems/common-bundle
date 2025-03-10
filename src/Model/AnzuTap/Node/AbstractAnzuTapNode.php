@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace AnzuSystems\CommonBundle\Model\AnzuTap\Node;
 
+use Closure;
+
 abstract class AbstractAnzuTapNode implements AnzuTapNodeInterface
 {
     protected ?AnzuTapNodeInterface $parent = null;
@@ -137,6 +139,48 @@ abstract class AbstractAnzuTapNode implements AnzuTapNodeInterface
     }
 
     /**
+     * @param Closure(AnzuTapNodeInterface $removeFn, mixed $key): bool $removeFn
+     */
+    public function removeNode(Closure $removeFn): ?AnzuTapNodeInterface
+    {
+        $removeNodeKey = $this->findNode($removeFn);
+        if (null === $removeNodeKey) {
+            return null;
+        }
+
+        if (array_key_exists($removeNodeKey, $this->content) && $this->content[$removeNodeKey] instanceof AnzuTapNodeInterface) {
+            $removed = $this->content[$removeNodeKey];
+            unset($this->content[$removeNodeKey]);
+            $this->content = array_values($this->content);
+
+            return $removed;
+        }
+
+        return $this;
+    }
+
+    /**
+     * @param Closure(AnzuTapNodeInterface $filterFn, mixed $key): bool $filterFn
+     *
+     * @return array-key
+     */
+    public function findNode(Closure $filterFn): int|string|null
+    {
+        $key = null;
+        foreach ($this->content as $currentKey => $value) {
+            if ($filterFn($value, $currentKey)) {
+                $key = $currentKey;
+                break;
+            }
+        }
+        if (is_string($key) || is_int($key)) {
+            return $key;
+        }
+
+        return null;
+    }
+
+    /**
      * Helper function for wrapping child nodes into paragraphs
      */
     protected function upsertFirstContentParagraph(): AnzuTapNodeInterface
@@ -151,43 +195,5 @@ abstract class AbstractAnzuTapNode implements AnzuTapNodeInterface
         $this->addContent($paragraphNode);
 
         return $paragraphNode;
-    }
-
-    /**
-     * @param \Closure(AnzuTapNodeInterface $value, mixed $key): bool $removeFn
-     */
-    public function removeNode(?\Closure $removeFn = null): ?AnzuTapNodeInterface
-    {
-        $removeNodeKey = $this->findNode($removeFn);
-        if (array_key_exists($removeNodeKey, $this->content) && $this->content[$removeNodeKey] instanceof AnzuTapNodeInterface) {
-            $removed = $this->content[$removeNodeKey];
-            unset($this->content[$removeNodeKey]);
-            $this->content = array_values($this->content);
-
-            return $removed;
-        }
-
-        return $this;
-    }
-
-    /**
-     * @param \Closure(AnzuTapNodeInterface $value, mixed $key): bool $filterFn
-     *
-     * @return array-key
-     */
-    public function findNode(\Closure $filterFn): int|string|null
-    {
-        $key = null;
-        foreach ($this->content as $currentKey => $value) {
-            if ($filterFn($value, $currentKey)) {
-                $key = $currentKey;
-                break;
-            }
-        }
-        if (is_string($key) || is_int($key)) {
-            return $key;
-        }
-
-        return null;
     }
 }
