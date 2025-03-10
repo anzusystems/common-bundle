@@ -11,13 +11,10 @@ use Symfony\Component\Console\Event\ConsoleErrorEvent;
 
 final readonly class ConsoleExceptionListener
 {
-    /**
-     *
-     */
     public function __construct(
-        private readonly LoggerInterface $appLogger,
-        private readonly array $ignoredExceptions = [],
-        private readonly ?LogContextFactory $logContextFactory = null,
+        private LoggerInterface $appLogger,
+        private array $ignoredExceptions = [],
+        private ?LogContextFactory $logContextFactory = null,
     ) {
     }
 

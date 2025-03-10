@@ -6,6 +6,7 @@ namespace AnzuSystems\CommonBundle\Log\Factory;
 
 use AnzuSystems\CommonBundle\Document\LogContext;
 use AnzuSystems\CommonBundle\Domain\User\CurrentAnzuUserProvider;
+use AnzuSystems\CommonBundle\Log\Helper\AuditLogResourceHelper;
 use AnzuSystems\CommonBundle\Log\Model\LogDto;
 use AnzuSystems\Contracts\AnzuApp;
 use AnzuSystems\SerializerBundle\Exception\SerializerException;
@@ -63,6 +64,12 @@ final class LogContextFactory
 
     public function buildFromRequest(Request $request, ?Response $response = null): LogContext
     {
+        $resourceIds = [];
+        $resourceIdFromRequest = $request->attributes->get(AuditLogResourceHelper::RESOURCE_ID_ATTR_NAME);
+        if (is_array($resourceIdFromRequest)) {
+            $resourceIds = array_map('strval', $resourceIdFromRequest);
+        }
+
         return $this->buildBaseContext()
             ->setRequestOriginAppVersion((string) $request->headers->get(self::REQUEST_ORIGIN_VERSION_HEADER))
             ->setPath($request->getPathInfo())
@@ -73,6 +80,8 @@ final class LogContextFactory
             ->setIp((string) $request->getClientIp())
             ->setResponse((string) $response?->getContent())
             ->setHttpStatus((int) $response?->getStatusCode())
+            ->setResourceName((string) $request->attributes->get(AuditLogResourceHelper::RESOURCE_NAME_ATTR_NAME))
+            ->setResourceIds($resourceIds)
         ;
     }
 
