@@ -55,24 +55,33 @@ abstract class AbstractAnzuTapNode implements AnzuTapNodeInterface
         return $this->type;
     }
 
-    public function addMark(string $markName): AnzuTapNodeInterface
+    public function setMarks(?array $marks = null): self
     {
-        if (null === $this->marks) {
-            $this->marks = [];
+        $marksAllowList = $this->getMarksAllowList();
+        if (null === $marks || (is_array($marksAllowList)  && 0 === count($marksAllowList))) {
+            $this->marks = null;
+
+            return $this;
         }
 
-        $this->marks[] = [
-            'type' => $markName,
-        ];
+        if (null === $marksAllowList) {
+            $this->marks = $marks;
+
+            return $this;
+        }
+
+        foreach ($marks as $mark) {
+            if (in_array($mark['type'] ?? '', $marksAllowList)) {
+                $this->marks[] = $mark;
+            }
+        }
 
         return $this;
     }
 
-    public function setMarks(?array $marks = null): self
+    protected function getMarksAllowList(): ?array
     {
-        $this->marks = $marks;
-
-        return $this;
+        return null;
     }
 
     public function addAttr(string $name, string $value): self

@@ -16,4 +16,9 @@ final class AnzuTapParagraphNode extends AnzuTapNode
             attrs: $attrs,
         );
     }
+
+    protected function getMarksAllowList(): ?array
+    {
+        return [];
+    }
 }

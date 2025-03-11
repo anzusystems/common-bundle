@@ -18,4 +18,6 @@ interface AnzuNodeTransformerInterface
     public function skipChildren(): bool;
 
     public function removeWhenEmpty(): bool;
+
+    public function fixEmpty(AnzuTapNodeInterface $node): void;
 }

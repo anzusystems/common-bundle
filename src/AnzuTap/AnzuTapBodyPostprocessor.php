@@ -9,9 +9,28 @@ use AnzuSystems\CommonBundle\Model\AnzuTap\Node\AnzuTapTextNode;
 
 class AnzuTapBodyPostprocessor
 {
-    public const array PARAGRAPH_ALLOWED_CONTENT_TYPES = [AnzuTapNodeInterface::TEXT, AnzuTapNodeInterface::HARD_BREAK, 'embedExternalImageInline', 'embedImageInline'];
-    private const array NODES_TO_SHAKE = ['button'];
-
+    public const array PARAGRAPH_ALLOWED_CONTENT_TYPES = [
+        AnzuTapNodeInterface::TEXT,
+        AnzuTapNodeInterface::HARD_BREAK,
+        'embedExternalImageInline',
+        'embedImageInline'
+    ];
+    private const array NODES_TO_SHAKE = [
+        'button',
+        'contentLock',
+        'embedImage',
+        'embedExternalImage',
+        'embedVideo',
+        'embedAudio',
+        'embedPoll',
+        'embedQuiz',
+        'embedRelated',
+        'embedReview',
+        'embedTimeline',
+        'embedWeather',
+        'embedExternal',
+        'embedCrossBox',
+    ];
 
     public function postprocess(AnzuTapDocNode $body): void
     {
