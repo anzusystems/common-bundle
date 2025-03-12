@@ -30,24 +30,31 @@ class AnzuTapBodyPostprocessor
         'embedWeather',
         'embedExternal',
         'embedCrossBox',
+        'bulletList',
+        'horizontalRule',
     ];
 
     public function postprocess(AnzuTapDocNode $body): void
     {
         $this->shakeNodes($body, self::NODES_TO_SHAKE);
         $this->fixParagraphs($body);
+        $this->removeInvalidNodes($body);
     }
-
-    protected function getParagraphAllowedNodes(): array
+    
+    
+    protected function removeInvalidNodes(AnzuTapDocNode $body): void
     {
-        return self::PARAGRAPH_ALLOWED_CONTENT_TYPES;
+        $body->setContent(array_filter(
+            $body->getContent(),
+            static fn (AnzuTapNodeInterface $node): bool => $node->isValid()
+        ));
     }
 
     protected function fixParagraphs(AnzuTapNodeInterface $body): void
     {
         foreach ($body->getContent() as $node) {
             if ($node->getType() === AnzuTapParagraphNode::NODE_NAME) {
-                $this->fixNode($node, $this->getParagraphAllowedNodes());
+                $this->fixNode($node, self::PARAGRAPH_ALLOWED_CONTENT_TYPES);
             }
 
             $this->fixParagraphs($node);
@@ -83,6 +90,7 @@ class AnzuTapBodyPostprocessor
         $topLevelNodes = [];
 
         foreach ($body->getContent() as $node) {
+            // todo 3 use cases (1. i am first move to beginning, 2. i am last move to end, 3. i am in the middle)
             $nodesToShake = $this->getNodesToShake($node, $nodeTypesToShake);
 
             // Check if root node was paragraph and after shaking, it lost content.

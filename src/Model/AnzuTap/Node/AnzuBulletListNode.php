@@ -12,4 +12,9 @@ class AnzuBulletListNode extends AnzuTapNode
             type: self::BULLET_LIST,
         );
     }
+
+    public function isValid(): bool
+    {
+        return false === empty($this->content);
+    }
 }

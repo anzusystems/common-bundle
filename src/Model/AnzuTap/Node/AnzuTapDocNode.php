@@ -17,6 +17,10 @@ final class AnzuTapDocNode extends AnzuTapNode
             return $this;
         }
 
+        if (self::TABLE_CELL === $node->getType()) {
+            return $this;
+        }
+
         if (self::TEXT === $node->getType()) {
             $paragraph = $this->upsertFirstContentParagraph();
 

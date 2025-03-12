@@ -79,6 +79,11 @@ abstract class AbstractAnzuTapNode implements AnzuTapNodeInterface
         return $this;
     }
 
+    public function isValid(): bool
+    {
+        return true;
+    }
+
     protected function getMarksAllowList(): ?array
     {
         return null;
