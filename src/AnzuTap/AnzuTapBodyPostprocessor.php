@@ -18,6 +18,7 @@ class AnzuTapBodyPostprocessor
     private const array NODES_TO_SHAKE = [
         'button',
         'contentLock',
+        'horizontalRule',
         'embedImage',
         'embedExternalImage',
         'embedVideo',
@@ -30,8 +31,6 @@ class AnzuTapBodyPostprocessor
         'embedWeather',
         'embedExternal',
         'embedCrossBox',
-        'bulletList',
-        'horizontalRule',
     ];
 
     public function postprocess(AnzuTapDocNode $body): void
