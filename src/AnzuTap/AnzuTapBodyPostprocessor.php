@@ -90,22 +90,21 @@ class AnzuTapBodyPostprocessor
         $topLevelNodes = [];
 
         foreach ($body->getContent() as $node) {
-            // todo 3 use cases (1. i am first move to beginning, 2. i am last move to end, 3. i am in the middle)
-            $nodesToShake = $this->getNodesToShake($node, $nodeTypesToShake);
+            $contentCount = count($node->getContent());
+            $shakenNodes = $this->shakeAndSplitChildNodes($node, $nodeTypesToShake);
 
             // Check if root node was paragraph and after shaking, it lost content.
-            if (false === (
-                0 < count($nodesToShake) &&
-                0 === count($node->getContent()) &&
-                $node->getType() === AnzuTapParagraphNode::NODE_NAME
-            )
-            ) {
-                $topLevelNodes[] = $node;
-            }
+            foreach ($shakenNodes as $shakenNode) {
+                if ($shakenNode === $node &&
+                    $shakenNode->getType() === AnzuTapParagraphNode::NODE_NAME &&
+                    0 === count($shakenNode->getContent()) &&
+                    0 < $contentCount
+                ) {
+                    continue;
+                }
 
-            foreach ($nodesToShake as $nodeToShake) {
-                $topLevelNodes[] = $nodeToShake;
-                $nodeToShake->setParent($body);
+                $topLevelNodes[] = $shakenNode;
+                $shakenNode->setParent($body);
             }
         }
 
@@ -117,7 +116,51 @@ class AnzuTapBodyPostprocessor
      *
      * @return array<int, AnzuTapNodeInterface>
      */
-    protected function getNodesToShake(AnzuTapNodeInterface $rootNode, array $nodeTypesToShake): array
+    protected function shakeAndSplitChildNodes(AnzuTapNodeInterface $rootNode, array $nodeTypesToShake): array
+    {
+        $nodesToKeep = [];
+        $resNodes = [];
+
+        $moveShakingNodesBefore = true;
+        foreach ($rootNode->getContent() as $node) {
+            $isShakingNode = in_array($node->getType(), $nodeTypesToShake, true);
+
+            if ($isShakingNode) {
+                $resNodes[] = $node;
+            }
+
+            if (false === empty($node->getContent())) {
+                $resNodes = [...$resNodes, ...$this->deepShake($node, $nodeTypesToShake)];
+            }
+
+            if (false === $isShakingNode) {
+                $nodesToKeep[] = $node;
+            }
+
+            // Add origin node to right position
+            if ($moveShakingNodesBefore && false === $isShakingNode) {
+                $resNodes[] = $rootNode;
+                $moveShakingNodesBefore = false;
+            }
+        }
+
+        // origin node was not added to res nodes
+        if ($moveShakingNodesBefore) {
+            $resNodes[] = $rootNode;
+        }
+
+        // remove shaking nodes from content
+        $rootNode->setContent($nodesToKeep);
+
+        return $resNodes;
+    }
+
+    /**
+     * @param array<int, string> $nodeTypesToShake
+     *
+     * @return array<int, AnzuTapNodeInterface>
+     */
+    protected function deepShake(AnzuTapNodeInterface $rootNode, array $nodeTypesToShake): array
     {
         $nodesToShake = [];
         $nodesToKeep = [];
@@ -130,7 +173,7 @@ class AnzuTapBodyPostprocessor
             }
 
             if (false === empty($node->getContent())) {
-                $nodesToShake = array_merge($nodesToShake, $this->getNodesToShake($node, $nodeTypesToShake));
+                $nodesToShake = array_merge($nodesToShake, $this->deepShake($node, $nodeTypesToShake));
             }
 
             if (false === $isShakingNode) {
