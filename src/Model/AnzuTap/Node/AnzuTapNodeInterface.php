@@ -8,7 +8,6 @@ interface AnzuTapNodeInterface
 {
     public const string PARAGRAPH = 'paragraph';
     public const string HEADING = 'heading';
-//    public const string HORIZONTAL_RULE = 'horizontalRule';
     public const string HARD_BREAK = 'hardBreak';
     public const string DOC = 'doc';
     public const string LIST_ITEM = 'listItem';

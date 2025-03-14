@@ -15,6 +15,8 @@ class AnzuTapBodyPostprocessor
         'embedExternalImageInline',
         'embedImageInline',
     ];
+
+    // todo: make this configurable in new article-bundle
     private const array NODES_TO_SHAKE = [
         'button',
         'contentLock',

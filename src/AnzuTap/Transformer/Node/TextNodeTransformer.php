@@ -17,7 +17,7 @@ class TextNodeTransformer extends AbstractNodeTransformer
     use TextNodeTrait;
 
     private const array ALLOW_EMPTY_TEXT_TYPES = [
-        AnzuTapParagraphNode::NODE_NAME
+        AnzuTapParagraphNode::NODE_NAME,
     ];
 
     public static function getSupportedNodeNames(): array
@@ -29,7 +29,6 @@ class TextNodeTransformer extends AbstractNodeTransformer
 
     public function transform(DOMElement | DOMText $element, EmbedContainer $embedContainer, ?AnzuTapNodeInterface $parent = null): ?AnzuTapNodeInterface
     {
-        // todo check!
         $text = $this->getText(
             $element,
             in_array($parent?->getType(), self::ALLOW_EMPTY_TEXT_TYPES, true)
