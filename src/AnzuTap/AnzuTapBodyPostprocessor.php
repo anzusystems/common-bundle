@@ -13,7 +13,7 @@ class AnzuTapBodyPostprocessor
         AnzuTapNodeInterface::TEXT,
         AnzuTapNodeInterface::HARD_BREAK,
         'embedExternalImageInline',
-        'embedImageInline'
+        'embedImageInline',
     ];
     private const array NODES_TO_SHAKE = [
         'button',
@@ -39,8 +39,8 @@ class AnzuTapBodyPostprocessor
         $this->fixParagraphs($body);
         $this->removeInvalidNodes($body);
     }
-    
-    
+
+
     protected function removeInvalidNodes(AnzuTapDocNode $body): void
     {
         $body->setContent(array_filter(
