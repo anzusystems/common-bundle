@@ -13,11 +13,6 @@ class AnzuTapNode extends AbstractAnzuTapNode
         return $this->type;
     }
 
-    public function getAttrs(): ?array
-    {
-        return $this->attrs;
-    }
-
     public function getMarks(): ?array
     {
         return $this->marks;

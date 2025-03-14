@@ -4,16 +4,16 @@ declare(strict_types=1);
 
 namespace AnzuSystems\CommonBundle\Model\AnzuTap\Node;
 
-final class AnzuTapParagraphNode extends AnzuTapNode
-{
-    public const string NODE_NAME = 'paragraph';
+namespace AnzuSystems\CommonBundle\Model\AnzuTap\Node;
 
-    public function __construct(
-        ?array $attrs = null,
-    ) {
+final class AnzuTapHorizontalRuleNode extends AnzuTapNode
+{
+    public const string NODE_NAME = 'horizontalRule';
+
+    public function __construct()
+    {
         parent::__construct(
             type: self::NODE_NAME,
-            attrs: $attrs,
         );
     }
 

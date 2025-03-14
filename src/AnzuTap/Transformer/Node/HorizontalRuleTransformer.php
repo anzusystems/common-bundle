@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace AnzuSystems\CommonBundle\AnzuTap\Transformer\Node;
 
 use AnzuSystems\CommonBundle\Model\AnzuTap\EmbedContainer;
+use AnzuSystems\CommonBundle\Model\AnzuTap\Node\AnzuTapHorizontalRuleNode;
 use AnzuSystems\CommonBundle\Model\AnzuTap\Node\AnzuTapNode;
 use AnzuSystems\CommonBundle\Model\AnzuTap\Node\AnzuTapNodeInterface;
 use DOMElement;
@@ -20,8 +21,6 @@ final class HorizontalRuleTransformer extends AbstractNodeTransformer
 
     public function transform(DOMElement $element, EmbedContainer $embedContainer, AnzuTapNodeInterface $parent): AnzuTapNodeInterface
     {
-        return new AnzuTapNode(
-            type: AnzuTapNodeInterface::HORIZONTAL_RULE,
-        );
+        return new AnzuTapHorizontalRuleNode();
     }
 }

@@ -17,10 +17,21 @@ final class AnzuTapDocNode extends AnzuTapNode
             return $this;
         }
 
+        if (self::TABLE_CELL === $node->getType()) {
+            return $this;
+        }
+
         if (self::TEXT === $node->getType()) {
             $paragraph = $this->upsertFirstContentParagraph();
 
             return $paragraph->addContent($node);
+        }
+
+        if (self::LIST_ITEM === $node->getType()) {
+            $newNode = new AnzuBulletListNode();
+            $newNode->addContent($node);
+
+            return parent::addContent($newNode);
         }
 
         return parent::addContent($node);

@@ -9,11 +9,11 @@ use DOMText;
 
 trait TextNodeTrait
 {
-    protected function getText(DOMText | DOMElement $element): ?string
+    protected function getText(DOMText | DOMElement $element, bool $allowEmpty = false): ?string
     {
         $text = $element->textContent;
         $textToTrim = $text;
-        if ('' === trim($textToTrim)) {
+        if (false === $allowEmpty && '' === trim($textToTrim)) {
             return null;
         }
 

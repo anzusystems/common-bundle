@@ -7,6 +7,7 @@ namespace AnzuSystems\CommonBundle\AnzuTap\Transformer\Node;
 use AnzuSystems\CommonBundle\AnzuTap\Transformer\Traits\AttributesTrait;
 use AnzuSystems\CommonBundle\Model\AnzuTap\EmbedContainer;
 use AnzuSystems\CommonBundle\Model\AnzuTap\Node\AnzuTapNodeInterface;
+use AnzuSystems\CommonBundle\Model\AnzuTap\Node\AnzuTapParagraphNode;
 use AnzuSystems\CommonBundle\Model\AnzuTap\Node\AnzuTapTableCellNode;
 use AnzuSystems\CommonBundle\Model\AnzuTap\Node\AnzuTapTableHeaderNode;
 use DOMElement;
@@ -26,9 +27,9 @@ final class TableCellTransformer extends AbstractNodeTransformer
         ];
     }
 
-    public function removeWhenEmpty(): bool
+    public function fixEmpty(AnzuTapNodeInterface $node): void
     {
-        return true;
+        $node->addContent(new AnzuTapParagraphNode());
     }
 
     public function transform(DOMElement $element, EmbedContainer $embedContainer, AnzuTapNodeInterface $parent): AnzuTapNodeInterface

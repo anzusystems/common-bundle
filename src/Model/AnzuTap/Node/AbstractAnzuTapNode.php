@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace AnzuSystems\CommonBundle\Model\AnzuTap\Node;
 
+use Closure;
+
 abstract class AbstractAnzuTapNode implements AnzuTapNodeInterface
 {
     protected ?AnzuTapNodeInterface $parent = null;
@@ -26,6 +28,16 @@ abstract class AbstractAnzuTapNode implements AnzuTapNodeInterface
         $this->marks = $marks;
     }
 
+    public function getAttrs(): ?array
+    {
+        return $this->attrs;
+    }
+
+    public function getAttr(string $key): mixed
+    {
+        return $this->attrs[$key] ?? null;
+    }
+
     public function getParent(): ?AnzuTapNodeInterface
     {
         return $this->parent;
@@ -43,24 +55,38 @@ abstract class AbstractAnzuTapNode implements AnzuTapNodeInterface
         return $this->type;
     }
 
-    public function addMark(string $markName): AnzuTapNodeInterface
+    public function setMarks(?array $marks = null): self
     {
-        if (null === $this->marks) {
-            $this->marks = [];
+        $marksAllowList = $this->getMarksAllowList();
+        if (null === $marks || (is_array($marksAllowList)  && 0 === count($marksAllowList))) {
+            $this->marks = null;
+
+            return $this;
         }
 
-        $this->marks[] = [
-            'type' => $markName,
-        ];
+        if (null === $marksAllowList) {
+            $this->marks = $marks;
+
+            return $this;
+        }
+
+        foreach ($marks as $mark) {
+            if (in_array($mark['type'] ?? '', $marksAllowList)) {
+                $this->marks[] = $mark;
+            }
+        }
 
         return $this;
     }
 
-    public function setMarks(?array $marks = null): self
+    public function isValid(): bool
     {
-        $this->marks = $marks;
+        return true;
+    }
 
-        return $this;
+    protected function getMarksAllowList(): ?array
+    {
+        return null;
     }
 
     public function addAttr(string $name, string $value): self
@@ -124,6 +150,48 @@ abstract class AbstractAnzuTapNode implements AnzuTapNodeInterface
         }
 
         return implode(' ', $text);
+    }
+
+    /**
+     * @param Closure(AnzuTapNodeInterface $removeFn, mixed $key): bool $removeFn
+     */
+    public function removeNode(Closure $removeFn): ?AnzuTapNodeInterface
+    {
+        $removeNodeKey = $this->findNode($removeFn);
+        if (null === $removeNodeKey) {
+            return null;
+        }
+
+        if (array_key_exists($removeNodeKey, $this->content) && $this->content[$removeNodeKey] instanceof AnzuTapNodeInterface) {
+            $removed = $this->content[$removeNodeKey];
+            unset($this->content[$removeNodeKey]);
+            $this->content = array_values($this->content);
+
+            return $removed;
+        }
+
+        return $this;
+    }
+
+    /**
+     * @param Closure(AnzuTapNodeInterface $filterFn, mixed $key): bool $filterFn
+     *
+     * @return array-key
+     */
+    public function findNode(Closure $filterFn): int|string|null
+    {
+        $key = null;
+        foreach ($this->content as $currentKey => $value) {
+            if ($filterFn($value, $currentKey)) {
+                $key = $currentKey;
+                break;
+            }
+        }
+        if (is_string($key) || is_int($key)) {
+            return $key;
+        }
+
+        return null;
     }
 
     /**

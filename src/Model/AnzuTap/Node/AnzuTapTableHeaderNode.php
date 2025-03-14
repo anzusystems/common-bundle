@@ -6,6 +6,11 @@ namespace AnzuSystems\CommonBundle\Model\AnzuTap\Node;
 
 final class AnzuTapTableHeaderNode extends AnzuTapTableCellNode
 {
+    protected function getMarksAllowList(): array
+    {
+        return [];
+    }
+
     protected function getNodeName(): string
     {
         return self::TABLE_HEADER;

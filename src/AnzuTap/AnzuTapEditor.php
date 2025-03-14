@@ -12,6 +12,7 @@ use AnzuSystems\CommonBundle\Entity\Interfaces\EmbedKindInterface;
 use AnzuSystems\CommonBundle\Model\AnzuTap\AnzuTapBody;
 use AnzuSystems\CommonBundle\Model\AnzuTap\EmbedContainer;
 use AnzuSystems\CommonBundle\Model\AnzuTap\Node\AnzuTapDocNode;
+use AnzuSystems\CommonBundle\Model\AnzuTap\Node\AnzuTapEmbedNodeNode;
 use AnzuSystems\CommonBundle\Model\AnzuTap\Node\AnzuTapNode;
 use AnzuSystems\CommonBundle\Model\AnzuTap\Node\AnzuTapNodeInterface;
 use DOMDocument;
@@ -148,8 +149,12 @@ final class AnzuTapEditor
                 $this->processChildren($childNode, $anzuTapNode, $root);
             }
 
-            if ($nodeTransformer->removeWhenEmpty() && 0 === count($anzuTapNode->getContent())) {
-                continue;
+            if (0 === count($anzuTapNode->getContent())) {
+                if ($nodeTransformer->removeWhenEmpty()) {
+                    continue;
+                }
+
+                $nodeTransformer->fixEmpty($anzuTapNode);
             }
 
             $anzuTapParentNode->addContent($anzuTapNode);
@@ -183,11 +188,9 @@ final class AnzuTapEditor
         if ($transformedNode instanceof EmbedKindInterface) {
             $this->embedContainer->addEmbed($transformedNode);
 
-            return new AnzuTapNode(
+            return new AnzuTapEmbedNodeNode(
                 type: $transformedNode->getNodeType(),
-                attrs: [
-                    'id' => $transformedNode->getId()->toRfc4122(),
-                ],
+                id: $transformedNode->getId()
             );
         }
 
