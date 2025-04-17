@@ -18,11 +18,13 @@ final class ForceIndexWalker extends SqlWalker
 
         $index = $this->getQuery()->getHint(self::HINT_FORCE_INDEX_FOR_FROM);
         if ($index) {
+            /** @var string $result */
             $result = preg_replace('~(\bFROM\s*\w+\s*\w+)~', sprintf('$1 FORCE INDEX (%s)', $index), $result);
         }
 
         $indexJoin = $this->getQuery()->getHint(self::HINT_FORCE_INDEX_FOR_JOIN);
         foreach ($indexJoin ?: [] as $joinName => $indexName) {
+            /** @var string $result */
             $result = preg_replace("~(\bJOIN\s*{$joinName}\s*\w+)~", sprintf('$1 FORCE INDEX (%s)', $indexName), $result);
         }
 

@@ -7,6 +7,7 @@
     memoizeMethodCallResults="true"
     findUnusedBaselineEntry="false"
     findUnusedCode="false"
+    cacheDirectory="var/cache/psalm"
     xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
     xmlns="https://getpsalm.org/schema/config"
     xsi:schemaLocation="https://getpsalm.org/schema/config vendor/vimeo/psalm/config.xsd"
@@ -25,6 +26,7 @@
     <issueHandlers>
         <RiskyTruthyFalsyComparison errorLevel="suppress"/>
         <MoreSpecificImplementedParamType errorLevel="suppress"/>
+        <MissingOverrideAttribute errorLevel="suppress"/>
         <UnnecessaryVarAnnotation errorLevel="suppress"/> <!-- PHPStorm doesn't understand to generics annotations yet -->
 
         <UnusedFunctionCall>

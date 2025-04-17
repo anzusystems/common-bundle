@@ -95,9 +95,11 @@ class AnzuKernel extends Kernel
 
     private function registerORMMapping(ContainerBuilder $container): void
     {
+        /** @var string $projectDir */
+        $projectDir = $container->getParameter('kernel.project_dir');
         $finder = Finder::create();
         $finder
-            ->in($container->getParameter('kernel.project_dir') . '/src')
+            ->in($projectDir . '/src')
             ->name('Entity')
             ->directories()
         ;

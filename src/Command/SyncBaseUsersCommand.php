@@ -53,7 +53,7 @@ final class SyncBaseUsersCommand extends Command
         }
 
         $contents = file_get_contents($filePath);
-        if (false === json_validate($contents)) {
+        if (false === is_string($contents) || false === json_validate($contents)) {
             $output->writeln("<error>Invalid json content at path: ({$filePath})</error>");
 
             return Command::FAILURE;
@@ -63,7 +63,7 @@ final class SyncBaseUsersCommand extends Command
         $users = $this->serializer->deserializeIterable($contents, UserDto::class, []);
 
         foreach ($users as $userDto) {
-            $output->writeln($userDto->getId() . ' ' . $userDto->getEmail());
+            $output->writeln((int) $userDto->getId() . ' ' . $userDto->getEmail());
 
             try {
                 $this->userFacade->upsertUser($userDto);
@@ -71,7 +71,7 @@ final class SyncBaseUsersCommand extends Command
                 $output->writeln(
                     sprintf(
                         PHP_EOL . '<comment>Validation error has occurred: (%s) for user (%d, %s)</comment>',
-                        json_encode($validationException->getFormattedErrors()),
+                        (string) json_encode($validationException->getFormattedErrors()),
                         (int) $userDto->getId(),
                         $userDto->getEmail(),
                     )
