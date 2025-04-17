@@ -58,7 +58,7 @@ abstract class AbstractAnzuTapNode implements AnzuTapNodeInterface
     public function setMarks(?array $marks = null): self
     {
         $marksAllowList = $this->getMarksAllowList();
-        if (null === $marks || (is_array($marksAllowList)  && 0 === count($marksAllowList))) {
+        if (null === $marks || (is_array($marksAllowList) && 0 === count($marksAllowList))) {
             $this->marks = null;
 
             return $this;
@@ -71,7 +71,7 @@ abstract class AbstractAnzuTapNode implements AnzuTapNodeInterface
         }
 
         foreach ($marks as $mark) {
-            if (in_array($mark['type'] ?? '', $marksAllowList)) {
+            if (in_array($mark['type'] ?? '', $marksAllowList, true)) {
                 $this->marks[] = $mark;
             }
         }
@@ -82,11 +82,6 @@ abstract class AbstractAnzuTapNode implements AnzuTapNodeInterface
     public function isValid(): bool
     {
         return true;
-    }
-
-    protected function getMarksAllowList(): ?array
-    {
-        return null;
     }
 
     public function addAttr(string $name, string $value): self
@@ -191,6 +186,11 @@ abstract class AbstractAnzuTapNode implements AnzuTapNodeInterface
             return $key;
         }
 
+        return null;
+    }
+
+    protected function getMarksAllowList(): ?array
+    {
         return null;
     }
 
