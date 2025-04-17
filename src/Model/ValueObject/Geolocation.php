@@ -25,7 +25,7 @@ final class Geolocation implements ValueObjectInterface
 
     public function __toString(): string
     {
-        return $this->latitude . ',' . $this->longitude;
+        return (string) $this->getLatitude() . ',' . (string) $this->getLongitude();
     }
 
     public function getLatitude(): float

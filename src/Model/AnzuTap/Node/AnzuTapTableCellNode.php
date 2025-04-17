@@ -14,11 +14,6 @@ class AnzuTapTableCellNode extends AnzuTapNode
         );
     }
 
-    protected function getMarksAllowList(): array
-    {
-        return [];
-    }
-
     public function addContent(AnzuTapNodeInterface $node): AnzuTapNodeInterface
     {
         if (false === (AnzuTapParagraphNode::NODE_NAME === $node->getType())) {
@@ -28,6 +23,11 @@ class AnzuTapTableCellNode extends AnzuTapNode
         }
 
         return parent::addContent($node);
+    }
+
+    protected function getMarksAllowList(): array
+    {
+        return [];
     }
 
     protected function getNodeName(): string

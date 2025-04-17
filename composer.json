@@ -12,18 +12,19 @@
   ],
   "require": {
     "php": ">=8.3",
+    "ext-dom": "*",
     "ext-json": "*",
+    "ext-libxml": "*",
     "ext-mongodb": "*",
     "ext-pcntl": "*",
     "ext-redis": "*",
-    "ext-dom": "*",
     "ext-zend-opcache": "*",
     "anzusystems/contracts": "^4.0",
     "anzusystems/serializer-bundle": "^5.0",
     "doctrine/dbal": "^4.0",
     "doctrine/lexer": "^3.0",
     "doctrine/orm": "^3.1",
-    "mongodb/mongodb": "^1.9",
+    "mongodb/mongodb": "^2.0",
     "monolog/monolog": "^2.0|^3.0",
     "nelmio/api-doc-bundle": "^4.8",
     "symfony/cache": "^7.0",
@@ -43,8 +44,7 @@
     "symfony/security-bundle": "^6.0|^7.0",
     "symfony/uid": "^6.0|^7.0",
     "symfony/validator": "^6.0|^7.0",
-    "symfony/yaml": "^6.0|^7.0",
-    "ext-libxml": "*"
+    "symfony/yaml": "^6.0|^7.0"
   },
   "require-dev": {
     "doctrine/doctrine-bundle": "^2.4",
@@ -53,7 +53,7 @@
     "slevomat/coding-standard": "^8.0",
     "symfony/test-pack": "^1.0",
     "symplify/easy-coding-standard": "^11.0",
-    "vimeo/psalm": "^5.4"
+    "vimeo/psalm": "^6.10"
   },
   "autoload": {
     "psr-4": {
