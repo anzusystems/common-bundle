@@ -8,9 +8,8 @@ use AnzuSystems\CommonBundle\Entity\Interfaces\JobInterface;
 use AnzuSystems\CommonBundle\Entity\Job;
 use AnzuSystems\CommonBundle\Model\Enum\JobStatus;
 use AnzuSystems\Contracts\AnzuApp;
-use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Order;
-use Doctrine\ORM\Query\Parameter;
+use Doctrine\DBAL\Exception;
 
 /**
  * @extends AbstractAnzuRepository<Job>
@@ -19,28 +18,30 @@ final class JobRepository extends AbstractAnzuRepository
 {
     /**
      * @return JobInterface[]
+     *
+     * @throws Exception
      */
     public function findProcessableJobs(int $maxResults): array
     {
-        $dqb = $this->createQueryBuilder('job');
-        $dqb
-            ->select('job')
-            ->where('job.status in (:processableStatuses) AND job.scheduledAt <= :scheduledAt')
-            ->setParameters(new ArrayCollection([
-                new Parameter('processableStatuses', JobStatus::PROCESSABLE_STATUSES),
-                new Parameter('scheduledAt', AnzuApp::getAppDate()),
-            ]))
+        $ids = $this->getEntityManager()->getConnection()
+            ->createQueryBuilder()
+            ->select('job.id')
+            ->from('job')
+            ->where('job.status in (:processableStatuses)')
+            ->andWhere('job.scheduled_at <= :scheduledAt')
+            ->setParameter('processableStatuses', array_map(static fn (JobStatus $status) => $status->toString(), JobStatus::PROCESSABLE_STATUSES), ArrayParameterType::STRING)
+            ->setParameter('scheduledAt', AnzuApp::getAppDate(), Types::DATETIME_IMMUTABLE)
             ->orderBy('job.priority', Order::Descending->value)
-            ->addOrderBy('job.scheduledAt', Order::Ascending->value)
+            ->addOrderBy('job.scheduled_at', Order::Ascending->value)
             ->setMaxResults($maxResults)
+            ->executeQuery()
+            ->fetchFirstColumn()
         ;
-
-        $results = $dqb->getQuery()->getResult();
-        if (is_array($results)) {
-            return $results;
+        if (empty($ids)) {
+            return [];
         }
 
-        return [];
+        return $this->findBy(['id' => $ids]);
     }
 
     protected function getEntityClass(): string
