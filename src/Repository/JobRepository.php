@@ -9,7 +9,9 @@ use AnzuSystems\CommonBundle\Entity\Job;
 use AnzuSystems\CommonBundle\Model\Enum\JobStatus;
 use AnzuSystems\Contracts\AnzuApp;
 use Doctrine\Common\Collections\Order;
+use Doctrine\DBAL\ArrayParameterType;
 use Doctrine\DBAL\Exception;
+use Doctrine\DBAL\Types\Types;
 
 /**
  * @extends AbstractAnzuRepository<Job>
