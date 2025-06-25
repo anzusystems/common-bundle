@@ -16,6 +16,7 @@ use AnzuSystems\CommonBundle\Messenger\Message\AppLogMessage;
 use AnzuSystems\CommonBundle\Messenger\Message\AuditLogMessage;
 use AnzuSystems\CommonBundle\Messenger\Middleware\ContextIdentityMiddleware;
 use AnzuSystems\CommonBundle\Messenger\MonologHandler\MessengerHandler;
+use AnzuSystems\CommonBundle\Repository\Mongo\AbstractAnzuMongoRepository;
 use AnzuSystems\CommonBundle\Serializer\Service\BsonConverter;
 use AnzuSystems\SerializerBundle\Metadata\MetadataRegistry;
 use AnzuSystems\SerializerBundle\Serializer;
@@ -52,16 +53,21 @@ return static function (ContainerConfigurator $configurator): void {
         ->arg('$metadataRegistry', service(MetadataRegistry::class))
     ;
 
-    $services->set(AppLogRepository::class)
-        ->arg('$appLogCollection', service('anzu_mongo_app_log_collection'))
+    $services->set(AbstractAnzuMongoRepository::class)
+        ->abstract()
         ->arg('$serializer', service(Serializer::class))
         ->arg('$bsonConverter', service(BsonConverter::class))
+        ->arg('$queryMaxTimeMs', param('anzu_systems_common.mongo_query_max_time_ms'))
+    ;
+
+    $services->set(AppLogRepository::class)
+        ->parent(AbstractAnzuMongoRepository::class)
+        ->arg('$appLogCollection', service('anzu_mongo_app_log_collection'))
     ;
 
     $services->set(AuditLogRepository::class)
+        ->parent(AbstractAnzuMongoRepository::class)
         ->arg('$auditLogCollection', service('anzu_mongo_audit_log_collection'))
-        ->arg('$serializer', service(Serializer::class))
-        ->arg('$bsonConverter', service(BsonConverter::class))
     ;
 
     $services->set(AuditLogMessageHandler::class)

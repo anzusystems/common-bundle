@@ -23,6 +23,7 @@ use AnzuSystems\CommonBundle\AnzuTap\Transformer\Node\TextNodeTransformer;
 use AnzuSystems\CommonBundle\AnzuTap\Transformer\Node\XRemoveTransformer;
 use AnzuSystems\CommonBundle\AnzuTap\TransformerProvider\AnzuTapMarkNodeTransformerProvider;
 use AnzuSystems\CommonBundle\AnzuTap\TransformerProvider\AnzuTapNodeTransformerProvider;
+use AnzuSystems\CommonBundle\ApiFilter\ApiQueryMongo;
 use AnzuSystems\CommonBundle\Exception\Handler\AccessDeniedExceptionHandler;
 use AnzuSystems\CommonBundle\Exception\Handler\AppReadOnlyModeExceptionHandler;
 use AnzuSystems\CommonBundle\Exception\Handler\DefaultExceptionHandler;
@@ -189,6 +190,7 @@ final class Configuration implements ConfigurationInterface
                 ->scalarNode('app_entity_namespace')->defaultValue('App\\Entity')->end()
                 ->scalarNode('app_value_object_namespace')->defaultValue('App\\Model\\ValueObject')->end()
                 ->scalarNode('app_enum_namespace')->defaultValue('App\\Model\\Enum')->end()
+                ->integerNode('mongo_query_max_time_ms')->defaultValue(ApiQueryMongo::DEFAULT_QUERY_MAX_TIME_MS)->end()
                 ->booleanNode('send_context_id_with_response')->defaultFalse()->end()
                 ->arrayNode('unlocked_commands')
                     ->defaultValue(self::DEFAULT_UNLOCKED_COMMANDS)

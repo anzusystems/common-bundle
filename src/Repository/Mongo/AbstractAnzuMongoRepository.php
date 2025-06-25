@@ -25,6 +25,7 @@ abstract class AbstractAnzuMongoRepository
         protected MongoCollection $collection,
         protected Serializer $serializer,
         protected BsonConverter $bsonConverter,
+        protected int $queryMaxTimeMs = ApiQueryMongo::DEFAULT_QUERY_MAX_TIME_MS,
     ) {
     }
 
@@ -35,7 +36,12 @@ abstract class AbstractAnzuMongoRepository
      */
     public function findByApiParams(ApiParams $apiParams): ApiInfiniteResponseList
     {
-        $apiQueryMongo = new ApiQueryMongo($apiParams, $this->getDocumentClass(), true);
+        $apiQueryMongo = new ApiQueryMongo(
+            params: $apiParams,
+            className: $this->getDocumentClass(),
+            fetchOneAdditionalRecord: true,
+            queryMaxTimeMs: $this->queryMaxTimeMs,
+        );
         $response = new ApiInfiniteResponseList();
         /** @var BSONDocument[] $documents */
         $documents = $this->collection->find(

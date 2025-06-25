@@ -15,6 +15,8 @@ use ReflectionProperty;
 
 final class ApiQueryMongo
 {
+    public const int DEFAULT_QUERY_MAX_TIME_MS = 3_000;
+
     private ReflectionClass $classReflection;
 
     /**
@@ -24,6 +26,7 @@ final class ApiQueryMongo
         private readonly ApiParams $params,
         string $className,
         private readonly bool $fetchOneAdditionalRecord = false,
+        private readonly int $queryMaxTimeMs = self::DEFAULT_QUERY_MAX_TIME_MS,
     ) {
         $this->classReflection = new ReflectionClass($className);
     }
@@ -101,6 +104,7 @@ final class ApiQueryMongo
         }
         $options['limit'] = $limit;
         $options['skip'] = $this->params->getOffset();
+        $options['maxTimeMS'] = $this->queryMaxTimeMs;
 
         return $options;
     }
