@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace AnzuSystems\CommonBundle\Log\Repository;
 
+use AnzuSystems\CommonBundle\ApiFilter\ApiQueryMongo;
 use AnzuSystems\CommonBundle\Document\Log;
 use AnzuSystems\CommonBundle\Repository\Mongo\AbstractAnzuMongoRepository;
 use AnzuSystems\CommonBundle\Serializer\Service\BsonConverter;
@@ -19,8 +20,9 @@ final class AuditLogRepository extends AbstractAnzuMongoRepository
         MongoCollection $auditLogCollection,
         Serializer $serializer,
         protected BsonConverter $bsonConverter,
+        protected int $queryMaxTimeMs = ApiQueryMongo::DEFAULT_QUERY_MAX_TIME_MS,
     ) {
-        parent::__construct($auditLogCollection, $serializer, $this->bsonConverter);
+        parent::__construct($auditLogCollection, $serializer, $this->bsonConverter, $queryMaxTimeMs);
     }
 
     protected function getDocumentClass(): string

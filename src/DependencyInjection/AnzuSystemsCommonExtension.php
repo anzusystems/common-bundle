@@ -450,6 +450,8 @@ final class AnzuSystemsCommonExtension extends Extension implements PrependExten
             return;
         }
 
+        $container->setParameter('anzu_systems_common.mongo_query_max_time_ms', $this->processedConfig['settings']['mongo_query_max_time_ms']);
+
         $loader->load('logs.php');
 
         $container
