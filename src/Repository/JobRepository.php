@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace AnzuSystems\CommonBundle\Repository;
 
-use AnzuSystems\CommonBundle\Entity\Interfaces\JobInterface;
 use AnzuSystems\CommonBundle\Entity\Job;
 use AnzuSystems\CommonBundle\Model\Enum\JobStatus;
 use AnzuSystems\Contracts\AnzuApp;
@@ -19,11 +18,11 @@ use Doctrine\DBAL\Types\Types;
 final class JobRepository extends AbstractAnzuRepository
 {
     /**
-     * @return JobInterface[]
+     * @return list<int>
      *
      * @throws Exception
      */
-    public function findProcessableJobs(int $maxResults): array
+    public function findProcessableJobIds(int $maxResults): array
     {
         $ids = $this->getEntityManager()->getConnection()
             ->createQueryBuilder()
@@ -39,11 +38,8 @@ final class JobRepository extends AbstractAnzuRepository
             ->executeQuery()
             ->fetchFirstColumn()
         ;
-        if (empty($ids)) {
-            return [];
-        }
 
-        return $this->findBy(['id' => $ids]);
+        return $ids;
     }
 
     protected function getEntityClass(): string
