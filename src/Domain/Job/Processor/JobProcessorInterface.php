@@ -16,5 +16,5 @@ interface JobProcessorInterface
      */
     public static function getSupportedJob(): string;
 
-    public function process(JobInterface $job): void;
+    public function process(JobInterface $job): bool;
 }

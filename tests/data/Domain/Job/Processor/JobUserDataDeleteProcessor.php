@@ -15,7 +15,8 @@ final class JobUserDataDeleteProcessor extends AbstractJobProcessor
         return JobUserDataDelete::class;
     }
 
-    public function process(JobInterface $job): void
+    public function process(JobInterface $job): bool
     {
+        return true;
     }
 }
