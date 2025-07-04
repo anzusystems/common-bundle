@@ -46,6 +46,8 @@ final class JobRunner
                 }
                 $job = $this->entityManager->find(Job::class, $jobId);
                 if (null === $job || false === $job->getStatus()->in(JobStatus::PROCESSABLE_STATUSES)) {
+                    $output->writeln(sprintf('<error>Job %d not found or not processable.</error>', $jobId));
+
                     continue;
                 }
                 $this->jobProcessor->process($job);
