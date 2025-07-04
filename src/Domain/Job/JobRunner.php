@@ -6,6 +6,7 @@ namespace AnzuSystems\CommonBundle\Domain\Job;
 
 use AnzuSystems\CommonBundle\Entity\Interfaces\JobInterface;
 use AnzuSystems\CommonBundle\Entity\Job;
+use AnzuSystems\CommonBundle\Model\Enum\JobStatus;
 use AnzuSystems\CommonBundle\Repository\JobRepository;
 use AnzuSystems\Contracts\AnzuApp;
 use Doctrine\DBAL\Exception;
@@ -43,8 +44,10 @@ final class JobRunner
                 if ($this->stopProcessingJobs($output)) {
                     break 2;
                 }
-                /** @var Job $job */
                 $job = $this->entityManager->find(Job::class, $jobId);
+                if (null === $job || false === $job->getStatus()->in(JobStatus::PROCESSABLE_STATUSES)) {
+                    continue;
+                }
                 $this->jobProcessor->process($job);
                 $this->entityManager->clear();
                 $progress->advance();
