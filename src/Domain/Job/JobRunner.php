@@ -5,8 +5,10 @@ declare(strict_types=1);
 namespace AnzuSystems\CommonBundle\Domain\Job;
 
 use AnzuSystems\CommonBundle\Entity\Interfaces\JobInterface;
+use AnzuSystems\CommonBundle\Entity\Job;
 use AnzuSystems\CommonBundle\Repository\JobRepository;
 use AnzuSystems\Contracts\AnzuApp;
+use Doctrine\DBAL\Exception;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\Console\Helper\ProgressBar;
 use Symfony\Component\Console\Output\OutputInterface;
@@ -27,22 +29,27 @@ final class JobRunner
     ) {
     }
 
+    /**
+     * @throws Exception
+     */
     public function run(OutputInterface $output): void
     {
         $progress = new ProgressBar($output);
         $progress->setFormat('debug');
 
         do {
-            $jobs = $this->getJobs($output);
-            foreach ($jobs as $job) {
+            $jobIds = $this->getJobIds($output);
+            foreach ($jobIds as $jobId) {
                 if ($this->stopProcessingJobs($output)) {
                     break 2;
                 }
-                $this->entityManager->clear();
+                /** @var Job $job */
+                $job = $this->entityManager->find(Job::class, $jobId);
                 $this->jobProcessor->process($job);
+                $this->entityManager->clear();
                 $progress->advance();
             }
-        } while (false === empty($jobs));
+        } while (false === empty($jobIds));
 
         $progress->finish();
     }
@@ -54,18 +61,20 @@ final class JobRunner
 
     /**
      * @return JobInterface[]
+     *
+     * @throws Exception
      */
-    private function getJobs(OutputInterface $output): array
+    private function getJobIds(OutputInterface $output): array
     {
         do {
-            $jobs = $this->jobRepo->findProcessableJobs($this->batchSize);
-            if (empty($jobs)) {
+            $jobIds = $this->jobRepo->findProcessableJobIds($this->batchSize);
+            if (empty($jobIds)) {
                 sleep($this->noJobIdleTime);
 
                 continue;
             }
 
-            return $jobs;
+            return $jobIds;
         } while (false === $this->stopProcessingJobs($output));
 
         return [];

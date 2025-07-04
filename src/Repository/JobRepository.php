@@ -23,7 +23,7 @@ final class JobRepository extends AbstractAnzuRepository
      *
      * @throws Exception
      */
-    public function findProcessableJobs(int $maxResults): array
+    public function findProcessableJobIds(int $maxResults): array
     {
         $ids = $this->getEntityManager()->getConnection()
             ->createQueryBuilder()
@@ -39,11 +39,8 @@ final class JobRepository extends AbstractAnzuRepository
             ->executeQuery()
             ->fetchFirstColumn()
         ;
-        if (empty($ids)) {
-            return [];
-        }
 
-        return $this->findBy(['id' => $ids]);
+        return $ids;
     }
 
     protected function getEntityClass(): string
