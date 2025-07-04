@@ -60,6 +60,9 @@ final class JobRunner
                 if (false === $success) {
                     $output->writeln(sprintf('<error>Job %d failed.</error>', $jobId));
 
+                    // We must terminate the process to reset all services.
+                    // Ideally, each process would run in a separate Symfony command, or we'd reboot the service container per job.
+                    // The current issue: resetting the EntityManager doesn't update other services that still hold the old EntityManager, leading to unexpected problems.
                     break 2;
                 }
                 $this->entityManager->clear();
