@@ -9,17 +9,17 @@ use AnzuSystems\CommonBundle\Entity\Interfaces\JobInterface;
 use LogicException;
 use Symfony\Contracts\Service\ServiceProviderInterface;
 
-final class JobProcessor
+final readonly class JobProcessor
 {
     public function __construct(
-        private readonly ServiceProviderInterface $processorProvider,
+        private ServiceProviderInterface $processorProvider,
     ) {
     }
 
     /**
      * @throws LogicException
      */
-    public function process(JobInterface $job): void
+    public function process(JobInterface $job): bool
     {
         if (false === $this->processorProvider->has($job::class)) {
             throw new LogicException(sprintf('Not found a job processor for "%s"!', $job::class));
@@ -27,6 +27,7 @@ final class JobProcessor
 
         /** @var JobProcessorInterface $processor */
         $processor = $this->processorProvider->get($job::class);
-        $processor->process($job);
+
+        return $processor->process($job);
     }
 }

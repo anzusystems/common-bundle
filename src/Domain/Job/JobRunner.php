@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace AnzuSystems\CommonBundle\Domain\Job;
 
 use AnzuSystems\CommonBundle\Entity\Job;
+use AnzuSystems\CommonBundle\Kernel\AnzuKernel;
 use AnzuSystems\CommonBundle\Model\Enum\JobStatus;
 use AnzuSystems\CommonBundle\Repository\JobRepository;
 use AnzuSystems\Contracts\AnzuApp;
@@ -12,8 +13,10 @@ use Doctrine\DBAL\Exception;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\Exception\ORMException;
 use Doctrine\ORM\OptimisticLockException;
+use Symfony\Bundle\FrameworkBundle\Console\Application;
 use Symfony\Component\Console\Helper\ProgressBar;
 use Symfony\Component\Console\Output\OutputInterface;
+use Symfony\Component\Console\Tester\CommandTester;
 
 final class JobRunner
 {
@@ -53,7 +56,12 @@ final class JobRunner
 
                     continue;
                 }
-                $this->jobProcessor->process($job);
+                $success = $this->jobProcessor->process($job);
+                if (false === $success) {
+                    $output->writeln(sprintf('<error>Job %d failed.</error>', $jobId));
+
+                    break 2;
+                }
                 $this->entityManager->clear();
                 $progress->advance();
             }
