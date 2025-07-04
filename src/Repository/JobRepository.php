@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace AnzuSystems\CommonBundle\Repository;
 
-use AnzuSystems\CommonBundle\Entity\Interfaces\JobInterface;
 use AnzuSystems\CommonBundle\Entity\Job;
 use AnzuSystems\CommonBundle\Model\Enum\JobStatus;
 use AnzuSystems\Contracts\AnzuApp;
@@ -19,7 +18,7 @@ use Doctrine\DBAL\Types\Types;
 final class JobRepository extends AbstractAnzuRepository
 {
     /**
-     * @return JobInterface[]
+     * @return list<int>
      *
      * @throws Exception
      */

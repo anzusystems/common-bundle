@@ -4,13 +4,14 @@ declare(strict_types=1);
 
 namespace AnzuSystems\CommonBundle\Domain\Job;
 
-use AnzuSystems\CommonBundle\Entity\Interfaces\JobInterface;
 use AnzuSystems\CommonBundle\Entity\Job;
 use AnzuSystems\CommonBundle\Model\Enum\JobStatus;
 use AnzuSystems\CommonBundle\Repository\JobRepository;
 use AnzuSystems\Contracts\AnzuApp;
 use Doctrine\DBAL\Exception;
 use Doctrine\ORM\EntityManagerInterface;
+use Doctrine\ORM\Exception\ORMException;
+use Doctrine\ORM\OptimisticLockException;
 use Symfony\Component\Console\Helper\ProgressBar;
 use Symfony\Component\Console\Output\OutputInterface;
 
@@ -32,6 +33,8 @@ final class JobRunner
 
     /**
      * @throws Exception
+     * @throws ORMException
+     * @throws OptimisticLockException
      */
     public function run(OutputInterface $output): void
     {
@@ -65,7 +68,7 @@ final class JobRunner
     }
 
     /**
-     * @return JobInterface[]
+     * @return list<int>
      *
      * @throws Exception
      */
