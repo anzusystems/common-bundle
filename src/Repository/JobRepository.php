@@ -8,7 +8,6 @@ use AnzuSystems\CommonBundle\Entity\Job;
 use AnzuSystems\CommonBundle\Model\Enum\JobStatus;
 use AnzuSystems\Contracts\AnzuApp;
 use Doctrine\Common\Collections\Order;
-use Doctrine\DBAL\ArrayParameterType;
 use Doctrine\DBAL\Exception;
 use Doctrine\DBAL\Types\Types;
 
@@ -24,23 +23,38 @@ final class JobRepository extends AbstractAnzuRepository
      */
     public function findProcessableJobIds(int $maxResults): array
     {
-        $ids = $this->getEntityManager()->getConnection()
+        // First try to find jobs with AwaitingBatchProcess status
+        $ids = $this->findJobIdsByStatus(JobStatus::AwaitingBatchProcess, $maxResults);
+
+        // If no AwaitingBatchProcess jobs found, search for Waiting jobs
+        if (empty($ids)) {
+            $ids = $this->findJobIdsByStatus(JobStatus::Waiting, $maxResults);
+        }
+
+        return $ids;
+    }
+
+    /**
+     * @return list<int>
+     *
+     * @throws Exception
+     */
+    private function findJobIdsByStatus(JobStatus $status, int $maxResults): array
+    {
+        return $this->getEntityManager()->getConnection()
             ->createQueryBuilder()
             ->select('job.id')
             ->from('job')
-            ->where('job.status in (:processableStatuses)')
+            ->where('job.status = :status')
             ->andWhere('job.scheduled_at <= :scheduledAt')
-            ->orderBy('FIELD(job.status, :processableStatuses)')
-            ->addOrderBy('job.priority', Order::Descending->value)
-            ->addOrderBy('job.scheduled_at', Order::Ascending->value)
-            ->setParameter('processableStatuses', array_map(static fn (JobStatus $status) => $status->toString(), JobStatus::PROCESSABLE_STATUSES), ArrayParameterType::STRING)
+            ->setParameter('status', $status->toString())
             ->setParameter('scheduledAt', AnzuApp::getAppDate(), Types::DATETIME_IMMUTABLE)
+            ->orderBy('job.priority', Order::Descending->value)
+            ->addOrderBy('job.scheduled_at', Order::Ascending->value)
             ->setMaxResults($maxResults)
             ->executeQuery()
             ->fetchFirstColumn()
         ;
-
-        return $ids;
     }
 
     protected function getEntityClass(): string
