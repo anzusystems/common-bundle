@@ -20,7 +20,7 @@ enum JobStatus: string implements EnumInterface
     public const JobStatus Default = self::Waiting;
 
     public const array PROCESSABLE_STATUSES = [
-        self::Waiting,
         self::AwaitingBatchProcess,
+        self::Waiting,
     ];
 }
