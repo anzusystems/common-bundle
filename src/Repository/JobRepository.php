@@ -23,15 +23,12 @@ final class JobRepository extends AbstractAnzuRepository
      */
     public function findProcessableJobIds(int $maxResults): array
     {
-        // First try to find jobs with AwaitingBatchProcess status
         $ids = $this->findJobIdsByStatus(JobStatus::AwaitingBatchProcess, $maxResults);
-
-        // If no AwaitingBatchProcess jobs found, search for Waiting jobs
-        if (empty($ids)) {
-            $ids = $this->findJobIdsByStatus(JobStatus::Waiting, $maxResults);
+        if ($ids) {
+            return $ids;
         }
 
-        return $ids;
+        return $this->findJobIdsByStatus(JobStatus::Waiting, $maxResults);
     }
 
     /**
