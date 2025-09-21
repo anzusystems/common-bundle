@@ -30,11 +30,11 @@ final class JobRepository extends AbstractAnzuRepository
         return $this
             ->createQueryBuilder('job')
             ->where('job.status = :status')
-            ->andWhere('job.scheduled_at <= :scheduledAt')
+            ->andWhere('job.scheduledAt <= :scheduledAt')
             ->setParameter('status', $status->toString())
             ->setParameter('scheduledAt', AnzuApp::getAppDate(), Types::DATETIME_IMMUTABLE)
             ->orderBy('job.priority', Order::Descending->value)
-            ->addOrderBy('job.scheduled_at', Order::Ascending->value)
+            ->addOrderBy('job.scheduledAt', Order::Ascending->value)
             ->setMaxResults(1)
             ->getQuery()
             ->getOneOrNullResult()
