@@ -35,6 +35,7 @@ final class JobRepository extends AbstractAnzuRepository
             ->setParameter('scheduledAt', AnzuApp::getAppDate(), Types::DATETIME_IMMUTABLE)
             ->orderBy('job.priority', Order::Descending->value)
             ->addOrderBy('job.scheduledAt', Order::Ascending->value)
+            ->addOrderBy('job.id', Order::Ascending->value)
             ->setMaxResults(1)
             ->getQuery()
             ->getOneOrNullResult()
