@@ -17,9 +17,9 @@ final class JobRepository extends AbstractAnzuRepository
 {
     public function findProcessableJob(): ?Job
     {
-        $id = $this->findJobByStatus(JobStatus::AwaitingBatchProcess);
-        if ($id) {
-            return $id;
+        $job = $this->findJobByStatus(JobStatus::AwaitingBatchProcess);
+        if ($job) {
+            return $job;
         }
 
         return $this->findJobByStatus(JobStatus::Waiting);
