@@ -8,7 +8,6 @@ use AnzuSystems\CommonBundle\Entity\Job;
 use AnzuSystems\CommonBundle\Model\Enum\JobStatus;
 use AnzuSystems\Contracts\AnzuApp;
 use Doctrine\Common\Collections\Order;
-use Doctrine\DBAL\Exception;
 use Doctrine\DBAL\Types\Types;
 
 /**
@@ -16,41 +15,29 @@ use Doctrine\DBAL\Types\Types;
  */
 final class JobRepository extends AbstractAnzuRepository
 {
-    /**
-     * @return list<int>
-     *
-     * @throws Exception
-     */
-    public function findProcessableJobIds(int $maxResults): array
+    public function findProcessableJob(): ?Job
     {
-        $ids = $this->findJobIdsByStatus(JobStatus::AwaitingBatchProcess, $maxResults);
-        if ($ids) {
-            return $ids;
+        $id = $this->findJobByStatus(JobStatus::AwaitingBatchProcess);
+        if ($id) {
+            return $id;
         }
 
-        return $this->findJobIdsByStatus(JobStatus::Waiting, $maxResults);
+        return $this->findJobByStatus(JobStatus::Waiting);
     }
 
-    /**
-     * @return list<int>
-     *
-     * @throws Exception
-     */
-    private function findJobIdsByStatus(JobStatus $status, int $maxResults): array
+    private function findJobByStatus(JobStatus $status): ?Job
     {
-        return $this->getEntityManager()->getConnection()
-            ->createQueryBuilder()
-            ->select('job.id')
-            ->from('job')
+        return $this
+            ->createQueryBuilder('job')
             ->where('job.status = :status')
             ->andWhere('job.scheduled_at <= :scheduledAt')
             ->setParameter('status', $status->toString())
             ->setParameter('scheduledAt', AnzuApp::getAppDate(), Types::DATETIME_IMMUTABLE)
             ->orderBy('job.priority', Order::Descending->value)
             ->addOrderBy('job.scheduled_at', Order::Ascending->value)
-            ->setMaxResults($maxResults)
-            ->executeQuery()
-            ->fetchFirstColumn()
+            ->setMaxResults(1)
+            ->getQuery()
+            ->getOneOrNullResult()
         ;
     }
 
