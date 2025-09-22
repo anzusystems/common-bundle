@@ -38,13 +38,13 @@ final class JobRunner
                 break;
             }
             if (null === $job || false === $job->getStatus()->in(JobStatus::PROCESSABLE_STATUSES)) {
-                $output->writeln(sprintf('<error>Job %d not found or not processable.</error>', $job));
+                $output->writeln(sprintf('<error>Job %d not found or not processable.</error>', (int) $job?->getId()));
 
                 continue;
             }
             $success = $this->jobProcessor->process($job);
             if (false === $success) {
-                $output->writeln(sprintf('<error>Job %d failed.</error>', $job));
+                $output->writeln(sprintf('<error>Job %d failed.</error>', (int) $job->getId()));
 
                 // We must terminate the process to reset all services.
                 // Ideally, each process would run in a separate Symfony command, or we'd reboot the service container per job.
