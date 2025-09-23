@@ -575,7 +575,6 @@ final class AnzuSystemsCommonExtension extends Extension implements PrependExten
     {
         $jobs = $this->processedConfig['jobs'];
         $container->getDefinition(JobRunner::class)
-            ->setArgument('$batchSize', $jobs['batch_size'])
             ->setArgument('$maxExecTime', $jobs['max_exec_time'])
             ->setArgument('$maxMemory', $jobs['max_memory'])
             ->setArgument('$noJobIdleTime', $jobs['no_job_idle_time'])

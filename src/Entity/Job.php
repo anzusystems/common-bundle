@@ -68,7 +68,7 @@ abstract class Job implements UserTrackingInterface, TimeTrackingInterface, JobI
     /**
      * In case of batch processing, it might contain a needle from which should the batch processing continue.
      */
-    #[ORM\Column(type: Types::STRING)]
+    #[ORM\Column(type: Types::STRING, length: 2_000)]
     #[Serialize]
     protected string $lastBatchProcessedRecord = '';
 

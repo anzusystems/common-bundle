@@ -16,7 +16,6 @@
         <directory name="src"/>
         <ignoreFiles>
             <directory name="./vendor"/>
-            <directory name="./var"/>
             <directory name="./src/Request/ParamConverter"/>
             <file name="ecs.php"/>
             <file name="src/DependencyInjection/Configuration.php"/>
