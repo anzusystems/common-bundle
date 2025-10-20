@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace AnzuSystems\CommonBundle\Event\Subscriber;
 
 use AnzuSystems\CommonBundle\Log\Factory\LogContextFactory;
+use AnzuSystems\CommonBundle\Log\Helper\AuditLogResourceHelper;
 use AnzuSystems\SerializerBundle\Exception\SerializerException;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
@@ -33,6 +34,9 @@ final readonly class AuditLogSubscriber implements EventSubscriberInterface
     public function onTerminate(TerminateEvent $event): void
     {
         if (false === in_array($event->getRequest()->getMethod(), $this->loggedMethods, true)) {
+            return;
+        }
+        if ($event->getRequest()->attributes->get(AuditLogResourceHelper::RESOURCE_EXCLUDE_ATTR_NAME)) {
             return;
         }
 
