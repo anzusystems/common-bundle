@@ -148,6 +148,7 @@ anzu_common:
         # Application log section
         app:
             # Mongo connection definition
+            enabled: true
             mongo:
                 uri: '%env(ANZU_MONGODB_APP_LOG_URI)%'
                 username: '%env(ANZU_MONGODB_APP_LOG_USERNAME)%'
@@ -158,6 +159,7 @@ anzu_common:
         # Audit log section
         audit:
             # Mongo connection definition
+            enabled: true
             mongo:
                 uri: '%env(ANZU_MONGODB_AUDIT_LOG_URI)%'
                 username: '%env(ANZU_MONGODB_AUDIT_LOG_USERNAME)%'

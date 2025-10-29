@@ -139,41 +139,50 @@ final class AnzuSystemsCommonExtension extends Extension implements PrependExten
             return;
         }
 
-        $container->prependExtensionConfig('monolog', [
-            'channels' => ['app', 'audit', 'app_sync', 'audit_sync'],
-            'handlers' => [
-                'app' => [
-                    'type' => 'service',
-                    'channels' => 'app',
-                    'id' => 'anzu_systems_common.logs.app_log_messenger_handler',
+        $monologConfig = [];
+        if ($logs['app']['enabled']) {
+            $monologConfig['channels'][] = 'app';
+            $monologConfig['channels'][] = 'app_sync';
+            $monologConfig['handlers']['app'] = [
+                'type' => 'service',
+                'channels' => 'app',
+                'id' => 'anzu_systems_common.logs.app_log_messenger_handler',
+            ];
+            $monologConfig['handlers']['app_sync'] = [
+                'type' => 'mongo',
+                'channels' => 'app_sync',
+                'level' => 'debug',
+                'mongo' => [
+                    'id' => 'anzu_systems_common.logs.app_log_client',
+                    'database' => $logs['app']['mongo']['database'],
+                    'collection' => $logs['app']['mongo']['collection'],
                 ],
-                'audit' => [
-                    'type' => 'service',
-                    'channels' => 'audit',
-                    'id' => 'anzu_systems_common.logs.audit_log_messenger_handler',
+            ];
+        }
+
+        if ($logs['audit']['enabled']) {
+            $monologConfig['channels'][] = 'audit';
+            $monologConfig['channels'][] = 'audit_sync';
+            $monologConfig['handlers']['audit'] = [
+                'type' => 'service',
+                'channels' => 'audit',
+                'id' => 'anzu_systems_common.logs.audit_log_messenger_handler',
+            ];
+            $monologConfig['handlers']['audit_sync'] = [
+                'type' => 'mongo',
+                'channels' => 'audit_sync',
+                'level' => 'debug',
+                'mongo' => [
+                    'id' => 'anzu_systems_common.logs.audit_log_client',
+                    'database' => $logs['audit']['mongo']['database'],
+                    'collection' => $logs['audit']['mongo']['collection'],
                 ],
-                'app_sync' => [
-                    'type' => 'mongo',
-                    'channels' => 'app_sync',
-                    'level' => 'debug',
-                    'mongo' => [
-                        'id' => 'anzu_systems_common.logs.app_log_client',
-                        'database' => $logs['app']['mongo']['database'],
-                        'collection' => $logs['app']['mongo']['collection'],
-                    ],
-                ],
-                'audit_sync' => [
-                    'type' => 'mongo',
-                    'channels' => 'audit_sync',
-                    'level' => 'debug',
-                    'mongo' => [
-                        'id' => 'anzu_systems_common.logs.audit_log_client',
-                        'database' => $logs['audit']['mongo']['database'],
-                        'collection' => $logs['audit']['mongo']['collection'],
-                    ],
-                ],
-            ],
-        ]);
+            ];
+        }
+
+        if (false === empty($monologConfig)) {
+            $container->prependExtensionConfig('monolog', $monologConfig);
+        }
 
         $messengerTransport = $logs['messenger_transport'];
         $container->prependExtensionConfig('framework', [
