@@ -220,10 +220,7 @@ final class Configuration implements ConfigurationInterface
             ->children()
                 ->scalarNode('mysql_table_name')->defaultValue('_doctrine_migration_versions')->end()
                 ->arrayNode('mongo_collections')
-                    ->defaultValue([
-                        'anzu_mongo_app_log_collection',
-                        'anzu_mongo_audit_log_collection',
-                    ])
+                    ->defaultValue([])
                     ->prototype('scalar')->end()
                 ->end()
                 ->arrayNode('modules')

@@ -8,10 +8,6 @@ use AnzuSystems\CommonBundle\Domain\User\CurrentAnzuUserProvider;
 use AnzuSystems\CommonBundle\Event\Subscriber\AuditLogSubscriber;
 use AnzuSystems\CommonBundle\Log\Factory\LogContextFactory;
 use AnzuSystems\CommonBundle\Log\LogFacade;
-use AnzuSystems\CommonBundle\Log\Repository\AppLogRepository;
-use AnzuSystems\CommonBundle\Log\Repository\AuditLogRepository;
-use AnzuSystems\CommonBundle\Messenger\Handler\AppLogMessageHandler;
-use AnzuSystems\CommonBundle\Messenger\Handler\AuditLogMessageHandler;
 use AnzuSystems\CommonBundle\Messenger\Message\AppLogMessage;
 use AnzuSystems\CommonBundle\Messenger\Message\AuditLogMessage;
 use AnzuSystems\CommonBundle\Messenger\Middleware\ContextIdentityMiddleware;
@@ -58,26 +54,6 @@ return static function (ContainerConfigurator $configurator): void {
         ->arg('$serializer', service(Serializer::class))
         ->arg('$bsonConverter', service(BsonConverter::class))
         ->arg('$queryMaxTimeMs', param('anzu_systems_common.mongo_query_max_time_ms'))
-    ;
-
-    $services->set(AppLogRepository::class)
-        ->parent(AbstractAnzuMongoRepository::class)
-        ->arg('$appLogCollection', service('anzu_mongo_app_log_collection'))
-    ;
-
-    $services->set(AuditLogRepository::class)
-        ->parent(AbstractAnzuMongoRepository::class)
-        ->arg('$auditLogCollection', service('anzu_mongo_audit_log_collection'))
-    ;
-
-    $services->set(AuditLogMessageHandler::class)
-        ->arg('$auditSyncLogger', service('monolog.logger.audit_sync'))
-        ->tag('messenger.message_handler', ['handler' => AuditLogMessage::class])
-    ;
-
-    $services->set(AppLogMessageHandler::class)
-        ->arg('$appSyncLogger', service('monolog.logger.app_sync'))
-        ->tag('messenger.message_handler', ['handler' => AppLogMessage::class])
     ;
 
     $services->set('anzu_systems_common.logs.app_log_messenger_handler', MessengerHandler::class)

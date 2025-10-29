@@ -26,8 +26,8 @@ use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 final class LogController extends AbstractAnzuApiController
 {
     public function __construct(
-        private readonly AuditLogRepository $auditLogRepo,
-        private readonly AppLogRepository $appLogRepo,
+        private readonly ?AuditLogRepository $auditLogRepo,
+        private readonly ?AppLogRepository $appLogRepo,
         private readonly LogFacade $logFacade,
     ) {
     }
@@ -40,6 +40,10 @@ final class LogController extends AbstractAnzuApiController
     #[OAResponseList(Log::class)]
     public function getAuditLogs(ApiParams $apiParams): JsonResponse
     {
+        if (null === $this->auditLogRepo) {
+            throw new NotFoundHttpException('Not configured to serve audit logs.');
+        }
+
         return $this->okResponse(
             $this->auditLogRepo->findByApiParams($apiParams)
         );
@@ -53,6 +57,10 @@ final class LogController extends AbstractAnzuApiController
     #[OAResponseList(Log::class)]
     public function getAppLogs(ApiParams $apiParams): JsonResponse
     {
+        if (null === $this->appLogRepo) {
+            throw new NotFoundHttpException('Not configured to serve app logs.');
+        }
+
         return $this->okResponse(
             $this->appLogRepo->findByApiParams($apiParams)
         );
@@ -64,6 +72,10 @@ final class LogController extends AbstractAnzuApiController
     #[OAParameterPath('id'), OAResponse(Log::class)]
     public function getOneAppLog(string $id): JsonResponse
     {
+        if (null === $this->appLogRepo) {
+            throw new NotFoundHttpException('Not configured to serve app logs.');
+        }
+
         $log = $this->appLogRepo->find($id);
         if ($log instanceof Log) {
             return $this->okResponse($log);
@@ -80,6 +92,10 @@ final class LogController extends AbstractAnzuApiController
     #[OAParameterPath('id'), OAResponse(Log::class)]
     public function getOneAuditLog(string $id): JsonResponse
     {
+        if (null === $this->auditLogRepo) {
+            throw new NotFoundHttpException('Not configured to serve audit logs.');
+        }
+
         $log = $this->auditLogRepo->find($id);
         if ($log instanceof Log) {
             return $this->okResponse($log);
