@@ -139,7 +139,10 @@ final class AnzuSystemsCommonExtension extends Extension implements PrependExten
             return;
         }
 
-        $monologConfig = [];
+        $monologConfig = [
+            'channels' => [],
+            'handlers' => [],
+        ];
         if ($logs['app']['enabled']) {
             $monologConfig['channels'][] = 'app';
             $monologConfig['channels'][] = 'app_sync';
@@ -180,7 +183,7 @@ final class AnzuSystemsCommonExtension extends Extension implements PrependExten
             ];
         }
 
-        if (false === empty($monologConfig)) {
+        if (false === empty($monologConfig['channels'])) {
             $container->prependExtensionConfig('monolog', $monologConfig);
         }
 
