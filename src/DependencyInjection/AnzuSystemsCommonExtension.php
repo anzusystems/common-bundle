@@ -519,6 +519,9 @@ final class AnzuSystemsCommonExtension extends Extension implements PrependExten
             $definition->setArgument('$appSyncLogger', new Reference('monolog.logger.app_sync'));
             $definition->addTag('messenger.message_handler', ['handler' => AppLogMessage::class]);
             $container->setDefinition(AppLogMessageHandler::class, $definition);
+        } else {
+            $container->removeDefinition(ExceptionListener::class);
+            $container->removeDefinition(ConsoleExceptionListener::class);
         }
 
         if ($logs['audit']['enabled']) {
