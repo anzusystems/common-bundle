@@ -71,6 +71,7 @@ use AnzuSystems\CommonBundle\Messenger\Handler\AppLogMessageHandler;
 use AnzuSystems\CommonBundle\Messenger\Handler\AuditLogMessageHandler;
 use AnzuSystems\CommonBundle\Messenger\Message\AppLogMessage;
 use AnzuSystems\CommonBundle\Messenger\Message\AuditLogMessage;
+use AnzuSystems\CommonBundle\Monolog\IgnoreExceptionProcessor;
 use AnzuSystems\CommonBundle\Repository\Mongo\AbstractAnzuMongoRepository;
 use AnzuSystems\CommonBundle\Request\ParamConverter\ApiFilterParamConverter;
 use AnzuSystems\CommonBundle\Request\ParamConverter\EnumParamConverter;
@@ -473,6 +474,15 @@ final class AnzuSystemsCommonExtension extends Extension implements PrependExten
         $logs = $this->processedConfig['logs'];
         if (false === $logs['enabled']) {
             return;
+        }
+
+        if (true === $logs['monolog']['enabled']) {
+            $loader->load('monolog.php');
+
+            $container
+                ->getDefinition(IgnoreExceptionProcessor::class)
+                ->replaceArgument('$ignoredExceptions', $logs['monolog']['ignored_exceptions'])
+            ;
         }
 
         $container->setParameter('anzu_systems_common.mongo_query_max_time_ms', $this->processedConfig['settings']['mongo_query_max_time_ms']);

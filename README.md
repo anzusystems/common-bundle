@@ -145,6 +145,9 @@ anzu_common:
             name: 'core_log'
             # Messenger transport DSN
             dsn: '%env(MESSENGER_TRANSPORT_DSN)%?topic[name]=core_log'
+        # enable monolog processors
+        monolog:
+            enabled: true
         # Application log section
         app:
             # Mongo connection definition
