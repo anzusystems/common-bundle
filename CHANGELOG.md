@@ -6,7 +6,7 @@
 ### Changes
 * BC change: `anzu_mongo_app_log_collection` was renamed to `anzu_mongo_journal_log_collection`
 * BC change: routing changes - `app` was renamed to `journal`
-  Before:
+Before:
 ```php
     $routes
         ->add('anzu_common.logs.app_list', '/api/adm/v1/log/app')
