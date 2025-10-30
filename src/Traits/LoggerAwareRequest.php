@@ -10,7 +10,6 @@ use AnzuSystems\CommonBundle\Model\HttpClient\HttpClientResponse;
 use AnzuSystems\Contracts\AnzuApp;
 use InvalidArgumentException;
 use JsonException;
-use Psr\Log\LoggerAwareTrait;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Contracts\HttpClient\Exception\ExceptionInterface;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
@@ -18,7 +17,7 @@ use Symfony\Contracts\Service\Attribute\Required;
 
 trait LoggerAwareRequest
 {
-    use LoggerAwareTrait;
+    use JournalLoggerAwareTrait;
     use SerializerAwareTrait;
 
     private LogContextFactory $contextFactory;
@@ -48,7 +47,7 @@ trait LoggerAwareRequest
         callable $contentValidator = null,
     ): HttpClientResponse {
         $context = $this->contextFactory->buildForRequest($method, $url, $json, $query, $body, $timeout);
-        if (!$this->logger) {
+        if (!$this->journalLogger) {
             throw new InvalidArgumentException('Logger is missing.');
         }
 
@@ -83,25 +82,25 @@ trait LoggerAwareRequest
                 if (empty($notLogErrorResponseCodes)
                     || false === in_array($response->getStatusCode(), $notLogErrorResponseCodes, true)
                 ) {
-                    $this->logger->error($message, $this->serializer->toArray($context));
+                    $this->journalLogger->error($message, $this->serializer->toArray($context));
                 }
 
                 return new HttpClientResponse(statusCode: $response->getStatusCode());
             }
             if ((is_callable($contentValidator) && false === $contentValidator($content)) || $response->getStatusCode() >= 300) {
-                $this->logger->error($message, $this->serializer->toArray($context));
+                $this->journalLogger->error($message, $this->serializer->toArray($context));
 
                 return new HttpClientResponse(statusCode: $response->getStatusCode());
             }
             if ($logSuccess) {
-                $this->logger->info($message, $this->serializer->toArray($context));
+                $this->journalLogger->info($message, $this->serializer->toArray($context));
             }
 
             return new HttpClientResponse(content: $content, statusCode: $response->getStatusCode());
         } catch (ExceptionInterface $exception) {
             $context->setException($exception::class);
             $context->setError($exception->getMessage());
-            $this->logger->error($message, $this->serializer->toArray($context));
+            $this->journalLogger->error($message, $this->serializer->toArray($context));
         }
 
         return new HttpClientResponse();
