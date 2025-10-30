@@ -4,8 +4,38 @@
  * App logger is the default logger expected to be logged to Sentry or Syslog and log errors, not mongodb. To keep logging some other data in Mongodb, new journal logger was created. 
 
 ### Changes
-* `anzu_mongo_app_log_collection` was renamed to `anzu_mongo_journal_log_collection`
-* Routing changes - `app` was renamed to `journal`
+* BC change: `anzu_mongo_app_log_collection` was renamed to `anzu_mongo_journal_log_collection`
+* BC change: routing changes - `app` was renamed to `journal`
+  Before:
+```php
+    $routes
+        ->add('anzu_common.logs.app_list', '/api/adm/v1/log/app')
+            ->methods([Request::METHOD_GET])
+            ->controller([LogController::class, 'getAppLogs'])
+    ;
+
+    $routes
+        ->add('anzu_common.logs.app_get_one', '/api/adm/v1/log/app/{id}')
+            ->methods([Request::METHOD_GET])
+            ->controller([LogController::class, 'getOneAppLog'])
+    ;
+```
+
+Now:
+```php
+    $routes
+        ->add('anzu_common.logs.journal_list', '/api/adm/v1/log/app')
+            ->methods([Request::METHOD_GET])
+            ->controller([LogController::class, 'getJournalLogs'])
+    ;
+
+    $routes
+        ->add('anzu_common.logs.journal_get_one', '/api/adm/v1/log/app/{id}')
+            ->methods([Request::METHOD_GET])
+            ->controller([LogController::class, 'getOneJournalLog'])
+    ;
+```
+
 * BC change: configuration change
 
 Before:
