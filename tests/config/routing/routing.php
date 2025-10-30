@@ -20,14 +20,14 @@ return static function (RoutingConfigurator $routes): void {
         ->controller([LogController::class, 'create'])
     ;
 
-    $routes->add('anzu_systems_common.logs.app_list', '/log/app')
+    $routes->add('anzu_systems_common.logs.journal_list', '/log/journal') // or '/log/app' for BC compatibility
         ->methods([Request::METHOD_GET])
-        ->controller([LogController::class, 'getAppLogs'])
+        ->controller([LogController::class, 'getJournalLogs'])
     ;
 
-    $routes->add('anzu_systems_common.logs.app_get_one', '/log/app/{id}')
+    $routes->add('anzu_systems_common.logs.journal_get_one', '/log/journal/{id}') // or '/log/app/{id}' for BC compatibility
         ->methods([Request::METHOD_GET])
-        ->controller([LogController::class, 'getOneAppLog'])
+        ->controller([LogController::class, 'getOneJournalLog'])
     ;
 
     $routes->add('anzu_systems_common.logs.audit_list', '/log/audit')

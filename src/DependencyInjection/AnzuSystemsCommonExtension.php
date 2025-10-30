@@ -65,13 +65,10 @@ use AnzuSystems\CommonBundle\HealthCheck\Module\OpCacheModule;
 use AnzuSystems\CommonBundle\HealthCheck\Module\RedisModule;
 use AnzuSystems\CommonBundle\Log\Factory\LogContextFactory;
 use AnzuSystems\CommonBundle\Log\LogFacade;
-use AnzuSystems\CommonBundle\Log\Repository\AppLogRepository;
 use AnzuSystems\CommonBundle\Log\Repository\AuditLogRepository;
-use AnzuSystems\CommonBundle\Messenger\Handler\AppLogMessageHandler;
-use AnzuSystems\CommonBundle\Messenger\Handler\AuditLogMessageHandler;
-use AnzuSystems\CommonBundle\Messenger\Message\AppLogMessage;
+use AnzuSystems\CommonBundle\Log\Repository\JournalLogRepository;
 use AnzuSystems\CommonBundle\Messenger\Message\AuditLogMessage;
-use AnzuSystems\CommonBundle\Repository\Mongo\AbstractAnzuMongoRepository;
+use AnzuSystems\CommonBundle\Messenger\Message\JournalLogMessage;
 use AnzuSystems\CommonBundle\Request\ParamConverter\ApiFilterParamConverter;
 use AnzuSystems\CommonBundle\Request\ParamConverter\EnumParamConverter;
 use AnzuSystems\CommonBundle\Request\ParamConverter\ValueObjectParamConverter;
@@ -95,7 +92,6 @@ use Symfony\Component\Config\FileLocator;
 use Symfony\Component\Config\Loader\LoaderInterface;
 use Symfony\Component\DependencyInjection\Argument\IteratorArgument;
 use Symfony\Component\DependencyInjection\Argument\ServiceLocatorArgument;
-use Symfony\Component\DependencyInjection\ChildDefinition;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 use Symfony\Component\DependencyInjection\Definition;
@@ -143,49 +139,41 @@ final class AnzuSystemsCommonExtension extends Extension implements PrependExten
             return;
         }
 
-        $monologConfig = [
-            'channels' => ['app', 'audit'], // app and audit channels are always available
-            'handlers' => [],
-        ];
-        if ($logs['app']['mongo']['enabled']) {
-            $monologConfig['channels'][] = 'app_sync';
-            $monologConfig['handlers']['app'] = [
-                'type' => 'service',
-                'channels' => 'app',
-                'id' => 'anzu_systems_common.logs.app_log_messenger_handler',
-            ];
-            $monologConfig['handlers']['app_sync'] = [
-                'type' => 'mongo',
-                'channels' => 'app_sync',
-                'level' => 'debug',
-                'mongo' => [
-                    'id' => 'anzu_systems_common.logs.app_log_client',
-                    'database' => $logs['app']['mongo']['database'],
-                    'collection' => $logs['app']['mongo']['collection'],
+        $container->prependExtensionConfig('monolog', [
+            'channels' => ['app', 'journal', 'audit', 'journal_sync', 'audit_sync'],
+            'handlers' => [
+                'journal' => [
+                    'type' => 'service',
+                    'channels' => 'journal',
+                    'id' => 'anzu_systems_common.logs.journal_log_messenger_handler',
                 ],
-            ];
-        }
-
-        if ($logs['audit']['mongo']['enabled']) {
-            $monologConfig['channels'][] = 'audit_sync';
-            $monologConfig['handlers']['audit'] = [
-                'type' => 'service',
-                'channels' => 'audit',
-                'id' => 'anzu_systems_common.logs.audit_log_messenger_handler',
-            ];
-            $monologConfig['handlers']['audit_sync'] = [
-                'type' => 'mongo',
-                'channels' => 'audit_sync',
-                'level' => 'debug',
-                'mongo' => [
-                    'id' => 'anzu_systems_common.logs.audit_log_client',
-                    'database' => $logs['audit']['mongo']['database'],
-                    'collection' => $logs['audit']['mongo']['collection'],
+                'audit' => [
+                    'type' => 'service',
+                    'channels' => 'audit',
+                    'id' => 'anzu_systems_common.logs.audit_log_messenger_handler',
                 ],
-            ];
-        }
-
-        $container->prependExtensionConfig('monolog', $monologConfig);
+                'journal_sync' => [
+                    'type' => 'mongo',
+                    'channels' => 'journal_sync',
+                    'level' => 'debug',
+                    'mongo' => [
+                        'id' => 'anzu_systems_common.logs.journal_log_client',
+                        'database' => $logs['journal']['mongo']['database'],
+                        'collection' => $logs['journal']['mongo']['collection'],
+                    ],
+                ],
+                'audit_sync' => [
+                    'type' => 'mongo',
+                    'channels' => 'audit_sync',
+                    'level' => 'debug',
+                    'mongo' => [
+                        'id' => 'anzu_systems_common.logs.audit_log_client',
+                        'database' => $logs['audit']['mongo']['database'],
+                        'collection' => $logs['audit']['mongo']['collection'],
+                    ],
+                ],
+            ],
+        ]);
 
         $messengerTransport = $logs['messenger_transport'];
         $container->prependExtensionConfig('framework', [
@@ -196,7 +184,7 @@ final class AnzuSystemsCommonExtension extends Extension implements PrependExten
                     ],
                 ],
                 'routing' => [
-                    AppLogMessage::class => $messengerTransport['name'],
+                    JournalLogMessage::class => $messengerTransport['name'],
                     AuditLogMessage::class => $messengerTransport['name'],
                 ],
             ],
@@ -427,15 +415,6 @@ final class AnzuSystemsCommonExtension extends Extension implements PrependExten
         }
 
         if ($hasModule(MongoModule::class)) {
-            if (empty($healthCheck['mongo_collections'])) {
-                if ($container->hasDefinition('anzu_mongo_app_log_collection')) {
-                    $healthCheck['mongo_collections'][] = 'anzu_mongo_app_log_collection';
-                }
-                if ($container->hasDefinition('anzu_mongo_audit_log_collection')) {
-                    $healthCheck['mongo_collections'][] = 'anzu_mongo_audit_log_collection';
-                }
-            }
-
             $collections = array_map(
                 static fn (string $collection) => new Reference($collection),
                 $healthCheck['mongo_collections']
@@ -476,6 +455,10 @@ final class AnzuSystemsCommonExtension extends Extension implements PrependExten
         $loader->load('logs.php');
 
         $container
+            ->getDefinition(AuditLogSubscriber::class)
+            ->replaceArgument('$loggedMethods', $logs['audit']['logged_methods']);
+
+        $container
             ->getDefinition(ExceptionListener::class)
             ->replaceArgument('$logContextFactory', new Reference(LogContextFactory::class))
             ->replaceArgument('$ignoredExceptions', $logs['app']['ignored_exceptions'])
@@ -487,73 +470,45 @@ final class AnzuSystemsCommonExtension extends Extension implements PrependExten
             ->replaceArgument('$ignoredExceptions', $logs['app']['ignored_exceptions'])
         ;
 
-        if ($logs['app']['mongo']['enabled']) {
-            $appLogMongo = $logs['app']['mongo'];
-            $appLogClientDefinition = new Definition(MongoDB\Client::class);
-            $appLogClientDefinition->setArgument('$uri', $appLogMongo['uri']);
-            $appLogClientDefinition->setArgument('$uriOptions', [
-                'username' => $appLogMongo['username'],
-                'password' => $appLogMongo['password'],
-                'ssl' => $appLogMongo['ssl'],
-            ]);
-            $container->setDefinition('anzu_systems_common.logs.app_log_client', $appLogClientDefinition);
-            $container->registerAliasForArgument('anzu_systems_common.logs.app_log_client', MongoDB\Client::class, '$appLogClient');
+        $journalLogMongo = $logs['journal']['mongo'];
+        $journalLogClientDefinition = new Definition(MongoDB\Client::class);
+        $journalLogClientDefinition->setArgument('$uri', $journalLogMongo['uri']);
+        $journalLogClientDefinition->setArgument('$uriOptions', [
+            'username' => $journalLogMongo['username'],
+            'password' => $journalLogMongo['password'],
+            'ssl' => $journalLogMongo['ssl'],
+        ]);
+        $container->setDefinition('anzu_systems_common.logs.journal_log_client', $journalLogClientDefinition);
+        $container->registerAliasForArgument('anzu_systems_common.logs.journal_log_client', MongoDB\Client::class, '$journalLogClient');
 
-            $appLogCollectionDefinition = new Definition(MongoDB\Collection::class);
-            $appLogCollectionDefinition->setFactory([new Reference('anzu_systems_common.logs.app_log_client'), 'selectCollection']);
-            $appLogCollectionDefinition->setArgument('$databaseName', $appLogMongo['database']);
-            $appLogCollectionDefinition->setArgument('$collectionName', $appLogMongo['collection']);
-            $container->setDefinition('anzu_mongo_app_log_collection', $appLogCollectionDefinition);
-            $container->registerAliasForArgument('anzu_mongo_app_log_collection', MongoDB\Collection::class, '$appLogCollection');
+        $auditLogMongo = $logs['audit']['mongo'];
+        $auditLogClientDefinition = new Definition(MongoDB\Client::class);
+        $auditLogClientDefinition->setArgument('$uri', $auditLogMongo['uri']);
+        $auditLogClientDefinition->setArgument('$uriOptions', [
+            'username' => $auditLogMongo['username'],
+            'password' => $auditLogMongo['password'],
+            'ssl' => $auditLogMongo['ssl'],
+        ]);
+        $container->setDefinition('anzu_systems_common.logs.audit_log_client', $auditLogClientDefinition);
+        $container->registerAliasForArgument('anzu_systems_common.logs.audit_log_client', MongoDB\Client::class, '$auditLogClient');
 
-            $definition = new ChildDefinition(AbstractAnzuMongoRepository::class);
-            $definition->setClass(AppLogRepository::class);
-            $definition->setArgument('$appLogCollection', new Reference('anzu_mongo_app_log_collection'));
-            $container->setDefinition(AppLogRepository::class, $definition);
+        $journalLogCollectionDefinition = new Definition(MongoDB\Collection::class);
+        $journalLogCollectionDefinition->setFactory([new Reference('anzu_systems_common.logs.journal_log_client'), 'selectCollection']);
+        $journalLogCollectionDefinition->setArgument('$databaseName', $journalLogMongo['database']);
+        $journalLogCollectionDefinition->setArgument('$collectionName', $journalLogMongo['collection']);
+        $container->setDefinition('anzu_mongo_journal_log_collection', $journalLogCollectionDefinition);
+        $container->registerAliasForArgument('anzu_mongo_journal_log_collection', MongoDB\Collection::class, '$journalLogCollection');
 
-            $definition = new Definition(AppLogMessageHandler::class);
-            $definition->setArgument('$appSyncLogger', new Reference('monolog.logger.app_sync'));
-            $definition->addTag('messenger.message_handler', ['handler' => AppLogMessage::class]);
-            $container->setDefinition(AppLogMessageHandler::class, $definition);
-        }
-
-        if ($logs['audit']['mongo']['enabled']) {
-            $container
-                ->getDefinition(AuditLogSubscriber::class)
-                ->replaceArgument('$loggedMethods', $logs['audit']['logged_methods']);
-
-            $auditLogMongo = $logs['audit']['mongo'];
-            $auditLogClientDefinition = new Definition(MongoDB\Client::class);
-            $auditLogClientDefinition->setArgument('$uri', $auditLogMongo['uri']);
-            $auditLogClientDefinition->setArgument('$uriOptions', [
-                'username' => $auditLogMongo['username'],
-                'password' => $auditLogMongo['password'],
-                'ssl' => $auditLogMongo['ssl'],
-            ]);
-            $container->setDefinition('anzu_systems_common.logs.audit_log_client', $auditLogClientDefinition);
-            $container->registerAliasForArgument('anzu_systems_common.logs.audit_log_client', MongoDB\Client::class, '$auditLogClient');
-
-            $auditLogCollectionDefinition = new Definition(MongoDB\Collection::class);
-            $auditLogCollectionDefinition->setFactory([new Reference('anzu_systems_common.logs.audit_log_client'), 'selectCollection']);
-            $auditLogCollectionDefinition->setArgument('$databaseName', $auditLogMongo['database']);
-            $auditLogCollectionDefinition->setArgument('$collectionName', $auditLogMongo['collection']);
-            $container->setDefinition('anzu_mongo_audit_log_collection', $auditLogCollectionDefinition);
-            $container->registerAliasForArgument('anzu_mongo_audit_log_collection', MongoDB\Collection::class, '$auditLogCollection');
-
-            $definition = new ChildDefinition(AbstractAnzuMongoRepository::class);
-            $definition->setClass(AuditLogRepository::class);
-            $definition->setArgument('$auditLogCollection', new Reference('anzu_mongo_audit_log_collection'));
-            $container->setDefinition(AuditLogRepository::class, $definition);
-
-            $definition = new Definition(AuditLogMessageHandler::class);
-            $definition->setArgument('$auditSyncLogger', new Reference('monolog.logger.audit_sync'));
-            $definition->addTag('messenger.message_handler', ['handler' => AuditLogMessage::class]);
-            $container->setDefinition(AuditLogMessageHandler::class, $definition);
-        }
+        $auditLogCollectionDefinition = new Definition(MongoDB\Collection::class);
+        $auditLogCollectionDefinition->setFactory([new Reference('anzu_systems_common.logs.audit_log_client'), 'selectCollection']);
+        $auditLogCollectionDefinition->setArgument('$databaseName', $auditLogMongo['database']);
+        $auditLogCollectionDefinition->setArgument('$collectionName', $auditLogMongo['collection']);
+        $container->setDefinition('anzu_mongo_audit_log_collection', $auditLogCollectionDefinition);
+        $container->registerAliasForArgument('anzu_mongo_audit_log_collection', MongoDB\Collection::class, '$auditLogCollection');
 
         $definition = $this->createControllerDefinition(LogController::class, [
-            '$auditLogRepo' => new Reference(AuditLogRepository::class, ContainerInterface::NULL_ON_INVALID_REFERENCE),
-            '$appLogRepo' => new Reference(AppLogRepository::class, ContainerInterface::NULL_ON_INVALID_REFERENCE),
+            '$auditLogRepo' => new Reference(AuditLogRepository::class),
+            '$journalLogRepo' => new Reference(JournalLogRepository::class),
             '$logFacade' => new Reference(LogFacade::class),
         ]);
         $container->setDefinition(LogController::class, $definition);

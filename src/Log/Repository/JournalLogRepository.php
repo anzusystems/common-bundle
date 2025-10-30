@@ -14,15 +14,15 @@ use MongoDB\Collection as MongoCollection;
 /**
  * @extends AbstractAnzuMongoRepository<Log>
  */
-final class AppLogRepository extends AbstractAnzuMongoRepository
+final class JournalLogRepository extends AbstractAnzuMongoRepository
 {
     public function __construct(
-        MongoCollection $appLogCollection,
+        MongoCollection $journalLogCollection,
         Serializer $serializer,
         protected BsonConverter $bsonConverter,
         protected int $queryMaxTimeMs = ApiQueryMongo::DEFAULT_QUERY_MAX_TIME_MS,
     ) {
-        parent::__construct($appLogCollection, $serializer, $this->bsonConverter, $queryMaxTimeMs);
+        parent::__construct($journalLogCollection, $serializer, $this->bsonConverter, $queryMaxTimeMs);
     }
 
     protected function getDocumentClass(): string

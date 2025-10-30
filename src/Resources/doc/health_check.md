@@ -32,12 +32,12 @@ anzu_systems_common:
 ```
 #### Configure MongoModule
 
-Mongo module is making ping to defined collection, by default are used collections `anzu_mongo_app_log_collection` and `anzu_mongo_audit_log_collection`, if you want to change it, you can configure it:
+Mongo module is making ping to defined collection, by default are used collections `anzu_mongo_journal_log_collection` and `anzu_mongo_audit_log_collection`, if you want to change it, you can configure it:
 
 ```yaml
 anzu_systems_common:
     health_check:
-        mongo_collections: [anzu_mongo_app_log_collection, anzu_mongo_audit_log_collection, anzu_mongo_app_something_specific_collection]  
+        mongo_collections: [anzu_mongo_journal_log_collection, anzu_mongo_audit_log_collection, anzu_mongo_app_something_specific_collection]  
 ```
 
 #### Register your own health check module

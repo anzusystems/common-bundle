@@ -220,7 +220,10 @@ final class Configuration implements ConfigurationInterface
             ->children()
                 ->scalarNode('mysql_table_name')->defaultValue('_doctrine_migration_versions')->end()
                 ->arrayNode('mongo_collections')
-                    ->defaultValue([])
+                    ->defaultValue([
+                        'anzu_mongo_journal_log_collection',
+                        'anzu_mongo_audit_log_collection',
+                    ])
                     ->prototype('scalar')->end()
                 ->end()
                 ->arrayNode('modules')
@@ -297,11 +300,16 @@ final class Configuration implements ConfigurationInterface
                 ->arrayNode('app')
                     ->addDefaultsIfNotSet()
                     ->children()
-                        ->append($this->addMongoConnectionSubSection('appLogs'))
-                        ->arrayNode('ignored_exceptions')
+                          ->arrayNode('ignored_exceptions')
                             ->defaultValue([])
                             ->prototype('scalar')->end()
                         ->end()
+                    ->end()
+                ->end()
+                ->arrayNode('journal')
+                    ->addDefaultsIfNotSet()
+                    ->children()
+                        ->append($this->addMongoConnectionSubSection('appLogs')) // "appLogs" is used for BC compatibility
                     ->end()
                 ->end()
                 ->arrayNode('audit')
@@ -328,28 +336,14 @@ final class Configuration implements ConfigurationInterface
     private function addMongoConnectionSubSection(string $collection): NodeDefinition
     {
         return (new TreeBuilder('mongo'))->getRootNode()
-            ->canBeDisabled()
             ->addDefaultsIfNotSet()
             ->children()
-                ->scalarNode('uri')->defaultNull()->end()
-                ->scalarNode('username')->defaultNull()->end()
-                ->scalarNode('password')->defaultNull()->end()
-                ->scalarNode('database')->defaultNull()->end()
+                ->scalarNode('uri')->isRequired()->end()
+                ->scalarNode('username')->isRequired()->end()
+                ->scalarNode('password')->isRequired()->end()
+                ->scalarNode('database')->isRequired()->end()
                 ->scalarNode('ssl')->defaultFalse()->end()
                 ->scalarNode('collection')->defaultValue($collection)->end()
-            ->end()
-            ->validate()
-                ->ifTrue(static function ($v) {
-                    if (isset($v['enabled']) && $v['enabled'] === true) {
-                        return empty($v['uri'])
-                            || empty($v['username'])
-                            || empty($v['password'])
-                            || empty($v['database']);
-                    }
-
-                    return false;
-                })
-                ->thenInvalid('You must configure "uri", "username", "password", and "database" when Mongo is enabled.')
             ->end()
         ;
     }

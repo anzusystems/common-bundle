@@ -16,7 +16,7 @@ use Symfony\Component\HttpFoundation\Request;
 final class LogFacade
 {
     public function __construct(
-        private readonly LoggerInterface $appLogger,
+        private readonly LoggerInterface $journalLogger,
         private readonly LogContextFactory $logContextFactory,
         private readonly Serializer $serializer,
     ) {
@@ -28,7 +28,7 @@ final class LogFacade
     public function create(Request $request, LogDto $logDto): Log
     {
         $context = $this->logContextFactory->buildCustomFromRequest($request, $logDto);
-        $this->appLogger->{$logDto->getLevel()->logMethodName()}(
+        $this->journalLogger->{$logDto->getLevel()->logMethodName()}(
             $logDto->getMessage(),
             $this->serializer->toArray($context)
         );

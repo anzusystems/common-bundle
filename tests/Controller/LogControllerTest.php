@@ -19,13 +19,13 @@ final class LogControllerTest extends AbstractControllerTest
         self::assertResponseStatusCodeSame(Response::HTTP_NOT_FOUND);
 
         /** @var ApiResponseList<Log> $response */
-        $response = $this->getList(uri: '/log/app', deserializationClass: Log::class);
+        $response = $this->getList(uri: '/log/journal', deserializationClass: Log::class);
         self::assertResponseIsSuccessful();
         self::assertNotEmpty($response->getData());
         self::assertContainsOnlyInstancesOf(Log::class, $response->getData());
 
         $log = $response->getData()[0];
-        $response = $this->get(uri: '/log/app/' .$log->getId(), deserializationClass: Log::class);
+        $response = $this->get(uri: '/log/journal/' .$log->getId(), deserializationClass: Log::class);
         self::assertResponseIsSuccessful();
         self::assertSame($response->getId(), $log->getId());
     }
@@ -71,7 +71,7 @@ final class LogControllerTest extends AbstractControllerTest
         $filterLog = [
             'filter_eq' => ['context.contextId' => $log->getContext()->getContextId()]
         ];
-        $logs = $this->getList('/log/app', Log::class, $filterLog);
+        $logs = $this->getList('/log/journal', Log::class, $filterLog);
         /** @var Log $foundLog */
         $foundLog = $logs->getData()[0];
         self::assertEquals($logDto->getMessage(), $foundLog->getMessage());

@@ -9,13 +9,29 @@ Anzu projects are using MongoDB to store logs.
 
 ### Application logs
 
-Common Bundle registers app channel for Monolog logger. Each time you use monolog as `LoggerInterface $appLogger` or just `LoggerInterface $logger`, logs are stored in Mongo collection `appLogs`.
+Common Bundle registers app channel for Monolog logger. Each time you use monolog as `LoggerInterface $appLogger` or just `LoggerInterface $logger`, logs are stored to default app logger.
 
-You must your connection to Mongo for app logs:
+Each exception is automatically logged by [ExceptionListener](https://github.com/anzusystems/common-bundle/blob/main/src/Event/Listener/ExceptionListener.php).
+It's possible to ignore logging of defined exception classes by configuration. For example, if you don't want to log 404 errors, use this config:
 ```yaml
 anzu_systems_common:
     logs:
         app:
+            ignored_exceptions:
+                - Symfony\Component\HttpKernel\Exception\NotFoundHttpException
+```
+
+You can use [LoggerAwareRequest](https://github.com/anzusystems/common-bundle/blob/main/src/Traits/LoggerAwareRequest.php) which logs each external http request send through `loggedRequest` method.
+
+### Journal logs
+
+Common Bundle registers journal channel for Monolog logger. Each time you use monolog as `LoggerInterface $journalLogger`, logs are stored in Mongo collection `appLogs`.
+
+You must your connection to Mongo for journal logs:
+```yaml
+anzu_systems_common:
+    logs:
+        journal:
             mongo:
                 uri: '%env(ANZU_MONGODB_APP_LOG_URI)%'
                 username: '%env(ANZU_MONGODB_APP_LOG_USERNAME)%'
@@ -35,18 +51,6 @@ framework:
                 middleware:
                     - AnzuSystems\CommonBundle\Messenger\Middleware\ContextIdentityMiddleware
 ```
-
-Each exception is automatically logged by [ExceptionListener](https://github.com/anzusystems/common-bundle/blob/main/src/Event/Listener/ExceptionListener.php).
-It's possible to ignore logging of defined exception classes by configuration. For example, if you don't want to log 404 errors, use this config:
-```yaml
-anzu_systems_common:
-    logs:
-        app:
-            ignored_exceptions:
-                - Symfony\Component\HttpKernel\Exception\NotFoundHttpException
-```
-
-You can use [LoggerAwareRequest](https://github.com/anzusystems/common-bundle/blob/main/src/Traits/LoggerAwareRequest.php) which logs each external http request send through `loggedRequest` method.
 
 ---
 
@@ -102,14 +106,14 @@ You should register routes for [LogController](https://github.com/anzusystems/co
 Create route configuration in `config/routes/logs.yaml`
 ```yaml
 anzu_systems_common.logs.app_list:
-    path: /api/adm/v1/log/app
+    path: /api/adm/v1/log/journal
     methods: GET
-    controller: AnzuSystems\CommonBundle\Controller\LogController::getAppLogs
+    controller: AnzuSystems\CommonBundle\Controller\LogController::getJournalLogs
 
-anzu_systems_common.logs.app_get_one:
-    path: /api/adm/v1/log/app/{id}
+anzu_systems_common.logs.journal_get_one:
+    path: /api/adm/v1/log/journal/{id}
     methods: GET
-    controller: AnzuSystems\CommonBundle\Controller\LogController::getOneAppLog
+    controller: AnzuSystems\CommonBundle\Controller\LogController::getOneJournalLog
 
 anzu_systems_common.logs.audit_list:
     path: /api/adm/v1/log/audit
