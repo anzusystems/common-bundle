@@ -24,13 +24,13 @@ Before:
 Now:
 ```php
     $routes
-        ->add('anzu_common.logs.journal_list', '/api/adm/v1/log/app')
+        ->add('anzu_common.logs.journal_list', '/api/adm/v1/log/journal')
             ->methods([Request::METHOD_GET])
             ->controller([LogController::class, 'getJournalLogs'])
     ;
 
     $routes
-        ->add('anzu_common.logs.journal_get_one', '/api/adm/v1/log/app/{id}')
+        ->add('anzu_common.logs.journal_get_one', '/api/adm/v1/log/journal/{id}')
             ->methods([Request::METHOD_GET])
             ->controller([LogController::class, 'getOneJournalLog'])
     ;
