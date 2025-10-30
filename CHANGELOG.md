@@ -1,4 +1,4 @@
-## [10.0.0](https://github.com/anzusystems/common-bundle/compare/7.0.0...8.0.0) (2024-10-30)
+## [10.0.0](https://github.com/anzusystems/common-bundle/compare/9.4.0...10.0.0) (2024-10-30)
 
 ### Features
  * App logger is the default logger expected to be logged to Sentry or Syslog and log errors, not mongodb. To keep logging some other data in Mongodb, new journal logger was created. 
