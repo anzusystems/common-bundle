@@ -6,17 +6,20 @@ namespace AnzuSystems\CommonBundle\Tests\Controller;
 
 use AnzuSystems\CommonBundle\ApiFilter\ApiResponseList;
 use AnzuSystems\CommonBundle\Document\Log;
+use AnzuSystems\CommonBundle\Document\LogContext;
+use AnzuSystems\CommonBundle\Log\Factory\LogContextFactory;
 use AnzuSystems\CommonBundle\Log\Model\LogDto;
 use AnzuSystems\Contracts\Model\Enum\LogLevel;
+use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 
 final class LogControllerTest extends AbstractControllerTest
 {
-    public function testAppLogs(): void
+    public function testJournalLogs(): void
     {
-        // create app error by making request to not existing uri
-        $this->get(uri: '/notfoundurl');
-        self::assertResponseStatusCodeSame(Response::HTTP_NOT_FOUND);
+        // create journal log record
+        $logContextFactory = self::getContainer()->get(LogContextFactory::class);
+        self::getContainer()->get('monolog.logger.journal')->error('Foo bar baz', $logContextFactory->buildFromRequestToArray(new Request()));
 
         /** @var ApiResponseList<Log> $response */
         $response = $this->getList(uri: '/log/journal', deserializationClass: Log::class);

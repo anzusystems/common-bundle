@@ -20,12 +20,12 @@ final readonly class ExceptionListener
      * @param list<class-string> $ignoredExceptions
      */
     public function __construct(
-        private readonly Traversable $exceptionHandlers,
-        private readonly ExceptionHandlerInterface $defaultExceptionHandler,
-        private readonly LoggerInterface $appLogger,
-        private readonly array $ignoredExceptions = [],
-        private readonly ?LogContextFactory $logContextFactory = null,
-        private readonly array $onlyUriMatch = [],
+        private Traversable $exceptionHandlers,
+        private ExceptionHandlerInterface $defaultExceptionHandler,
+        private LoggerInterface $appLogger,
+        private array $ignoredExceptions = [],
+        private ?LogContextFactory $logContextFactory = null,
+        private array $onlyUriMatch = [],
     ) {
     }
 
