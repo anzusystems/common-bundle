@@ -294,16 +294,6 @@ final class Configuration implements ConfigurationInterface
                         ->scalarNode('dsn')->isRequired()->end()
                     ->end()
                 ->end()
-                ->arrayNode('monolog')
-                    ->addDefaultsIfNotSet()
-                    ->canBeEnabled()
-                    ->children()
-                        ->arrayNode('ignored_exceptions')
-                            ->defaultValue([])
-                            ->prototype('scalar')->end()
-                        ->end()
-                    ->end()
-                ->end()
                 ->arrayNode('app')
                     ->addDefaultsIfNotSet()
                     ->canBeDisabled()
@@ -340,14 +330,28 @@ final class Configuration implements ConfigurationInterface
     private function addMongoConnectionSubSection(string $collection): NodeDefinition
     {
         return (new TreeBuilder('mongo'))->getRootNode()
+            ->canBeDisabled()
             ->addDefaultsIfNotSet()
             ->children()
-                ->scalarNode('uri')->isRequired()->end()
-                ->scalarNode('username')->isRequired()->end()
-                ->scalarNode('password')->isRequired()->end()
-                ->scalarNode('database')->isRequired()->end()
+                ->scalarNode('uri')->defaultNull()->end()
+                ->scalarNode('username')->defaultNull()->end()
+                ->scalarNode('password')->defaultNull()->end()
+                ->scalarNode('database')->defaultNull()->end()
                 ->scalarNode('ssl')->defaultFalse()->end()
                 ->scalarNode('collection')->defaultValue($collection)->end()
+            ->end()
+            ->validate()
+                ->ifTrue(static function ($v) {
+                    if (isset($v['enabled']) && $v['enabled'] === true) {
+                        return empty($v['uri'])
+                            || empty($v['username'])
+                            || empty($v['password'])
+                            || empty($v['database']);
+                    }
+
+                    return false;
+                })
+                ->thenInvalid('You must configure "uri", "username", "password", and "database" when Mongo is enabled.')
             ->end()
         ;
     }

@@ -145,14 +145,11 @@ anzu_common:
             name: 'core_log'
             # Messenger transport DSN
             dsn: '%env(MESSENGER_TRANSPORT_DSN)%?topic[name]=core_log'
-        # enable monolog processors
-        monolog:
-            enabled: true
         # Application log section
         app:
             # Mongo connection definition
-            enabled: true
             mongo:
+                enabled: true
                 uri: '%env(ANZU_MONGODB_APP_LOG_URI)%'
                 username: '%env(ANZU_MONGODB_APP_LOG_USERNAME)%'
                 password: '%env(ANZU_MONGODB_APP_LOG_PASSWORD)%'
@@ -162,8 +159,8 @@ anzu_common:
         # Audit log section
         audit:
             # Mongo connection definition
-            enabled: true
             mongo:
+                enabled: true
                 uri: '%env(ANZU_MONGODB_AUDIT_LOG_URI)%'
                 username: '%env(ANZU_MONGODB_AUDIT_LOG_USERNAME)%'
                 password: '%env(ANZU_MONGODB_AUDIT_LOG_PASSWORD)%'

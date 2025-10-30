@@ -12,6 +12,7 @@ use AnzuSystems\CommonBundle\Messenger\Message\AppLogMessage;
 use AnzuSystems\CommonBundle\Messenger\Message\AuditLogMessage;
 use AnzuSystems\CommonBundle\Messenger\Middleware\ContextIdentityMiddleware;
 use AnzuSystems\CommonBundle\Messenger\MonologHandler\MessengerHandler;
+use AnzuSystems\CommonBundle\Monolog\ContextProcessor;
 use AnzuSystems\CommonBundle\Repository\Mongo\AbstractAnzuMongoRepository;
 use AnzuSystems\CommonBundle\Serializer\Service\BsonConverter;
 use AnzuSystems\SerializerBundle\Metadata\MetadataRegistry;
@@ -26,6 +27,9 @@ return static function (ContainerConfigurator $configurator): void {
         ->autowire(false)
         ->autoconfigure(false)
     ;
+
+    $services->set(ContextProcessor::class)
+        ->tag('monolog.processor');
 
     $services->set(LogContextFactory::class)
         ->arg('$userProvider', service(CurrentAnzuUserProvider::class))

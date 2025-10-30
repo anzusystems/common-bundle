@@ -71,7 +71,6 @@ use AnzuSystems\CommonBundle\Messenger\Handler\AppLogMessageHandler;
 use AnzuSystems\CommonBundle\Messenger\Handler\AuditLogMessageHandler;
 use AnzuSystems\CommonBundle\Messenger\Message\AppLogMessage;
 use AnzuSystems\CommonBundle\Messenger\Message\AuditLogMessage;
-use AnzuSystems\CommonBundle\Monolog\IgnoreExceptionProcessor;
 use AnzuSystems\CommonBundle\Repository\Mongo\AbstractAnzuMongoRepository;
 use AnzuSystems\CommonBundle\Request\ParamConverter\ApiFilterParamConverter;
 use AnzuSystems\CommonBundle\Request\ParamConverter\EnumParamConverter;
@@ -145,11 +144,10 @@ final class AnzuSystemsCommonExtension extends Extension implements PrependExten
         }
 
         $monologConfig = [
-            'channels' => [],
+            'channels' => ['app', 'audit'], // app and audit channels are always available
             'handlers' => [],
         ];
-        if ($logs['app']['enabled']) {
-            $monologConfig['channels'][] = 'app';
+        if ($logs['app']['mongo']['enabled']) {
             $monologConfig['channels'][] = 'app_sync';
             $monologConfig['handlers']['app'] = [
                 'type' => 'service',
@@ -168,8 +166,7 @@ final class AnzuSystemsCommonExtension extends Extension implements PrependExten
             ];
         }
 
-        if ($logs['audit']['enabled']) {
-            $monologConfig['channels'][] = 'audit';
+        if ($logs['audit']['mongo']['enabled']) {
             $monologConfig['channels'][] = 'audit_sync';
             $monologConfig['handlers']['audit'] = [
                 'type' => 'service',
@@ -188,9 +185,7 @@ final class AnzuSystemsCommonExtension extends Extension implements PrependExten
             ];
         }
 
-        if (false === empty($monologConfig['channels'])) {
-            $container->prependExtensionConfig('monolog', $monologConfig);
-        }
+        $container->prependExtensionConfig('monolog', $monologConfig);
 
         $messengerTransport = $logs['messenger_transport'];
         $container->prependExtensionConfig('framework', [
@@ -476,32 +471,23 @@ final class AnzuSystemsCommonExtension extends Extension implements PrependExten
             return;
         }
 
-        if (true === $logs['monolog']['enabled']) {
-            $loader->load('monolog.php');
-
-            $container
-                ->getDefinition(IgnoreExceptionProcessor::class)
-                ->replaceArgument('$ignoredExceptions', $logs['monolog']['ignored_exceptions'])
-            ;
-        }
-
         $container->setParameter('anzu_systems_common.mongo_query_max_time_ms', $this->processedConfig['settings']['mongo_query_max_time_ms']);
 
         $loader->load('logs.php');
 
-        if ($logs['app']['enabled']) {
-            $container
-                ->getDefinition(ExceptionListener::class)
-                ->replaceArgument('$logContextFactory', new Reference(LogContextFactory::class))
-                ->replaceArgument('$ignoredExceptions', $logs['app']['ignored_exceptions'])
-            ;
+        $container
+            ->getDefinition(ExceptionListener::class)
+            ->replaceArgument('$logContextFactory', new Reference(LogContextFactory::class))
+            ->replaceArgument('$ignoredExceptions', $logs['app']['ignored_exceptions'])
+        ;
 
-            $container
-                ->getDefinition(ConsoleExceptionListener::class)
-                ->replaceArgument('$logContextFactory', new Reference(LogContextFactory::class))
-                ->replaceArgument('$ignoredExceptions', $logs['app']['ignored_exceptions'])
-            ;
+        $container
+            ->getDefinition(ConsoleExceptionListener::class)
+            ->replaceArgument('$logContextFactory', new Reference(LogContextFactory::class))
+            ->replaceArgument('$ignoredExceptions', $logs['app']['ignored_exceptions'])
+        ;
 
+        if ($logs['app']['mongo']['enabled']) {
             $appLogMongo = $logs['app']['mongo'];
             $appLogClientDefinition = new Definition(MongoDB\Client::class);
             $appLogClientDefinition->setArgument('$uri', $appLogMongo['uri']);
@@ -529,12 +515,9 @@ final class AnzuSystemsCommonExtension extends Extension implements PrependExten
             $definition->setArgument('$appSyncLogger', new Reference('monolog.logger.app_sync'));
             $definition->addTag('messenger.message_handler', ['handler' => AppLogMessage::class]);
             $container->setDefinition(AppLogMessageHandler::class, $definition);
-        } else {
-            $container->removeDefinition(ExceptionListener::class);
-            $container->removeDefinition(ConsoleExceptionListener::class);
         }
 
-        if ($logs['audit']['enabled']) {
+        if ($logs['audit']['mongo']['enabled']) {
             $container
                 ->getDefinition(AuditLogSubscriber::class)
                 ->replaceArgument('$loggedMethods', $logs['audit']['logged_methods']);
