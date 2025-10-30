@@ -25,6 +25,11 @@ final class JobRepository extends AbstractAnzuRepository
         return $this->findJobByStatus(JobStatus::Waiting);
     }
 
+    protected function getEntityClass(): string
+    {
+        return Job::class;
+    }
+
     private function findJobByStatus(JobStatus $status): ?Job
     {
         return $this
@@ -40,10 +45,5 @@ final class JobRepository extends AbstractAnzuRepository
             ->getQuery()
             ->getOneOrNullResult()
         ;
-    }
-
-    protected function getEntityClass(): string
-    {
-        return Job::class;
     }
 }

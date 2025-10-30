@@ -8,8 +8,8 @@ use AnzuSystems\CommonBundle\ApiFilter\ApiParams;
 use AnzuSystems\CommonBundle\Document\Log;
 use AnzuSystems\CommonBundle\Log\LogFacade;
 use AnzuSystems\CommonBundle\Log\Model\LogDto;
-use AnzuSystems\CommonBundle\Log\Repository\AppLogRepository;
 use AnzuSystems\CommonBundle\Log\Repository\AuditLogRepository;
+use AnzuSystems\CommonBundle\Log\Repository\JournalLogRepository;
 use AnzuSystems\CommonBundle\Model\OpenApi\Parameter\OAParameterPath;
 use AnzuSystems\CommonBundle\Model\OpenApi\Request\OARequest;
 use AnzuSystems\CommonBundle\Model\OpenApi\Response\OAResponse;
@@ -27,7 +27,7 @@ final class LogController extends AbstractAnzuApiController
 {
     public function __construct(
         private readonly AuditLogRepository $auditLogRepo,
-        private readonly AppLogRepository $appLogRepo,
+        private readonly JournalLogRepository $journalLogRepo,
         private readonly LogFacade $logFacade,
     ) {
     }
@@ -46,15 +46,15 @@ final class LogController extends AbstractAnzuApiController
     }
 
     /**
-     * Get list of app logs.
+     * Get list of journal logs.
      *
      * @throws SerializerException
      */
     #[OAResponseList(Log::class)]
-    public function getAppLogs(ApiParams $apiParams): JsonResponse
+    public function getJournalLogs(ApiParams $apiParams): JsonResponse
     {
         return $this->okResponse(
-            $this->appLogRepo->findByApiParams($apiParams)
+            $this->journalLogRepo->findByApiParams($apiParams)
         );
     }
 
@@ -62,14 +62,14 @@ final class LogController extends AbstractAnzuApiController
      * Get one app log.
      */
     #[OAParameterPath('id'), OAResponse(Log::class)]
-    public function getOneAppLog(string $id): JsonResponse
+    public function getOneJournalLog(string $id): JsonResponse
     {
-        $log = $this->appLogRepo->find($id);
+        $log = $this->journalLogRepo->find($id);
         if ($log instanceof Log) {
             return $this->okResponse($log);
         }
 
-        throw new NotFoundHttpException(sprintf('App log with id "%s" was not found.', $id));
+        throw new NotFoundHttpException(sprintf('Journal log with id "%s" was not found.', $id));
     }
 
     /**
@@ -89,7 +89,7 @@ final class LogController extends AbstractAnzuApiController
     }
 
     /**
-     * Create custom app log (i.e. Admin FE error log).
+     * Create custom journal log (i.e. Admin FE error log).
      *
      * @throws SerializerException
      */

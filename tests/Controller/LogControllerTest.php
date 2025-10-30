@@ -6,26 +6,29 @@ namespace AnzuSystems\CommonBundle\Tests\Controller;
 
 use AnzuSystems\CommonBundle\ApiFilter\ApiResponseList;
 use AnzuSystems\CommonBundle\Document\Log;
+use AnzuSystems\CommonBundle\Document\LogContext;
+use AnzuSystems\CommonBundle\Log\Factory\LogContextFactory;
 use AnzuSystems\CommonBundle\Log\Model\LogDto;
 use AnzuSystems\Contracts\Model\Enum\LogLevel;
+use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 
 final class LogControllerTest extends AbstractControllerTest
 {
-    public function testAppLogs(): void
+    public function testJournalLogs(): void
     {
-        // create app error by making request to not existing uri
-        $this->get(uri: '/notfoundurl');
-        self::assertResponseStatusCodeSame(Response::HTTP_NOT_FOUND);
+        // create journal log record
+        $logContextFactory = self::getContainer()->get(LogContextFactory::class);
+        self::getContainer()->get('monolog.logger.journal')->error('Foo bar baz', $logContextFactory->buildFromRequestToArray(new Request()));
 
         /** @var ApiResponseList<Log> $response */
-        $response = $this->getList(uri: '/log/app', deserializationClass: Log::class);
+        $response = $this->getList(uri: '/log/journal', deserializationClass: Log::class);
         self::assertResponseIsSuccessful();
         self::assertNotEmpty($response->getData());
         self::assertContainsOnlyInstancesOf(Log::class, $response->getData());
 
         $log = $response->getData()[0];
-        $response = $this->get(uri: '/log/app/' .$log->getId(), deserializationClass: Log::class);
+        $response = $this->get(uri: '/log/journal/' .$log->getId(), deserializationClass: Log::class);
         self::assertResponseIsSuccessful();
         self::assertSame($response->getId(), $log->getId());
     }
@@ -71,7 +74,7 @@ final class LogControllerTest extends AbstractControllerTest
         $filterLog = [
             'filter_eq' => ['context.contextId' => $log->getContext()->getContextId()]
         ];
-        $logs = $this->getList('/log/app', Log::class, $filterLog);
+        $logs = $this->getList('/log/journal', Log::class, $filterLog);
         /** @var Log $foundLog */
         $foundLog = $logs->getData()[0];
         self::assertEquals($logDto->getMessage(), $foundLog->getMessage());

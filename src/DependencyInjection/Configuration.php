@@ -221,7 +221,7 @@ final class Configuration implements ConfigurationInterface
                 ->scalarNode('mysql_table_name')->defaultValue('_doctrine_migration_versions')->end()
                 ->arrayNode('mongo_collections')
                     ->defaultValue([
-                        'anzu_mongo_app_log_collection',
+                        'anzu_mongo_journal_log_collection',
                         'anzu_mongo_audit_log_collection',
                     ])
                     ->prototype('scalar')->end()
@@ -300,11 +300,16 @@ final class Configuration implements ConfigurationInterface
                 ->arrayNode('app')
                     ->addDefaultsIfNotSet()
                     ->children()
-                        ->append($this->addMongoConnectionSubSection('appLogs'))
-                        ->arrayNode('ignored_exceptions')
+                          ->arrayNode('ignored_exceptions')
                             ->defaultValue([])
                             ->prototype('scalar')->end()
                         ->end()
+                    ->end()
+                ->end()
+                ->arrayNode('journal')
+                    ->addDefaultsIfNotSet()
+                    ->children()
+                        ->append($this->addMongoConnectionSubSection('appLogs')) // "appLogs" is used for BC compatibility
                     ->end()
                 ->end()
                 ->arrayNode('audit')

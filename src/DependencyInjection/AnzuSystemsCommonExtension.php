@@ -65,10 +65,10 @@ use AnzuSystems\CommonBundle\HealthCheck\Module\OpCacheModule;
 use AnzuSystems\CommonBundle\HealthCheck\Module\RedisModule;
 use AnzuSystems\CommonBundle\Log\Factory\LogContextFactory;
 use AnzuSystems\CommonBundle\Log\LogFacade;
-use AnzuSystems\CommonBundle\Log\Repository\AppLogRepository;
 use AnzuSystems\CommonBundle\Log\Repository\AuditLogRepository;
-use AnzuSystems\CommonBundle\Messenger\Message\AppLogMessage;
+use AnzuSystems\CommonBundle\Log\Repository\JournalLogRepository;
 use AnzuSystems\CommonBundle\Messenger\Message\AuditLogMessage;
+use AnzuSystems\CommonBundle\Messenger\Message\JournalLogMessage;
 use AnzuSystems\CommonBundle\Request\ParamConverter\ApiFilterParamConverter;
 use AnzuSystems\CommonBundle\Request\ParamConverter\EnumParamConverter;
 use AnzuSystems\CommonBundle\Request\ParamConverter\ValueObjectParamConverter;
@@ -140,26 +140,26 @@ final class AnzuSystemsCommonExtension extends Extension implements PrependExten
         }
 
         $container->prependExtensionConfig('monolog', [
-            'channels' => ['app', 'audit', 'app_sync', 'audit_sync'],
+            'channels' => ['app', 'journal', 'audit', 'journal_sync', 'audit_sync'],
             'handlers' => [
-                'app' => [
+                'journal' => [
                     'type' => 'service',
-                    'channels' => 'app',
-                    'id' => 'anzu_systems_common.logs.app_log_messenger_handler',
+                    'channels' => 'journal',
+                    'id' => 'anzu_systems_common.logs.journal_log_messenger_handler',
                 ],
                 'audit' => [
                     'type' => 'service',
                     'channels' => 'audit',
                     'id' => 'anzu_systems_common.logs.audit_log_messenger_handler',
                 ],
-                'app_sync' => [
+                'journal_sync' => [
                     'type' => 'mongo',
-                    'channels' => 'app_sync',
+                    'channels' => 'journal_sync',
                     'level' => 'debug',
                     'mongo' => [
-                        'id' => 'anzu_systems_common.logs.app_log_client',
-                        'database' => $logs['app']['mongo']['database'],
-                        'collection' => $logs['app']['mongo']['collection'],
+                        'id' => 'anzu_systems_common.logs.journal_log_client',
+                        'database' => $logs['journal']['mongo']['database'],
+                        'collection' => $logs['journal']['mongo']['collection'],
                     ],
                 ],
                 'audit_sync' => [
@@ -184,7 +184,7 @@ final class AnzuSystemsCommonExtension extends Extension implements PrependExten
                     ],
                 ],
                 'routing' => [
-                    AppLogMessage::class => $messengerTransport['name'],
+                    JournalLogMessage::class => $messengerTransport['name'],
                     AuditLogMessage::class => $messengerTransport['name'],
                 ],
             ],
@@ -470,16 +470,16 @@ final class AnzuSystemsCommonExtension extends Extension implements PrependExten
             ->replaceArgument('$ignoredExceptions', $logs['app']['ignored_exceptions'])
         ;
 
-        $appLogMongo = $logs['app']['mongo'];
-        $appLogClientDefinition = new Definition(MongoDB\Client::class);
-        $appLogClientDefinition->setArgument('$uri', $appLogMongo['uri']);
-        $appLogClientDefinition->setArgument('$uriOptions', [
-            'username' => $appLogMongo['username'],
-            'password' => $appLogMongo['password'],
-            'ssl' => $appLogMongo['ssl'],
+        $journalLogMongo = $logs['journal']['mongo'];
+        $journalLogClientDefinition = new Definition(MongoDB\Client::class);
+        $journalLogClientDefinition->setArgument('$uri', $journalLogMongo['uri']);
+        $journalLogClientDefinition->setArgument('$uriOptions', [
+            'username' => $journalLogMongo['username'],
+            'password' => $journalLogMongo['password'],
+            'ssl' => $journalLogMongo['ssl'],
         ]);
-        $container->setDefinition('anzu_systems_common.logs.app_log_client', $appLogClientDefinition);
-        $container->registerAliasForArgument('anzu_systems_common.logs.app_log_client', MongoDB\Client::class, '$appLogClient');
+        $container->setDefinition('anzu_systems_common.logs.journal_log_client', $journalLogClientDefinition);
+        $container->registerAliasForArgument('anzu_systems_common.logs.journal_log_client', MongoDB\Client::class, '$journalLogClient');
 
         $auditLogMongo = $logs['audit']['mongo'];
         $auditLogClientDefinition = new Definition(MongoDB\Client::class);
@@ -492,12 +492,12 @@ final class AnzuSystemsCommonExtension extends Extension implements PrependExten
         $container->setDefinition('anzu_systems_common.logs.audit_log_client', $auditLogClientDefinition);
         $container->registerAliasForArgument('anzu_systems_common.logs.audit_log_client', MongoDB\Client::class, '$auditLogClient');
 
-        $appLogCollectionDefinition = new Definition(MongoDB\Collection::class);
-        $appLogCollectionDefinition->setFactory([new Reference('anzu_systems_common.logs.app_log_client'), 'selectCollection']);
-        $appLogCollectionDefinition->setArgument('$databaseName', $appLogMongo['database']);
-        $appLogCollectionDefinition->setArgument('$collectionName', $appLogMongo['collection']);
-        $container->setDefinition('anzu_mongo_app_log_collection', $appLogCollectionDefinition);
-        $container->registerAliasForArgument('anzu_mongo_app_log_collection', MongoDB\Collection::class, '$appLogCollection');
+        $journalLogCollectionDefinition = new Definition(MongoDB\Collection::class);
+        $journalLogCollectionDefinition->setFactory([new Reference('anzu_systems_common.logs.journal_log_client'), 'selectCollection']);
+        $journalLogCollectionDefinition->setArgument('$databaseName', $journalLogMongo['database']);
+        $journalLogCollectionDefinition->setArgument('$collectionName', $journalLogMongo['collection']);
+        $container->setDefinition('anzu_mongo_journal_log_collection', $journalLogCollectionDefinition);
+        $container->registerAliasForArgument('anzu_mongo_journal_log_collection', MongoDB\Collection::class, '$journalLogCollection');
 
         $auditLogCollectionDefinition = new Definition(MongoDB\Collection::class);
         $auditLogCollectionDefinition->setFactory([new Reference('anzu_systems_common.logs.audit_log_client'), 'selectCollection']);
@@ -508,7 +508,7 @@ final class AnzuSystemsCommonExtension extends Extension implements PrependExten
 
         $definition = $this->createControllerDefinition(LogController::class, [
             '$auditLogRepo' => new Reference(AuditLogRepository::class),
-            '$appLogRepo' => new Reference(AppLogRepository::class),
+            '$journalLogRepo' => new Reference(JournalLogRepository::class),
             '$logFacade' => new Reference(LogFacade::class),
         ]);
         $container->setDefinition(LogController::class, $definition);

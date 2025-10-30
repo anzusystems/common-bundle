@@ -111,7 +111,7 @@ anzu_common:
         enabled: true
         # Table name against which is performed health check.
         mysql_table_name: _doctrine_migration_versions
-        mongo_collections: [anzu_mongo_app_log_collection, anzu_mongo_audit_log_collection]
+        mongo_collections: [anzu_mongo_journal_log_collection, anzu_mongo_audit_log_collection]
         # Modules used for health check. Defaults to modules listed bellow.
         # Here you can only define some of these modules.
         # For none use modules: []
@@ -145,8 +145,8 @@ anzu_common:
             name: 'core_log'
             # Messenger transport DSN
             dsn: '%env(MESSENGER_TRANSPORT_DSN)%?topic[name]=core_log'
-        # Application log section
-        app:
+        # Journal log section
+        journal:
             # Mongo connection definition
             mongo:
                 uri: '%env(ANZU_MONGODB_APP_LOG_URI)%'

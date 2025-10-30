@@ -8,14 +8,15 @@ use AnzuSystems\CommonBundle\Domain\User\CurrentAnzuUserProvider;
 use AnzuSystems\CommonBundle\Event\Subscriber\AuditLogSubscriber;
 use AnzuSystems\CommonBundle\Log\Factory\LogContextFactory;
 use AnzuSystems\CommonBundle\Log\LogFacade;
-use AnzuSystems\CommonBundle\Log\Repository\AppLogRepository;
 use AnzuSystems\CommonBundle\Log\Repository\AuditLogRepository;
-use AnzuSystems\CommonBundle\Messenger\Handler\AppLogMessageHandler;
+use AnzuSystems\CommonBundle\Log\Repository\JournalLogRepository;
 use AnzuSystems\CommonBundle\Messenger\Handler\AuditLogMessageHandler;
-use AnzuSystems\CommonBundle\Messenger\Message\AppLogMessage;
+use AnzuSystems\CommonBundle\Messenger\Handler\JournalLogMessageHandler;
 use AnzuSystems\CommonBundle\Messenger\Message\AuditLogMessage;
+use AnzuSystems\CommonBundle\Messenger\Message\JournalLogMessage;
 use AnzuSystems\CommonBundle\Messenger\Middleware\ContextIdentityMiddleware;
 use AnzuSystems\CommonBundle\Messenger\MonologHandler\MessengerHandler;
+use AnzuSystems\CommonBundle\Monolog\ContextProcessor;
 use AnzuSystems\CommonBundle\Repository\Mongo\AbstractAnzuMongoRepository;
 use AnzuSystems\CommonBundle\Serializer\Service\BsonConverter;
 use AnzuSystems\SerializerBundle\Metadata\MetadataRegistry;
@@ -31,13 +32,16 @@ return static function (ContainerConfigurator $configurator): void {
         ->autoconfigure(false)
     ;
 
+    $services->set(ContextProcessor::class)
+        ->tag('monolog.processor');
+
     $services->set(LogContextFactory::class)
         ->arg('$userProvider', service(CurrentAnzuUserProvider::class))
         ->arg('$serializer', service(Serializer::class))
     ;
 
     $services->set(LogFacade::class)
-        ->arg('$appLogger', service('monolog.logger'))
+        ->arg('$journalLogger', service('monolog.logger.journal'))
         ->arg('$logContextFactory', service(LogContextFactory::class))
         ->arg('$serializer', service(Serializer::class))
     ;
@@ -60,9 +64,9 @@ return static function (ContainerConfigurator $configurator): void {
         ->arg('$queryMaxTimeMs', param('anzu_systems_common.mongo_query_max_time_ms'))
     ;
 
-    $services->set(AppLogRepository::class)
+    $services->set(JournalLogRepository::class)
         ->parent(AbstractAnzuMongoRepository::class)
-        ->arg('$appLogCollection', service('anzu_mongo_app_log_collection'))
+        ->arg('$journalLogCollection', service('anzu_mongo_journal_log_collection'))
     ;
 
     $services->set(AuditLogRepository::class)
@@ -75,13 +79,13 @@ return static function (ContainerConfigurator $configurator): void {
         ->tag('messenger.message_handler', ['handler' => AuditLogMessage::class])
     ;
 
-    $services->set(AppLogMessageHandler::class)
-        ->arg('$appSyncLogger', service('monolog.logger.app_sync'))
-        ->tag('messenger.message_handler', ['handler' => AppLogMessage::class])
+    $services->set(JournalLogMessageHandler::class)
+        ->arg('$journalSyncLogger', service('monolog.logger.journal_sync'))
+        ->tag('messenger.message_handler', ['handler' => JournalLogMessage::class])
     ;
 
-    $services->set('anzu_systems_common.logs.app_log_messenger_handler', MessengerHandler::class)
-        ->arg('$messageClass', AppLogMessage::class)
+    $services->set('anzu_systems_common.logs.journal_log_messenger_handler', MessengerHandler::class)
+        ->arg('$messageClass', JournalLogMessage::class)
         ->arg('$messageBus', service(MessageBusInterface::class))
     ;
 

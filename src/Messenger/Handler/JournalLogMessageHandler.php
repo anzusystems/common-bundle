@@ -4,24 +4,24 @@ declare(strict_types=1);
 
 namespace AnzuSystems\CommonBundle\Messenger\Handler;
 
-use AnzuSystems\CommonBundle\Messenger\Message\AppLogMessage;
+use AnzuSystems\CommonBundle\Messenger\Message\JournalLogMessage;
 use Monolog\Logger;
 use Psr\Log\LoggerInterface;
 
-final class AppLogMessageHandler
+final class JournalLogMessageHandler
 {
     public function __construct(
-        private readonly LoggerInterface $appSyncLogger,
+        private readonly LoggerInterface $journalSyncLogger,
     ) {
     }
 
-    public function __invoke(AppLogMessage $logMessage): void
+    public function __invoke(JournalLogMessage $logMessage): void
     {
-        if (false === ($this->appSyncLogger instanceof Logger)) {
+        if (false === ($this->journalSyncLogger instanceof Logger)) {
             return;
         }
 
-        foreach ($this->appSyncLogger->getHandlers() as $handler) {
+        foreach ($this->journalSyncLogger->getHandlers() as $handler) {
             /**
              * @psalm-suppress PossiblyInvalidArgument - It gives array for monolog 2, LogRecord for monolog 3.
              */
