@@ -6,7 +6,7 @@ namespace AnzuSystems\CommonBundle\Repository;
 
 use AnzuSystems\CommonBundle\Entity\Job;
 use AnzuSystems\CommonBundle\Model\Enum\JobStatus;
-use AnzuSystems\Contracts\AnzuApp;
+use DateTimeImmutable;
 use Doctrine\Common\Collections\Order;
 use Doctrine\DBAL\Types\Types;
 
@@ -37,7 +37,7 @@ final class JobRepository extends AbstractAnzuRepository
             ->where('job.status = :status')
             ->andWhere('job.scheduledAt <= :scheduledAt')
             ->setParameter('status', $status->toString())
-            ->setParameter('scheduledAt', AnzuApp::getAppDate(), Types::DATETIME_IMMUTABLE)
+            ->setParameter('scheduledAt', new DateTimeImmutable(), Types::DATETIME_IMMUTABLE)
             ->orderBy('job.priority', Order::Descending->value)
             ->addOrderBy('job.scheduledAt', Order::Ascending->value)
             ->addOrderBy('job.id', Order::Ascending->value)
