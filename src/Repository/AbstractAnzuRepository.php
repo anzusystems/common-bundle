@@ -80,6 +80,7 @@ abstract class AbstractAnzuRepository extends ServiceEntityRepository implements
         array $customOrders = [],
         array $customInnerFilters = [],
         array $fieldCallbacks = [],
+        ?string $objectClass = null,
         ?Closure $mapDataFn = null,
     ): ApiResponseList {
         if ($customFilter instanceof CustomFilterInterface && empty($customFilters)) {
@@ -129,6 +130,7 @@ abstract class AbstractAnzuRepository extends ServiceEntityRepository implements
         array $customOrders = [],
         array $customInnerFilters = [],
         array $fieldCallbacks = [],
+        ?string $objectClass = null,
         ?Closure $mapDataFn = null,
     ): ApiInfiniteResponseList {
         if ($customFilter instanceof CustomFilterInterface && empty($customFilters)) {
