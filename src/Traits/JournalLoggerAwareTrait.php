@@ -15,7 +15,7 @@ trait JournalLoggerAwareTrait
      * Sets a journal logger.
      */
     #[Required]
-    public function setLogger(LoggerInterface $journalLogger): void
+    public function setJournalLogger(LoggerInterface $journalLogger): void
     {
         $this->journalLogger = $journalLogger;
     }
