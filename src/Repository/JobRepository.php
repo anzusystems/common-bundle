@@ -30,7 +30,7 @@ final class JobRepository extends AbstractAnzuRepository
      */
     private function findJobByStatuses(array $statuses): ?Job
     {
-        $statusStrings = array_map(fn(JobStatus $status) => $status->toString(), $statuses);
+        $statusStrings = array_map(fn (JobStatus $status) => $status->toString(), $statuses);
 
         return $this
             ->createQueryBuilder('job')
