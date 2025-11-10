@@ -17,12 +17,7 @@ final class JobRepository extends AbstractAnzuRepository
 {
     public function findProcessableJob(): ?Job
     {
-        $job = $this->findJobByStatus(JobStatus::AwaitingBatchProcess);
-        if ($job) {
-            return $job;
-        }
-
-        return $this->findJobByStatus(JobStatus::Waiting);
+        return $this->findJobByStatuses(JobStatus::PROCESSABLE_STATUSES);
     }
 
     protected function getEntityClass(): string
@@ -30,13 +25,18 @@ final class JobRepository extends AbstractAnzuRepository
         return Job::class;
     }
 
-    private function findJobByStatus(JobStatus $status): ?Job
+    /**
+     * @param JobStatus[] $statuses
+     */
+    private function findJobByStatuses(array $statuses): ?Job
     {
+        $statusStrings = array_map(fn (JobStatus $status) => $status->toString(), $statuses);
+
         return $this
             ->createQueryBuilder('job')
-            ->where('job.status = :status')
+            ->where('job.status IN (:statuses)')
             ->andWhere('job.scheduledAt <= :scheduledAt')
-            ->setParameter('status', $status->toString())
+            ->setParameter('statuses', $statusStrings)
             ->setParameter('scheduledAt', new DateTimeImmutable(), Types::DATETIME_IMMUTABLE)
             ->orderBy('job.priority', Order::Descending->value)
             ->addOrderBy('job.scheduledAt', Order::Ascending->value)
