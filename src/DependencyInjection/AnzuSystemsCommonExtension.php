@@ -154,20 +154,20 @@ final class AnzuSystemsCommonExtension extends Extension implements PrependExten
                     'id' => 'anzu_systems_common.logs.audit_log_messenger_handler',
                 ],
                 'journal_sync' => [
-                    'type' => 'mongo',
+                    'type' => 'mongodb',
                     'channels' => 'journal_sync',
                     'level' => 'debug',
-                    'mongo' => [
+                    'mongodb' => [
                         'id' => 'anzu_systems_common.logs.journal_log_client',
                         'database' => $logs['journal']['mongo']['database'],
                         'collection' => $logs['journal']['mongo']['collection'],
                     ],
                 ],
                 'audit_sync' => [
-                    'type' => 'mongo',
+                    'type' => 'mongodb',
                     'channels' => 'audit_sync',
                     'level' => 'debug',
-                    'mongo' => [
+                    'mongodb' => [
                         'id' => 'anzu_systems_common.logs.audit_log_client',
                         'database' => $logs['audit']['mongo']['database'],
                         'collection' => $logs['audit']['mongo']['collection'],
