@@ -33,8 +33,10 @@ final class UniqueEntityDtoValidator extends ConstraintValidator
             throw new UnexpectedTypeException($constraint->entity, BaseIdentifiableInterface::class);
         }
 
+        /** @var class-string<BaseIdentifiableInterface> $entityClass */
         $entityClass = $constraint->entity;
         if ($entityClass === AnzuUser::class) {
+            /** @var class-string<BaseIdentifiableInterface> $entityClass */
             $entityClass = $this->userEntityClass;
         }
 
