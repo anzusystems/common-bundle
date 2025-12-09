@@ -44,6 +44,7 @@
     "symfony/security-bundle": "^6.0|^7.0",
     "symfony/uid": "^6.0|^7.0",
     "symfony/validator": "^6.0|^7.0",
+    "symfony/var-exporter": "^6.4|^7.0",
     "symfony/yaml": "^6.0|^7.0"
   },
   "require-dev": {
