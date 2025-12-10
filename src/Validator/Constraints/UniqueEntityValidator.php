@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace AnzuSystems\CommonBundle\Validator\Constraints;
 
-use AnzuSystems\Contracts\Entity\AnzuUser;
+use AnzuSystems\CommonBundle\Validator\Traits\EntityClassResolverTrait;
 use AnzuSystems\Contracts\Entity\Interfaces\BaseIdentifiableInterface;
 use Doctrine\Common\Util\ClassUtils;
 use Doctrine\ORM\EntityManagerInterface;
@@ -15,14 +15,17 @@ use Symfony\Component\Validator\Exception\UnexpectedTypeException;
 
 final class UniqueEntityValidator extends ConstraintValidator
 {
+    use EntityClassResolverTrait;
+
     /**
      * @param class-string $userEntityClass
      */
     public function __construct(
         private readonly PropertyAccessorInterface $propertyAccessor,
         private readonly EntityManagerInterface $entityManager,
-        private readonly string $userEntityClass,
+        string $userEntityClass,
     ) {
+        $this->userEntityClass = $userEntityClass;
     }
 
     /**
@@ -40,10 +43,7 @@ final class UniqueEntityValidator extends ConstraintValidator
             $fields[$fieldName] = $this->propertyAccessor->getValue($value, $fieldName);
         }
 
-        $entityClass = ClassUtils::getRealClass($value::class);
-        if ($entityClass === AnzuUser::class) {
-            $entityClass = $this->userEntityClass;
-        }
+        $entityClass = $this->resolveEntityClass(ClassUtils::getRealClass($value::class));
 
         /** @var BaseIdentifiableInterface|null $existingEntity */
         $existingEntity = $this->entityManager->getRepository($entityClass)->findOneBy($fields);
