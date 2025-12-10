@@ -150,12 +150,14 @@ return static function (ContainerConfigurator $configurator): void {
 
     $services->set(EntityExistsValidator::class)
         ->arg('$entityManager', service(EntityManagerInterface::class))
+        ->arg('$userEntityClass', null)
         ->tag('validator.constraint_validator')
     ;
 
     $services->set(UniqueEntityValidator::class)
         ->arg('$propertyAccessor', service(PropertyAccessorInterface::class))
         ->arg('$entityManager', service(EntityManagerInterface::class))
+        ->arg('$userEntityClass', null)
         ->tag('validator.constraint_validator')
     ;
 

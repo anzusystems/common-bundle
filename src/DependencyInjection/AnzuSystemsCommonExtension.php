@@ -81,7 +81,9 @@ use AnzuSystems\CommonBundle\Serializer\Handler\Handlers\GeolocationHandler;
 use AnzuSystems\CommonBundle\Serializer\Handler\Handlers\ValueObjectHandler;
 use AnzuSystems\CommonBundle\Serializer\Service\BsonConverter;
 use AnzuSystems\CommonBundle\Util\ResourceLocker;
+use AnzuSystems\CommonBundle\Validator\Constraints\EntityExistsValidator;
 use AnzuSystems\CommonBundle\Validator\Constraints\UniqueEntityDtoValidator;
+use AnzuSystems\CommonBundle\Validator\Constraints\UniqueEntityValidator;
 use AnzuSystems\CommonBundle\Validator\Validator;
 use AnzuSystems\SerializerBundle\Metadata\MetadataRegistry;
 use AnzuSystems\SerializerBundle\Serializer;
@@ -268,6 +270,14 @@ final class AnzuSystemsCommonExtension extends Extension implements PrependExten
 
         $container
             ->getDefinition(UniqueEntityDtoValidator::class)
+            ->replaceArgument('$userEntityClass', $settings['user_entity_class']);
+
+        $container
+            ->getDefinition(UniqueEntityValidator::class)
+            ->replaceArgument('$userEntityClass', $settings['user_entity_class']);
+
+        $container
+            ->getDefinition(EntityExistsValidator::class)
             ->replaceArgument('$userEntityClass', $settings['user_entity_class']);
 
         if ($settings['send_context_id_with_response']) {
