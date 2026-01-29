@@ -8,6 +8,7 @@ use Symfony\Component\String\UnicodeString;
 
 final class StringHelper
 {
+    private const string EMPTY_STRING = '';
     private const string SHORTHAND_SUFFIX = '...';
 
     public static function isNotEmpty(string $string): bool
@@ -27,7 +28,7 @@ final class StringHelper
 
     public static function isEmpty(string $string): bool
     {
-        return '' === $string;
+        return self::EMPTY_STRING === $string;
     }
 
     public static function cutString(
@@ -55,7 +56,8 @@ final class StringHelper
 
     public static function extractFirstLetter(string $string): string
     {
-        return (new UnicodeString(trim(preg_replace('/[^\p{L}]+/u', '', $string))))
+        /** @psalm-suppress PossiblyNullArgument */
+        return (new UnicodeString(trim(preg_replace('/[^\p{L}]+/u', self::EMPTY_STRING, $string))))
             ->slice(0, 1)
             ->ascii()
             ->lower()
