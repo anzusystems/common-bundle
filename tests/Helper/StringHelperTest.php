@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace AnzuSystems\CommonBundle\Tests\Helper;
 
 use AnzuSystems\CommonBundle\Helper\StringHelper;
-use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 
 final class StringHelperTest extends TestCase
@@ -19,7 +18,9 @@ final class StringHelperTest extends TestCase
         $this->assertSame('j', StringHelper::extractFirstLetter('Johnson'));
     }
 
-    #[DataProvider('normalStringDataProvider')]
+    /**
+     * @dataProvider normalStringDataProvider
+     */
     public function testExtractFirstLetterWithNormalStrings(string $input, string $expected): void
     {
         $result = StringHelper::extractFirstLetter($input);
@@ -38,7 +39,9 @@ final class StringHelperTest extends TestCase
         $this->assertSame('t', StringHelper::extractFirstLetter('Ťapák'));
     }
 
-    #[DataProvider('unicodeStringDataProvider')]
+    /**
+     * @dataProvider unicodeStringDataProvider
+     */
     public function testExtractFirstLetterWithUnicodeCharacters(string $input, string $expected): void
     {
         $result = StringHelper::extractFirstLetter($input);
@@ -55,7 +58,9 @@ final class StringHelperTest extends TestCase
         $this->assertSame('', StringHelper::extractFirstLetter('   ')); // Only whitespace
     }
 
-    #[DataProvider('edgeCaseDataProvider')]
+    /**
+     * @dataProvider edgeCaseDataProvider
+     */
     public function testExtractFirstLetterWithEdgeCases(string $input, string $expected): void
     {
         $result = StringHelper::extractFirstLetter($input);
