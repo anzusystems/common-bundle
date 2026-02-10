@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace AnzuSystems\CommonBundle\Model\OpenApi\Response;
 
 use Attribute;
-use Nelmio\ApiDocBundle\Annotation\Model;
+use Nelmio\ApiDocBundle\Attribute\Model;
 use OpenApi\Attributes\Items;
 use OpenApi\Attributes\JsonContent;
 use OpenApi\Attributes\Property;
