@@ -48,7 +48,7 @@
     "symfony/yaml": "^7.0|^8.0"
   },
   "require-dev": {
-    "doctrine/doctrine-bundle": "^2.4",
+    "doctrine/doctrine-bundle": "^3.0",
     "jetbrains/phpstorm-attributes": "^1.0",
     "phpunit/phpunit": "^9.5",
     "slevomat/coding-standard": "8.20",
