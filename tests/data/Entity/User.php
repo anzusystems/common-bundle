@@ -16,18 +16,17 @@ use Doctrine\ORM\Mapping as ORM;
 #[ORM\Entity(repositoryClass: UserRepository::class)]
 class User extends AnzuUser implements CopyableInterface
 {
-    #[ORM\Column(type: Types::STRING)]
-    private string $name;
-
     /**
      * Assigned permission groups.
      *
      * Override in your project to get relations:
      */
-     #[ORM\ManyToMany(targetEntity: PermissionGroup::class, inversedBy: 'users', fetch: 'EXTRA_LAZY', indexBy: 'id')]
-     #[ORM\JoinTable]
-     #[Serialize(handler: EntityIdHandler::class, type: PermissionGroup::class)]
+    #[ORM\ManyToMany(targetEntity: PermissionGroup::class, inversedBy: 'users', fetch: 'EXTRA_LAZY', indexBy: 'id')]
+    #[ORM\JoinTable]
+    #[Serialize(handler: EntityIdHandler::class, type: PermissionGroup::class)]
     protected Collection $permissionGroups;
+    #[ORM\Column(type: Types::STRING)]
+    private string $name;
 
     public function __construct()
     {
@@ -36,6 +35,15 @@ class User extends AnzuUser implements CopyableInterface
         $this->setRoles([self::ROLE_USER]);
         $this->setName('');
         $this->setEnabled(true);
+    }
+
+    public function __copy(): self
+    {
+        return (new self())
+            ->setName('Tester')
+            ->setRoles([])
+            ->setEnabled(false)
+        ;
     }
 
     public function getUsername(): string
@@ -53,19 +61,10 @@ class User extends AnzuUser implements CopyableInterface
         return $this->name;
     }
 
-    public function setName(string $name): User
+    public function setName(string $name): self
     {
         $this->name = $name;
 
         return $this;
-    }
-
-    public function __copy(): self
-    {
-        return (new self())
-            ->setName('Tester')
-            ->setRoles([])
-            ->setEnabled(false)
-        ;
     }
 }

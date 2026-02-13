@@ -30,7 +30,7 @@ class ExampleJoinedEntity
     {
         $this->setId(0);
         $this->setName('');
-        $this->setJoinedEntity(new ExampleJoinedEntity());
+        $this->setJoinedEntity(new self());
     }
 
     public function getId(): int
@@ -55,12 +55,12 @@ class ExampleJoinedEntity
         return $this;
     }
 
-    public function getJoinedEntity(): ExampleJoinedEntity
+    public function getJoinedEntity(): self
     {
         return $this->joinedEntity;
     }
 
-    public function setJoinedEntity(ExampleJoinedEntity $joinedEntity): self
+    public function setJoinedEntity(self $joinedEntity): self
     {
         $this->joinedEntity = $joinedEntity;
 

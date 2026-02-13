@@ -6,7 +6,6 @@ namespace AnzuSystems\CommonBundle\Tests\Data\Fixtures;
 
 use AnzuSystems\CommonBundle\AnzuSystemsCommonBundle;
 use AnzuSystems\CommonBundle\DataFixtures\Fixtures\AbstractFixtures;
-use AnzuSystems\CommonBundle\DataFixtures\Interfaces\FixturesInterface;
 use AnzuSystems\CommonBundle\Tests\Data\Entity\Example;
 use AnzuSystems\CommonBundle\Tests\Data\Model\Enum\DummyEnum;
 use Generator;

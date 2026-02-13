@@ -62,59 +62,59 @@ final class AnzuSerializerTest extends AnzuKernelTestCase
 
         return [
             [
-            (new SerializerTestDto())
-                ->setName('test')
-                ->setPosition(1)
-                ->setDummyDto((new DummyDto())->setData('bla'))
-                ->setDummyValueObject(new DummyValueObject(DummyValueObject::ANZU))
-                ->setDummyEnum(DummyEnum::StateTwo)
-                ->setCreatedAt(new DateTimeImmutable('1986-08-04T23:28:12Z'))
-                ->setCreatedAtFormat1(new DateTimeImmutable('1986-08-04T23:28:12Z'))
-                ->setItems($itemsWithKeys)
-                ->setItemsKeysValues($itemsWithKeys)
-                ->setItemsArray($itemsWithKeys->toArray())
-                ->setItemsArrayKeysValues($itemsWithKeys->toArray()),
-            '{'
-                . '"name":"test",'
-                . '"position":1,'
-                . '"dummyDto":{"data":"bla"},'
-                . '"createdAt":"1986-08-04T23:28:12.000000Z",'
-                . '"createdAtFormat1":"04.08.1986 23:28:12",'
-                . '"dummyValueObject":"anzu",'
-                . '"dummyEnum":"state_two",'
-                . '"items":[{"data":"one"},{"data":"two"},{"data":"three"}],'
-                . '"itemsKeysValues":{"A":{"data":"one"},"B":{"data":"two"},"C":{"data":"three"}},'
-                . '"itemsArray":[{"data":"one"},{"data":"two"},{"data":"three"}],'
-                . '"itemsArrayKeysValues":{"A":{"data":"one"},"B":{"data":"two"},"C":{"data":"three"}},'
-                . '"createdAtTimestamp":523582092'
-            . '}'
-            ],[
-            (new SerializerTestDto())
-                ->setName('test')
-                ->setPosition(1)
-                ->setDummyDto((new DummyDto())->setData('bla'))
-                ->setDummyValueObject(new DummyValueObject(DummyValueObject::ANZU))
-                ->setDummyEnum(DummyEnum::StateTwo)
-                ->setCreatedAt(new DateTimeImmutable('1986-08-04T23:28:12Z'))
-                ->setCreatedAtFormat1(new DateTimeImmutable('1986-08-04T23:28:12Z'))
-                ->setItems($items)
-                ->setItemsArray($items->toArray())
-                ->setItemsKeysValues($items)
-                ->setItemsArrayKeysValues($items->toArray()),
-            '{'
-                . '"name":"test",'
-                . '"position":1,'
-                . '"dummyDto":{"data":"bla"},'
-                . '"createdAt":"1986-08-04T23:28:12.000000Z",'
-                . '"createdAtFormat1":"04.08.1986 23:28:12",'
-                . '"dummyValueObject":"anzu",'
-                . '"dummyEnum":"state_two",'
-                . '"items":[{"data":"one"},{"data":"two"},{"data":"three"}],'
-                . '"itemsKeysValues":[{"data":"one"},{"data":"two"},{"data":"three"}],'
-                . '"itemsArray":[{"data":"one"},{"data":"two"},{"data":"three"}],'
-                . '"itemsArrayKeysValues":[{"data":"one"},{"data":"two"},{"data":"three"}],'
-                . '"createdAtTimestamp":523582092'
-            . '}'
+                (new SerializerTestDto())
+                    ->setName('test')
+                    ->setPosition(1)
+                    ->setDummyDto((new DummyDto())->setData('bla'))
+                    ->setDummyValueObject(new DummyValueObject(DummyValueObject::ANZU))
+                    ->setDummyEnum(DummyEnum::StateTwo)
+                    ->setCreatedAt(new DateTimeImmutable('1986-08-04T23:28:12Z'))
+                    ->setCreatedAtFormat1(new DateTimeImmutable('1986-08-04T23:28:12Z'))
+                    ->setItems($itemsWithKeys)
+                    ->setItemsKeysValues($itemsWithKeys)
+                    ->setItemsArray($itemsWithKeys->toArray())
+                    ->setItemsArrayKeysValues($itemsWithKeys->toArray()),
+                '{'
+                    . '"name":"test",'
+                    . '"position":1,'
+                    . '"dummyDto":{"data":"bla"},'
+                    . '"createdAt":"1986-08-04T23:28:12.000000Z",'
+                    . '"createdAtFormat1":"04.08.1986 23:28:12",'
+                    . '"dummyValueObject":"anzu",'
+                    . '"dummyEnum":"state_two",'
+                    . '"items":[{"data":"one"},{"data":"two"},{"data":"three"}],'
+                    . '"itemsKeysValues":{"A":{"data":"one"},"B":{"data":"two"},"C":{"data":"three"}},'
+                    . '"itemsArray":[{"data":"one"},{"data":"two"},{"data":"three"}],'
+                    . '"itemsArrayKeysValues":{"A":{"data":"one"},"B":{"data":"two"},"C":{"data":"three"}},'
+                    . '"createdAtTimestamp":523582092'
+                . '}',
+            ], [
+                (new SerializerTestDto())
+                    ->setName('test')
+                    ->setPosition(1)
+                    ->setDummyDto((new DummyDto())->setData('bla'))
+                    ->setDummyValueObject(new DummyValueObject(DummyValueObject::ANZU))
+                    ->setDummyEnum(DummyEnum::StateTwo)
+                    ->setCreatedAt(new DateTimeImmutable('1986-08-04T23:28:12Z'))
+                    ->setCreatedAtFormat1(new DateTimeImmutable('1986-08-04T23:28:12Z'))
+                    ->setItems($items)
+                    ->setItemsArray($items->toArray())
+                    ->setItemsKeysValues($items)
+                    ->setItemsArrayKeysValues($items->toArray()),
+                '{'
+                    . '"name":"test",'
+                    . '"position":1,'
+                    . '"dummyDto":{"data":"bla"},'
+                    . '"createdAt":"1986-08-04T23:28:12.000000Z",'
+                    . '"createdAtFormat1":"04.08.1986 23:28:12",'
+                    . '"dummyValueObject":"anzu",'
+                    . '"dummyEnum":"state_two",'
+                    . '"items":[{"data":"one"},{"data":"two"},{"data":"three"}],'
+                    . '"itemsKeysValues":[{"data":"one"},{"data":"two"},{"data":"three"}],'
+                    . '"itemsArray":[{"data":"one"},{"data":"two"},{"data":"three"}],'
+                    . '"itemsArrayKeysValues":[{"data":"one"},{"data":"two"},{"data":"three"}],'
+                    . '"createdAtTimestamp":523582092'
+                . '}',
             ],
         ];
     }

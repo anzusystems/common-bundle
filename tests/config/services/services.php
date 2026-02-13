@@ -15,7 +15,6 @@ use AnzuSystems\CommonBundle\Tests\Data\Fixtures\UserFixtures;
 use AnzuSystems\CommonBundle\Tests\Data\Repository\UserRepository;
 use AnzuSystems\CommonBundle\Util\ResourceLocker;
 use AnzuSystems\SerializerBundle\Serializer;
-use App\Tests\AnzuTap\ArtemisAnzuTapEditor;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\Persistence\ManagerRegistry;
 use Redis;

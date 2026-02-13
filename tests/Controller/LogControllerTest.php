@@ -6,7 +6,6 @@ namespace AnzuSystems\CommonBundle\Tests\Controller;
 
 use AnzuSystems\CommonBundle\ApiFilter\ApiResponseList;
 use AnzuSystems\CommonBundle\Document\Log;
-use AnzuSystems\CommonBundle\Document\LogContext;
 use AnzuSystems\CommonBundle\Log\Factory\LogContextFactory;
 use AnzuSystems\CommonBundle\Log\Model\LogDto;
 use AnzuSystems\Contracts\Model\Enum\LogLevel;
@@ -28,7 +27,7 @@ final class LogControllerTest extends AbstractControllerTest
         self::assertContainsOnlyInstancesOf(Log::class, $response->getData());
 
         $log = $response->getData()[0];
-        $response = $this->get(uri: '/log/journal/' .$log->getId(), deserializationClass: Log::class);
+        $response = $this->get(uri: '/log/journal/' . $log->getId(), deserializationClass: Log::class);
         self::assertResponseIsSuccessful();
         self::assertSame($response->getId(), $log->getId());
     }
@@ -45,7 +44,7 @@ final class LogControllerTest extends AbstractControllerTest
         self::assertContainsOnlyInstancesOf(Log::class, $response->getData());
 
         $log = $response->getData()[0];
-        $response = $this->get(uri: '/log/audit/' .$log->getId(), deserializationClass: Log::class);
+        $response = $this->get(uri: '/log/audit/' . $log->getId(), deserializationClass: Log::class);
         self::assertResponseIsSuccessful();
         self::assertSame($response->getId(), $log->getId());
         self::assertSame('test', $log->getContext()->getResourceName());
@@ -72,7 +71,7 @@ final class LogControllerTest extends AbstractControllerTest
         self::assertEquals($logDto->getContextId(), $log->getContext()->getContextId());
 
         $filterLog = [
-            'filter_eq' => ['context.contextId' => $log->getContext()->getContextId()]
+            'filter_eq' => ['context.contextId' => $log->getContext()->getContextId()],
         ];
         $logs = $this->getList('/log/journal', Log::class, $filterLog);
         /** @var Log $foundLog */
