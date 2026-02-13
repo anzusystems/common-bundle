@@ -115,7 +115,6 @@ class AnzuKernel extends Kernel
         $container->addCompilerPass(DoctrineOrmMappingsPass::createAttributeMappingDriver(
             namespaces: $namespaces,
             directories: $directories,
-            reportFieldsWhereDeclared: true,
         ));
     }
 }
