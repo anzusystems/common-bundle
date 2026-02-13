@@ -75,12 +75,12 @@ final class UuidHelperTest extends AnzuKernelTestCase
             [
                 'user0000-test-0000-0000-000000000010',
                 (new User())
-                    ->setId(10)
+                    ->setId(10),
             ],
             [
                 'user0000-test-0000-0000-000999999999',
                 (new User())
-                    ->setId(999_999_999)
+                    ->setId(999_999_999),
             ],
         ];
     }

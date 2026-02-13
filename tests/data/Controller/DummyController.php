@@ -56,7 +56,8 @@ final class DummyController extends AbstractAnzuApiController
 
     #[Route('/value-resolver/array-string/{dummy}', methods: [Request::METHOD_GET])]
     public function apiFilterConverterTest(
-        #[ArrayStringParam(itemsLimit: 3, itemNormalizer: 'intval', separator: ',')] array $dummy,
+        #[ArrayStringParam(itemsLimit: 3, itemNormalizer: 'intval', separator: ',')]
+        array $dummy,
     ): JsonResponse {
         return $this->okResponse($dummy);
     }

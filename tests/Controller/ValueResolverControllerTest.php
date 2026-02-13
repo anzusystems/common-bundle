@@ -59,15 +59,23 @@ final class ValueResolverControllerTest extends AbstractControllerTest
                 'limit' => 50,
                 'offset' => 10,
                 'bigTable' => false,
-                'filter_' . ApiParams::FILTER_EQ => ['test' => 'rest'],
-                'order' => ['id' => 'desc'],
+                'filter_' . ApiParams::FILTER_EQ => [
+                    'test' => 'rest',
+                ],
+                'order' => [
+                    'id' => 'desc',
+                ],
             ],
         );
         self::assertResponseIsSuccessful();
         self::assertSame(50, $response->getLimit());
         self::assertSame(10, $response->getOffset());
         self::assertFalse($response->isBigTable());
-        self::assertSame([ApiParams::FILTER_EQ => ['test' => 'rest']], $response->getFilter());
+        self::assertSame([
+            ApiParams::FILTER_EQ => [
+                'test' => 'rest',
+            ],
+        ], $response->getFilter());
         self::assertSame(['id' => 'desc'], $response->getOrder());
     }
 

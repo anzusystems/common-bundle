@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace AnzuSystems\CommonBundle\Tests\AnzuTap;
 
 use AnzuSystems\CommonBundle\Tests\AnzuWebTestCase;
@@ -8,7 +10,7 @@ final class AnzuTapTransformerTest extends AnzuWebTestCase
 {
     private TestAnzuTapEditor $editor;
 
-    public function setUp(): void
+    protected function setUp(): void
     {
         $this->editor = static::getContainer()->get(TestAnzuTapEditor::class);
     }
@@ -32,7 +34,7 @@ final class AnzuTapTransformerTest extends AnzuWebTestCase
                     [
                         'type' => 'paragraph',
                         'attrs' => [
-                            'anchor' => 'pp-1'
+                            'anchor' => 'pp-1',
                         ],
                         'content' => [
                             ['type' => 'text', 'marks' => [
@@ -43,11 +45,11 @@ final class AnzuTapTransformerTest extends AnzuWebTestCase
                                     'external' => false,
                                 ]],
                             ],
-                                'text' => 'Anchor link'
+                                'text' => 'Anchor link',
                             ],
-                        ]
-                    ]
-                ]]
+                        ],
+                    ],
+                ]],
             ],
             [
                 'html' => 'Simple Text <i><i><b>double italic</b></i><list></list>',
@@ -57,9 +59,9 @@ final class AnzuTapTransformerTest extends AnzuWebTestCase
                         'content' => [
                             ['type' => 'text', 'text' => 'Simple Text '],
                             ['type' => 'text', 'marks' => [['type' => 'italic'], ['type' => 'bold']], 'text' => 'double italic'],
-                        ]
-                    ]
-                ]]
+                        ],
+                    ],
+                ]],
             ],
             [
                 'html' => '<list><li>li1</li><li>li2</li><li></li></list>',
@@ -69,17 +71,17 @@ final class AnzuTapTransformerTest extends AnzuWebTestCase
                         'content' => [
                             ['type' => 'listItem', 'content' => [
                                 ['type' => 'paragraph', 'content' => [
-                                    ['type' => 'text', 'text' => 'li1']
-                                ]]
+                                    ['type' => 'text', 'text' => 'li1'],
+                                ]],
                             ]],
                             ['type' => 'listItem', 'content' => [
                                 ['type' => 'paragraph', 'content' => [
-                                    ['type' => 'text', 'text' => 'li2']
-                                ]]
-                            ]]
-                        ]
-                    ]
-                ]]
+                                    ['type' => 'text', 'text' => 'li2'],
+                                ]],
+                            ]],
+                        ],
+                    ],
+                ]],
             ],
             [
                 'html' => '<p><i>Text before <email href="mailto:jolo@sme.sk">jolo@sme.sk</email>.</i></p>',
@@ -95,12 +97,12 @@ final class AnzuTapTransformerTest extends AnzuWebTestCase
                                     'variant' => 'email',
                                 ]],
                             ],
-                                'text' => 'jolo@sme.sk'
+                                'text' => 'jolo@sme.sk',
                             ],
                             ['type' => 'text', 'marks' => [['type' => 'italic']], 'text' => '.'],
-                        ]
-                    ]
-                ]]
+                        ],
+                    ],
+                ]],
             ],
         ];
     }

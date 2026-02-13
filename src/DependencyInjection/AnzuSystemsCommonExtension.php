@@ -332,7 +332,7 @@ final class AnzuSystemsCommonExtension extends Extension implements PrependExten
 
         /** @psalm-var callable(class-string<ExceptionHandlerInterface>):bool $hasHandler */
         $hasHandler = static fn (string $handler): bool => in_array($handler, $handlers, true);
-        $debug = $container->getParameter('kernel.environment') !== 'prod';
+        $debug = 'prod' !== $container->getParameter('kernel.environment');
 
         if (DefaultExceptionHandler::class === $errors['default_exception_handler']) {
             $definition = new Definition(DefaultExceptionHandler::class);

@@ -7,8 +7,8 @@ namespace AnzuSystems\CommonBundle\Tests\Controller;
 use AnzuSystems\CommonBundle\ApiFilter\ApiResponseList;
 use AnzuSystems\CommonBundle\Tests\AnzuWebTestCase;
 use AnzuSystems\CommonBundle\Tests\Data\Entity\User;
-use AnzuSystems\SerializerBundle\Serializer;
 use AnzuSystems\Contracts\AnzuApp;
+use AnzuSystems\SerializerBundle\Serializer;
 use Doctrine\ORM\EntityManagerInterface;
 use JsonException;
 use Symfony\Component\HttpFoundation\Request;
@@ -31,6 +31,12 @@ abstract class AbstractControllerTest extends AnzuWebTestCase
         self::getContainer()->get(EntityManagerInterface::class)->persist($this->user);
 
         $this->serializer = self::getContainer()->get(Serializer::class);
+    }
+
+    protected function tearDown(): void
+    {
+        self::getContainer()->get('doctrine.orm.entity_manager')->detach($this->user);
+        parent::tearDown();
     }
 
     protected function loginUser(array $roles = []): void
@@ -122,11 +128,5 @@ abstract class AbstractControllerTest extends AnzuWebTestCase
             self::$client->getResponse()->getContent(),
             $deserializationClass
         );
-    }
-
-    protected function tearDown(): void
-    {
-        self::getContainer()->get('doctrine.orm.entity_manager')->detach($this->user);
-        parent::tearDown();
     }
 }

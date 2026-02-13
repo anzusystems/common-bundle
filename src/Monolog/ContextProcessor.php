@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace AnzuSystems\CommonBundle\Monolog;
 
 use AnzuSystems\Contracts\AnzuApp;
-
 use Monolog\LogRecord;
 
 final class ContextProcessor

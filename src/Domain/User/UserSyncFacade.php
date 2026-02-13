@@ -4,11 +4,8 @@ declare(strict_types=1);
 
 namespace AnzuSystems\CommonBundle\Domain\User;
 
-use AnzuSystems\CommonBundle\Domain\AbstractManager;
 use AnzuSystems\CommonBundle\Exception\ValidationException;
-use AnzuSystems\CommonBundle\Model\User\BaseUserDto;
 use AnzuSystems\CommonBundle\Model\User\UserDto;
-use AnzuSystems\CommonBundle\Tests\Data\Entity\User;
 use AnzuSystems\CommonBundle\Validator\Validator;
 use AnzuSystems\Contracts\Entity\AnzuUser;
 use Doctrine\ORM\EntityManagerInterface;

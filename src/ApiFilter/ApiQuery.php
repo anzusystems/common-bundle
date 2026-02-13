@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace AnzuSystems\CommonBundle\ApiFilter;
 
-use Closure;
 use DateTime;
 use DateTimeImmutable;
 use Doctrine\DBAL\Types\Types;
@@ -26,7 +25,6 @@ class ApiQuery
      */
     protected array $customInnerFilters = [];
 
-
     /**
      * @var array<string, list<FieldCallbackInterface>>
      */
@@ -44,7 +42,8 @@ class ApiQuery
         protected EntityManagerInterface $entityManager,
         protected ClassMetadata $metadata,
         protected ApiParams $apiParams,
-        #[Deprecated] protected ?CustomFilterInterface $customFilter = null,
+        #[Deprecated]
+        protected ?CustomFilterInterface $customFilter = null,
         protected bool $fetchOneAdditionalRecord = false,
         protected array $customFilters = [],
         protected array $customOrders = [],

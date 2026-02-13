@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace AnzuSystems\CommonBundle\AnzuTap;
 
 use AnzuSystems\CommonBundle\Model\AnzuTap\Node\AnzuTapDocNode;
@@ -42,7 +44,6 @@ class AnzuTapBodyPostprocessor
         $this->removeInvalidNodes($body);
     }
 
-
     protected function removeInvalidNodes(AnzuTapDocNode $body): void
     {
         $body->setContent(array_filter(
@@ -54,7 +55,7 @@ class AnzuTapBodyPostprocessor
     protected function fixParagraphs(AnzuTapNodeInterface $body): void
     {
         foreach ($body->getContent() as $node) {
-            if ($node->getType() === AnzuTapParagraphNode::NODE_NAME) {
+            if (AnzuTapParagraphNode::NODE_NAME === $node->getType()) {
                 $this->fixNode($node, self::PARAGRAPH_ALLOWED_CONTENT_TYPES);
             }
 
@@ -97,7 +98,7 @@ class AnzuTapBodyPostprocessor
             // Check if root node was paragraph and after shaking, it lost content.
             foreach ($shakenNodes as $shakenNode) {
                 if ($shakenNode === $node &&
-                    $shakenNode->getType() === AnzuTapParagraphNode::NODE_NAME &&
+                    AnzuTapParagraphNode::NODE_NAME === $shakenNode->getType() &&
                     0 === count($shakenNode->getContent()) &&
                     0 < $contentCount
                 ) {

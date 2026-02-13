@@ -4,9 +4,7 @@ declare(strict_types=1);
 
 namespace AnzuSystems\CommonBundle\AnzuTap\Transformer\Mark;
 
-use AnzuSystems\CommonBundle\AnzuSystemsCommonBundle;
 use DOMElement;
-use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
 
 interface AnzuMarkTransformerInterface
 {

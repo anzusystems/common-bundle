@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace AnzuSystems\CommonBundle\Doctrine\Type;
 
 use AnzuSystems\Contracts\Model\Enum\EnumInterface;

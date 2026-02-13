@@ -26,7 +26,9 @@ final class JobControllerTest extends AbstractControllerTest
             ->setAnonymizeUser(true)
         ;
         $response = $this->post('/job/user-data-delete', $job);
-        $this->assertValidationErrors($response, ['targetUserId' => [EntityExists::MESSAGE]]);
+        $this->assertValidationErrors($response, [
+            'targetUserId' => [EntityExists::MESSAGE],
+        ]);
 
         // 1.b Creation successfully
         $job = (new JobUserDataDelete())

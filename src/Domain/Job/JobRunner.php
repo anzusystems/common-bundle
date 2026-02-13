@@ -22,7 +22,9 @@ final class JobRunner
         private readonly EntityManagerInterface $entityManager,
         private readonly int $maxExecTime,
         private readonly int $maxMemory,
-        /** @var int<0, max> */
+        /**
+         * @var int<0, max>
+         */
         private readonly int $noJobIdleTime,
     ) {
     }

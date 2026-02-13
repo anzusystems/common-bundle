@@ -4,19 +4,15 @@ declare(strict_types=1);
 
 namespace AnzuSystems\CommonBundle\Model\User;
 
-use AnzuSystems\CommonBundle\Exception\ValidationException;
 use AnzuSystems\CommonBundle\Validator\Constraints\UniqueEntityDto;
 use AnzuSystems\Contracts\Entity\AnzuPermissionGroup;
 use AnzuSystems\Contracts\Entity\AnzuUser;
-use AnzuSystems\Contracts\Entity\Embeds\Avatar;
-use AnzuSystems\Contracts\Entity\Embeds\Person;
 use AnzuSystems\SerializerBundle\Attributes\Serialize;
 use AnzuSystems\SerializerBundle\Handler\Handlers\EntityIdHandler;
 use AnzuSystems\SerializerBundle\Metadata\ContainerParam;
 use DateTimeImmutable;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
-use Symfony\Component\Validator\Constraints as Assert;
 
 #[UniqueEntityDto(entity: AnzuUser::class, fields: ['id'])]
 #[UniqueEntityDto(entity: AnzuUser::class, fields: ['email'])]
@@ -33,15 +29,10 @@ class UserDto extends BaseUserDto
 
     #[Serialize]
     protected bool $enabled = true;
-
     protected array $resolvedPermissions = [];
-
     protected DateTimeImmutable $createdAt;
-
     protected DateTimeImmutable $modifiedAt;
-
     protected AnzuUser $createdBy;
-
     protected AnzuUser $modifiedBy;
 
     public function __construct()
