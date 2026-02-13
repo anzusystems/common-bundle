@@ -25,6 +25,7 @@ class User extends AnzuUser implements CopyableInterface
     #[ORM\JoinTable]
     #[Serialize(handler: EntityIdHandler::class, type: PermissionGroup::class)]
     protected Collection $permissionGroups;
+
     #[ORM\Column(type: Types::STRING)]
     private string $name;
 
