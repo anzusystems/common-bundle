@@ -14,7 +14,6 @@ use OpenApi\Attributes\QueryParameter;
 final class OAGetList extends Get
 {
     /**
-     * @param string $type
      * @param QueryParameter[] $customFilters
      */
     public function __construct(string $type, array $customFilters = [])

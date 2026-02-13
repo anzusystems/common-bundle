@@ -75,7 +75,8 @@ abstract class AbstractAnzuRepository extends ServiceEntityRepository implements
      */
     public function findByApiParams(
         ApiParams $apiParams,
-        #[Deprecated] ?CustomFilterInterface $customFilter = null,
+        #[Deprecated]
+        ?CustomFilterInterface $customFilter = null,
         array $customFilters = [],
         array $customOrders = [],
         array $customInnerFilters = [],
@@ -125,7 +126,8 @@ abstract class AbstractAnzuRepository extends ServiceEntityRepository implements
      */
     public function findByApiParamsWithInfiniteListing(
         ApiParams $apiParams,
-        #[Deprecated] ?CustomFilterInterface $customFilter = null,
+        #[Deprecated]
+        ?CustomFilterInterface $customFilter = null,
         array $customFilters = [],
         array $customOrders = [],
         array $customInnerFilters = [],

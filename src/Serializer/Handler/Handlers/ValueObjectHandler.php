@@ -9,7 +9,7 @@ use AnzuSystems\Contracts\Model\ValueObject\ValueObjectInterface;
 use AnzuSystems\SerializerBundle\Context\SerializationContext;
 use AnzuSystems\SerializerBundle\Handler\Handlers\AbstractHandler;
 use AnzuSystems\SerializerBundle\Metadata\Metadata;
-use Symfony\Component\PropertyInfo\Type;
+use Symfony\Component\TypeInfo\TypeIdentifier;
 
 final class ValueObjectHandler extends AbstractHandler
 {
@@ -48,7 +48,7 @@ final class ValueObjectHandler extends AbstractHandler
         /** @var AbstractValueObject $valueObjectClass */
         $valueObjectClass = $metadata->type;
         $description['enum'] = $valueObjectClass::AVAILABLE_VALUES;
-        $description['type'] = Type::BUILTIN_TYPE_STRING;
+        $description['type'] = TypeIdentifier::STRING->value;
         $description['default'] = $valueObjectClass::DEFAULT_VALUE;
 
         return $description;

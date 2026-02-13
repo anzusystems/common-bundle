@@ -13,7 +13,6 @@ use AnzuSystems\CommonBundle\Model\AnzuTap\AnzuTapBody;
 use AnzuSystems\CommonBundle\Model\AnzuTap\EmbedContainer;
 use AnzuSystems\CommonBundle\Model\AnzuTap\Node\AnzuTapDocNode;
 use AnzuSystems\CommonBundle\Model\AnzuTap\Node\AnzuTapEmbedNodeNode;
-use AnzuSystems\CommonBundle\Model\AnzuTap\Node\AnzuTapNode;
 use AnzuSystems\CommonBundle\Model\AnzuTap\Node\AnzuTapNodeInterface;
 use DOMDocument;
 use DOMElement;

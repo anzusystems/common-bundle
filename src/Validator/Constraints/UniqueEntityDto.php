@@ -14,11 +14,17 @@ final class UniqueEntityDto extends Constraint
     public string $message = ValidationException::ERROR_FIELD_UNIQUE;
 
     public function __construct(
-        /** @var class-string */
+        /**
+         * @var class-string
+         */
         public readonly string $entity,
-        /** @var non-empty-list<string> */
+        /**
+         * @var non-empty-list<string>
+         */
         public readonly array $fields,
-        /** @var list<string> */
+        /**
+         * @var list<string>
+         */
         public readonly array $errorAtPath = [],
         mixed $options = null,
         ?array $groups = null,

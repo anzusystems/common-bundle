@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace AnzuSystems\CommonBundle\AnzuTap\Transformer\Mark;
 
 use DOMElement;
-use DOMText;
 
 abstract class AbstractMarkNodeTransformer implements AnzuMarkTransformerInterface
 {

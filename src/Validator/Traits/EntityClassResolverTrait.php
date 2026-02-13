@@ -20,7 +20,7 @@ trait EntityClassResolverTrait
      */
     private function resolveEntityClass(string $entityClass): string
     {
-        if ($entityClass === AnzuUser::class) {
+        if (AnzuUser::class === $entityClass) {
             return $this->userEntityClass;
         }
 

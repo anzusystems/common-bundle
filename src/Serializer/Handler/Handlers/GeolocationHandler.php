@@ -11,7 +11,7 @@ use AnzuSystems\SerializerBundle\Handler\Handlers\AbstractHandler;
 use AnzuSystems\SerializerBundle\Helper\SerializerHelper;
 use AnzuSystems\SerializerBundle\Metadata\Metadata;
 use OpenApi\Annotations\Property;
-use Symfony\Component\PropertyInfo\Type;
+use Symfony\Component\TypeInfo\TypeIdentifier;
 
 final class GeolocationHandler extends AbstractHandler
 {
@@ -74,14 +74,14 @@ final class GeolocationHandler extends AbstractHandler
     public function describe(string $property, Metadata $metadata): array
     {
         $description = parent::describe($property, $metadata);
-        $description['type'] = Type::BUILTIN_TYPE_OBJECT;
+        $description['type'] = TypeIdentifier::OBJECT->value;
         $description['title'] = SerializerHelper::getClassBaseName(Geolocation::class);
         $description['properties'] = [
             new Property([
                 'property' => self::LON,
                 'title' => 'Longitude',
                 'type' => 'number',
-                'format' => Type::BUILTIN_TYPE_FLOAT,
+                'format' => TypeIdentifier::FLOAT->value,
                 'minimum' => -180,
                 'maximum' => 180,
             ]),
@@ -89,7 +89,7 @@ final class GeolocationHandler extends AbstractHandler
                 'property' => self::LAT,
                 'title' => 'Latitude',
                 'type' => 'number',
-                'format' => Type::BUILTIN_TYPE_FLOAT,
+                'format' => TypeIdentifier::FLOAT->value,
                 'minimum' => -90,
                 'maximum' => 90,
             ]),

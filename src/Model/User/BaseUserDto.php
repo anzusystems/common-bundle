@@ -7,15 +7,10 @@ namespace AnzuSystems\CommonBundle\Model\User;
 use AnzuSystems\CommonBundle\Exception\ValidationException;
 use AnzuSystems\CommonBundle\Validator\Constraints\UniqueEntityDto;
 use AnzuSystems\Contracts\AnzuApp;
-use AnzuSystems\Contracts\Entity\AnzuPermissionGroup;
 use AnzuSystems\Contracts\Entity\AnzuUser;
 use AnzuSystems\Contracts\Entity\Embeds\Avatar;
 use AnzuSystems\Contracts\Entity\Embeds\Person;
 use AnzuSystems\SerializerBundle\Attributes\Serialize;
-use AnzuSystems\SerializerBundle\Handler\Handlers\EntityIdHandler;
-use AnzuSystems\SerializerBundle\Metadata\ContainerParam;
-use Doctrine\Common\Collections\ArrayCollection;
-use Doctrine\Common\Collections\Collection;
 use Symfony\Component\Validator\Constraints as Assert;
 
 /**
@@ -41,7 +36,6 @@ class BaseUserDto
     #[Assert\Valid]
     #[Serialize]
     protected Avatar $avatar;
-
     protected string $resourceName = '';
 
     public function __construct()

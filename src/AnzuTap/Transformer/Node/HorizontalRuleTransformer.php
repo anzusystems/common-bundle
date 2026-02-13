@@ -6,7 +6,6 @@ namespace AnzuSystems\CommonBundle\AnzuTap\Transformer\Node;
 
 use AnzuSystems\CommonBundle\Model\AnzuTap\EmbedContainer;
 use AnzuSystems\CommonBundle\Model\AnzuTap\Node\AnzuTapHorizontalRuleNode;
-use AnzuSystems\CommonBundle\Model\AnzuTap\Node\AnzuTapNode;
 use AnzuSystems\CommonBundle\Model\AnzuTap\Node\AnzuTapNodeInterface;
 use DOMElement;
 

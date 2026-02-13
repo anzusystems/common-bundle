@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace AnzuSystems\CommonBundle\Model\AnzuTap;
 
 use AnzuSystems\CommonBundle\AnzuTap\Transformer\Mark\LinkNodeTransformer;
