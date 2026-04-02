@@ -36,6 +36,10 @@ class BaseUserDto
     #[Assert\Valid]
     #[Serialize]
     protected Avatar $avatar;
+
+    #[Assert\Locale]
+    #[Serialize]
+    protected ?string $locale = null;
     protected string $resourceName = '';
 
     public function __construct()
@@ -55,6 +59,7 @@ class BaseUserDto
             ->setEmail($user->getEmail())
             ->setPerson($user->getPerson())
             ->setAvatar($user->getAvatar())
+            ->setLocale($user->getLocale())
             ->setResourceName($user::getResourceName())
         ;
     }
@@ -103,6 +108,18 @@ class BaseUserDto
     public function setAvatar(Avatar $avatar): static
     {
         $this->avatar = $avatar;
+
+        return $this;
+    }
+
+    public function getLocale(): ?string
+    {
+        return $this->locale;
+    }
+
+    public function setLocale(?string $locale): static
+    {
+        $this->locale = $locale;
 
         return $this;
     }
