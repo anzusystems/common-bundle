@@ -26,6 +26,7 @@ abstract class AbstractUserManager extends AbstractManager
     {
         $user
             ->setEmail($userDto->getEmail())
+            ->setLocale($userDto->getLocale())
         ;
         $user->getAvatar()
             ->setColor($userDto->getAvatar()->getColor())

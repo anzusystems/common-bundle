@@ -41,6 +41,7 @@ final class UserFixtures extends AbstractFixtures
         $consoleUser = (new User())
             ->setEmail('console@anzusystems.sk')
             ->setId(AnzuApp::getUserIdConsole())
+            ->setLocale('sk')
             ->setCreatedAt(AnzuApp::getAppDate())
             ->setModifiedAt(AnzuApp::getAppDate())
         ;
@@ -54,6 +55,7 @@ final class UserFixtures extends AbstractFixtures
         yield (new User())
             ->setEmail('anonymous@anzusystems.sk')
             ->setId(AnzuApp::getUserIdAnonymous())
+            ->setLocale('sk')
             ->setCreatedAt(AnzuApp::getAppDate())
             ->setModifiedAt(AnzuApp::getAppDate())
             ->setCreatedBy($consoleUser)
@@ -63,6 +65,7 @@ final class UserFixtures extends AbstractFixtures
             ->setId(AnzuApp::getUserIdAdmin())
             ->setEmail('admin@anzusystems.sk')
             ->setRoles([User::ROLE_ADMIN])
+            ->setLocale('sk')
             ->setCreatedAt(AnzuApp::getAppDate())
             ->setModifiedAt(AnzuApp::getAppDate())
             ->setCreatedBy($consoleUser)
