@@ -1,18 +1,34 @@
 name: CI for AnzuSystems Common Bundle by Petit Press a.s. (www.sme.sk)
 
 on:
+  push:
+    branches:
+      - main
   pull_request:
     branches:
       - main
 
+# Cancels previously running jobs for the same PR if a new commit is pushed
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+# Follows the principle of least privilege
+permissions:
+  contents: read
+
 jobs:
   build:
+    name: PHP ${{ matrix.php-version }}
+    runs-on: ubuntu-latest
+    container: ${{ matrix.docker-image }}
+
     strategy:
       matrix:
         include:
-          - php-version: 8.4
+          - php-version: '8.4'
             docker-image: 'anzusystems/php:5.0.1-php84-cli'
-          - php-version: 8.5
+          - php-version: '8.5'
             docker-image: 'anzusystems/php:5.0.1-php85-cli'
 
     services:
@@ -34,25 +50,21 @@ jobs:
         env:
           MONGO_INITDB_ROOT_USERNAME: root
           MONGO_INITDB_ROOT_PASSWORD: admin
-
-    name: PHP ${{ matrix.php-version }}
-    runs-on: ubuntu-latest
-    container: ${{ matrix.docker-image }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Validate composer.json
-        run: composer validate
+        run: composer validate --strict
 
       - name: Cache Composer packages
         id: composer-cache
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: vendor
-          key: ${{ runner.os }}-composer-${{ hashFiles('**/composer.json') }}
+          key: ${{ runner.os }}-php-${{ matrix.php-version }}-composer-${{ hashFiles('**/composer.lock', '**/composer.json') }}
           restore-keys: |
-            ${{ runner.os }}-composer-
+            ${{ runner.os }}-php-${{ matrix.php-version }}-composer-
 
       - name: Install dependencies
         run: composer install --prefer-dist --no-progress --no-ansi --no-interaction --no-scripts

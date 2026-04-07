@@ -38,7 +38,7 @@
     "symfony/http-kernel": "^7.0|^8.0",
     "symfony/lock": "^7.0|^8.0",
     "symfony/messenger": "^7.0|^8.0",
-    "symfony/monolog-bundle": ">=3.9",
+    "symfony/monolog-bundle": "^3.9|^4.0",
     "symfony/polyfill-uuid": "^1.23",
     "symfony/runtime": "^7.0|^8.0",
     "symfony/security-bundle": "^7.0|^8.0",
