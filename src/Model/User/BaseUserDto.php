@@ -37,7 +37,7 @@ class BaseUserDto
     #[Serialize]
     protected Avatar $avatar;
 
-    #[Assert\Locale]
+    #[Assert\Locale(message: ValidationException::ERROR_FIELD_INVALID)]
     #[Serialize]
     protected ?string $locale = null;
     protected string $resourceName = '';
