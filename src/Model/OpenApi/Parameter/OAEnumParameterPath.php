@@ -21,13 +21,15 @@ final class OAEnumParameterPath extends PathParameter
     public function __construct(string $name, string $class, ?string $description = null)
     {
         if (is_a($class, EnumInterface::class, true)) {
+            /** @var list<scalar> $enum */
+            $enum = array_values($class::values());
             parent::__construct(
                 name: $name,
                 description: $description,
                 schema: new Schema(
                     type: 'string',
                     default: $class::Default,
-                    enum: $class::values(),
+                    enum: $enum,
                 )
             );
         }

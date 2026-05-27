@@ -81,6 +81,9 @@ final class ApiParams
         $this->bigTable = self::DEFAULTS[self::BIG_TABLE];
     }
 
+    /**
+     * @return Generator<int, QueryParameter>
+     */
     public static function generateAllAvailableOAQueryParams(): Generator
     {
         foreach (self::AVAILABLE_FILTERS as $filterName) {

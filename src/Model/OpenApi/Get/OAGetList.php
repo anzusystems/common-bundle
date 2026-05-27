@@ -19,7 +19,7 @@ final class OAGetList extends Get
     public function __construct(string $type, array $customFilters = [])
     {
         parent::__construct(
-            parameters: iterator_to_array(ApiParams::generateAllAvailableOAQueryParams()),
+            parameters: array_values(iterator_to_array(ApiParams::generateAllAvailableOAQueryParams())),
             responses: [new OAResponseList($type)]
         );
     }
