@@ -15,7 +15,7 @@ final class OAGetInfiniteList extends Get
     public function __construct(string $type)
     {
         parent::__construct(
-            parameters: iterator_to_array(ApiParams::generateAllAvailableOAQueryParams()),
+            parameters: array_values(iterator_to_array(ApiParams::generateAllAvailableOAQueryParams())),
             responses: [
                 new OAResponseInfiniteList(type: $type),
             ]

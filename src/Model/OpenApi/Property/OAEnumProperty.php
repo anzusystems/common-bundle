@@ -20,11 +20,13 @@ final class OAEnumProperty extends Property
     public function __construct(string $class, ?string $description = null)
     {
         if (is_a($class, EnumInterface::class, true)) {
+            /** @var list<scalar> $enum */
+            $enum = array_values($class::values());
             parent::__construct(
                 description: $description,
                 type: 'string',
                 default: $class::Default,
-                enum: $class::values(),
+                enum: $enum,
             );
         }
     }
