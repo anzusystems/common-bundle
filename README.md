@@ -137,6 +137,7 @@ anzu_common:
             - AnzuSystems\CommonBundle\Exception\Handler\ValidationExceptionHandler
             - AnzuSystems\CommonBundle\Exception\Handler\AppReadOnlyModeExceptionHandler
             - AnzuSystems\CommonBundle\Exception\Handler\AccessDeniedExceptionHandler
+            - AnzuSystems\CommonBundle\Exception\Handler\HttpExceptionHandler
     logs:
         enabled: true
         # Logs are sent through Symfony Messenger.

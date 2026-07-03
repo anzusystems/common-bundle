@@ -53,6 +53,7 @@ use AnzuSystems\CommonBundle\Exception\Handler\AccessDeniedExceptionHandler;
 use AnzuSystems\CommonBundle\Exception\Handler\AppReadOnlyModeExceptionHandler;
 use AnzuSystems\CommonBundle\Exception\Handler\DefaultExceptionHandler;
 use AnzuSystems\CommonBundle\Exception\Handler\ExceptionHandlerInterface;
+use AnzuSystems\CommonBundle\Exception\Handler\HttpExceptionHandler;
 use AnzuSystems\CommonBundle\Exception\Handler\NotFoundExceptionHandler;
 use AnzuSystems\CommonBundle\Exception\Handler\ValidationExceptionHandler;
 use AnzuSystems\CommonBundle\HealthCheck\HealthChecker;
@@ -370,6 +371,13 @@ final class AnzuSystemsCommonExtension extends Extension implements PrependExten
             $definition->addArgument($debug);
             $definition->addTag(AnzuSystemsCommonBundle::TAG_EXCEPTION_HANDLER);
             $container->setDefinition(SerializerExceptionHandler::class, $definition);
+        }
+
+        if ($hasHandler(HttpExceptionHandler::class)) {
+            $definition = new Definition(HttpExceptionHandler::class);
+            $definition->addArgument($debug);
+            $definition->addTag(AnzuSystemsCommonBundle::TAG_EXCEPTION_HANDLER, ['priority' => -100]);
+            $container->setDefinition(HttpExceptionHandler::class, $definition);
         }
 
         $container
