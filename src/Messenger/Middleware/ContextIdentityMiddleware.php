@@ -22,11 +22,13 @@ final class ContextIdentityMiddleware implements MiddlewareInterface
         if (null === $contextIdentityStamp) {
             $envelope = $envelope->with(ContextIdentityStamp::create());
 
-            return $stack->next()->handle($envelope, $stack);
+            return $stack->next()
+                ->handle($envelope, $stack);
         }
 
         AnzuApp::setContextId($contextIdentityStamp->getContextId());
 
-        return $stack->next()->handle($envelope, $stack);
+        return $stack->next()
+            ->handle($envelope, $stack);
     }
 }

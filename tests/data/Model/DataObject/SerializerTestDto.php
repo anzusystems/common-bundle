@@ -60,7 +60,8 @@ final class SerializerTestDto
     #[Serialize]
     public function getCreatedAtTimestamp(): int
     {
-        return $this->getCreatedAt()->getTimestamp();
+        return $this->getCreatedAt()
+            ->getTimestamp();
     }
 
     public function getName(): string

@@ -9,7 +9,7 @@ use DOMText;
 
 final readonly class AnzuTapNodeTransformerProvider implements NodeTransformerProviderInterface
 {
-    public function getNodeTransformerKey(DOMElement | DOMText $element): string
+    public function getNodeTransformerKey(DOMElement|DOMText $element): string
     {
         return $element->nodeName;
     }

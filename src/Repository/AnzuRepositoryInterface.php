@@ -12,9 +12,9 @@ use Doctrine\Common\Collections\Collection;
 
 interface AnzuRepositoryInterface
 {
-    public function getAllById(int | string ...$ids): Collection;
+    public function getAllById(int|string ...$ids): Collection;
 
-    public function getAllByIdIndexed(int | string ...$id): Collection;
+    public function getAllByIdIndexed(int|string ...$id): Collection;
 
     public function findByApiParams(ApiParams $apiParams, ?CustomFilterInterface $customFilter = null): ApiResponseList;
 
@@ -27,5 +27,5 @@ interface AnzuRepositoryInterface
         ?CustomFilterInterface $customFilter = null,
     ): ApiInfiniteResponseList;
 
-    public function exists(int | string $id): bool;
+    public function exists(int|string $id): bool;
 }

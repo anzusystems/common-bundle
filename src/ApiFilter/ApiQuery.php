@@ -83,7 +83,8 @@ class ApiQuery
 
         return (int) $this->dqb
             ->select('count(t)')
-            ->getQuery()->getSingleScalarResult()
+            ->getQuery()
+            ->getSingleScalarResult()
         ;
     }
 
@@ -100,7 +101,8 @@ class ApiQuery
             ->select('t')
             ->setFirstResult($this->apiParams->getOffset())
             ->setMaxResults($limit)
-            ->getQuery()->getResult()
+            ->getQuery()
+            ->getResult()
         ;
     }
 
@@ -168,10 +170,11 @@ class ApiQuery
                         break;
                     default:
                         $this->dqb->andWhere(
-                            $this->dqb->expr()->{$filterVariant}(
-                                't.' . $field,
-                                ':' . $paramName
-                            )
+                            $this->dqb->expr()
+                                ->{$filterVariant}(
+                                    't.' . $field,
+                                    ':' . $paramName
+                                )
                         );
                         $this->dqb->setParameter(
                             $paramName,

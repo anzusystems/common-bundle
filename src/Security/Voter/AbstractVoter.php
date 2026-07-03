@@ -72,12 +72,14 @@ abstract class AbstractVoter extends Voter
     protected function resolveAllowOwner(mixed $subject, AnzuUser $user): bool
     {
         if ($subject instanceof OwnersAwareInterface) {
-            return $subject->getOwners()->exists(
-                fn (int $key, AnzuUser $owner): bool => $owner->is($user)
-            );
+            return $subject->getOwners()
+                ->exists(
+                    fn (int $key, AnzuUser $owner): bool => $owner->is($user)
+                );
         }
         if ($subject instanceof UserTrackingInterface) {
-            return $subject->getCreatedBy()->is($user);
+            return $subject->getCreatedBy()
+                ->is($user);
         }
 
         return false;

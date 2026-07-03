@@ -27,7 +27,7 @@ class TextNodeTransformer extends AbstractNodeTransformer
         ];
     }
 
-    public function transform(DOMElement | DOMText $element, EmbedContainer $embedContainer, ?AnzuTapNodeInterface $parent = null): ?AnzuTapNodeInterface
+    public function transform(DOMElement|DOMText $element, EmbedContainer $embedContainer, ?AnzuTapNodeInterface $parent = null): ?AnzuTapNodeInterface
     {
         $text = $this->getText(
             $element,

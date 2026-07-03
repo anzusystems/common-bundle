@@ -47,7 +47,8 @@ final class UniqueEntityDtoValidator extends ConstraintValidator
             $fields[$fieldName] = $this->propertyAccessor->getValue($value, $fieldName);
         }
         /** @var BaseIdentifiableInterface|null $existingEntity */
-        $existingEntity = $this->entityManager->getRepository($entityClass)->findOneBy($fields);
+        $existingEntity = $this->entityManager->getRepository($entityClass)
+            ->findOneBy($fields);
         if (null === $existingEntity) {
             return;
         }

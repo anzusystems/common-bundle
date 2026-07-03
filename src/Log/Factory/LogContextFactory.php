@@ -43,7 +43,7 @@ final class LogContextFactory
         string $url,
         ?array $json,
         ?array $query,
-        array | string $body,
+        array|string $body,
         ?int $timeout
     ): LogContext {
         $content = $body ?: $json;

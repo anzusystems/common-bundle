@@ -46,7 +46,8 @@ final class UniqueEntityValidator extends ConstraintValidator
         $entityClass = $this->resolveEntityClass(ClassUtils::getRealClass($value::class));
 
         /** @var BaseIdentifiableInterface|null $existingEntity */
-        $existingEntity = $this->entityManager->getRepository($entityClass)->findOneBy($fields);
+        $existingEntity = $this->entityManager->getRepository($entityClass)
+            ->findOneBy($fields);
         if (null === $existingEntity) {
             return;
         }

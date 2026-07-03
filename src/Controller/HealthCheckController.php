@@ -19,8 +19,6 @@ final class HealthCheckController extends AbstractAnzuApiController
     }
 
     /**
-     * Health check.
-     *
      * @throws SerializerException
      */
     #[OAResponse(description: 'Health check')]

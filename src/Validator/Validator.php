@@ -54,7 +54,8 @@ final class Validator
         }
         if ($object instanceof IdentifiableByUuidInterface
             && $oldObject instanceof IdentifiableByUuidInterface
-            && $object->getId()->equals($oldObject->getId())) {
+            && $object->getId()
+                ->equals($oldObject->getId())) {
             return;
         }
 

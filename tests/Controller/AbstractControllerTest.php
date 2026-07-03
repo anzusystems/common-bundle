@@ -76,7 +76,7 @@ abstract class AbstractControllerTest extends AnzuWebTestCase
      *
      * @throws JsonException
      */
-    protected function get(string $uri, string $deserializationClass = null, array $params = []): object | array
+    protected function get(string $uri, ?string $deserializationClass = null, array $params = []): object|array
     {
         self::$client->request(method: Request::METHOD_GET, uri: $uri, parameters: $params);
 
@@ -92,7 +92,7 @@ abstract class AbstractControllerTest extends AnzuWebTestCase
      *
      * @throws JsonException
      */
-    protected function post(string $uri, object $content = null, string $deserializationClass = null, array $params = []): object | array
+    protected function post(string $uri, ?object $content = null, ?string $deserializationClass = null, array $params = []): object|array
     {
         self::$client->request(
             method: Request::METHOD_POST,
@@ -113,7 +113,7 @@ abstract class AbstractControllerTest extends AnzuWebTestCase
      *
      * @throws JsonException
      */
-    protected function deserializeResponse(string $deserializationClass = null): object | array
+    protected function deserializeResponse(?string $deserializationClass = null): object|array
     {
         if (null === $deserializationClass) {
             return json_decode(

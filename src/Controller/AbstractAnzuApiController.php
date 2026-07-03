@@ -45,7 +45,7 @@ abstract class AbstractAnzuApiController extends AbstractController
     /**
      * Get newly created entity.
      */
-    protected function createdResponse(array | object $data): JsonResponse
+    protected function createdResponse(array|object $data): JsonResponse
     {
         return $this->getResponse($data, JsonResponse::HTTP_CREATED);
     }
@@ -59,7 +59,7 @@ abstract class AbstractAnzuApiController extends AbstractController
     }
 
     protected function getResponse(
-        array | object $data,
+        array|object $data,
         int $statusCode = JsonResponse::HTTP_OK,
     ): JsonResponse {
         return new JsonResponse(
@@ -73,7 +73,8 @@ abstract class AbstractAnzuApiController extends AbstractController
     protected function lockApi(bool $blocking = false): void
     {
         $this->resourceLocker->lock(
-            (string) $this->container->get('request_stack')->getCurrentRequest()?->get('_route'),
+            (string) $this->container->get('request_stack')
+                ->getCurrentRequest()?->get('_route'),
             $blocking
         );
     }

@@ -39,12 +39,12 @@ trait LoggerAwareRequest
         array $headers = [],
         array $json = [],
         array $query = [],
-        array | string $body = [],
+        array|string $body = [],
         string $authBearer = '',
         int $timeout = 5,
         bool $logSuccess = true,
         array $notLogErrorResponseCodes = [],
-        callable $contentValidator = null,
+        ?callable $contentValidator = null,
     ): HttpClientResponse {
         $context = $this->contextFactory->buildForRequest($method, $url, $json, $query, $body, $timeout);
         if (!$this->journalLogger) {

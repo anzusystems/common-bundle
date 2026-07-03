@@ -73,8 +73,6 @@ final class LogController extends AbstractAnzuApiController
     }
 
     /**
-     * Get one audit log.
-     *
      * @throws SerializerException
      */
     #[OAParameterPath('id'), OAResponse(Log::class)]

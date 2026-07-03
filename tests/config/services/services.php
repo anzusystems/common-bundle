@@ -75,7 +75,8 @@ return static function (ContainerConfigurator $configurator): void {
         ->public()
     ;
 
-    $configurator->services()->set(TestAnzuTapEditor::class)
+    $configurator->services()
+        ->set(TestAnzuTapEditor::class)
         ->autowire()
         ->public();
 };

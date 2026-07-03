@@ -9,7 +9,7 @@ use DOMText;
 
 trait TextNodeTrait
 {
-    protected function getText(DOMText | DOMElement $element, bool $allowEmpty = false): ?string
+    protected function getText(DOMText|DOMElement $element, bool $allowEmpty = false): ?string
     {
         $text = $element->textContent;
         $textToTrim = $text;

@@ -8,5 +8,5 @@ use Doctrine\ORM\QueryBuilder;
 
 interface CustomFilterInterface
 {
-    public function apply(QueryBuilder $dqb, string $field, string | int $value): QueryBuilder;
+    public function apply(QueryBuilder $dqb, string $field, string|int $value): QueryBuilder;
 }
