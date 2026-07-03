@@ -15,9 +15,6 @@ use Symfony\Component\HttpFoundation\Request;
 #[OA\Tag('Debug')]
 final class DebugController extends AbstractAnzuApiController
 {
-    /**
-     * Get lead time.
-     */
     #[OAResponse(description: 'Lead time')]
     public function getLeadTime(): JsonResponse
     {

@@ -84,6 +84,7 @@ class CurrentAnzuUserProvider
 
     public function isCurrentUser(AnzuUser $user): bool
     {
-        return $user->getId() === $this->getCurrentUser()->getId();
+        return $user->getId() === $this->getCurrentUser()
+            ->getId();
     }
 }

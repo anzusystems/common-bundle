@@ -111,7 +111,8 @@ final class ApiQueryMongo
 
     private function getPersistedName(string $field): string
     {
-        $fieldAttributes = $this->getPropertyByField($field)->getAttributes(PersistedName::class);
+        $fieldAttributes = $this->getPropertyByField($field)
+            ->getAttributes(PersistedName::class);
         if (array_key_exists(0, $fieldAttributes)) {
             $persistedNameAttribute = $fieldAttributes[0]->newInstance();
             /** @psalm-suppress RedundantConditionGivenDocblockType */
@@ -142,7 +143,8 @@ final class ApiQueryMongo
             return 'oid';
         }
 
-        return (string) $this->getPropertyByField($field)->getType();
+        return (string) $this->getPropertyByField($field)
+            ->getType();
     }
 
     /**
@@ -156,7 +158,8 @@ final class ApiQueryMongo
         $class = $this->classReflection;
         foreach ($propertyPath as $curPropName) {
             /** @psalm-var class-string $curClassType */
-            $curClassType = (string) $class->getProperty($curPropName)->getType();
+            $curClassType = (string) $class->getProperty($curPropName)
+                ->getType();
             $class = new ReflectionClass($curClassType);
         }
 

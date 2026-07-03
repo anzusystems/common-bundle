@@ -45,7 +45,8 @@ final class HealthChecker
             ->setLeadTime(
                 $this->formatDuration(
                     $this->getDiffSecondsFromCurrentToStart(
-                        (float) $this->requestStack->getMainRequest()?->server->get('REQUEST_TIME_FLOAT')
+                        (float) $this->requestStack->getMainRequest()?->server
+                            ->get('REQUEST_TIME_FLOAT')
                     )
                 )
             );

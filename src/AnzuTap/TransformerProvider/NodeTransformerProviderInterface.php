@@ -9,5 +9,5 @@ use DOMText;
 
 interface NodeTransformerProviderInterface
 {
-    public function getNodeTransformerKey(DOMElement | DOMText $element): string;
+    public function getNodeTransformerKey(DOMElement|DOMText $element): string;
 }

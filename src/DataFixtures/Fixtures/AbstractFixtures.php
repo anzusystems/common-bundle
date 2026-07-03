@@ -67,9 +67,10 @@ abstract class AbstractFixtures implements FixturesInterface
      *
      * @throws InvalidArgumentException
      */
-    public function getOneFromRegistry(string | int $key): object
+    public function getOneFromRegistry(string|int $key): object
     {
-        $object = $this->getRegistry()->get($key);
+        $object = $this->getRegistry()
+            ->get($key);
         if (null === $object) {
             throw new InvalidArgumentException(sprintf('Object key "%s" not found in registry!', $key));
         }
@@ -80,14 +81,16 @@ abstract class AbstractFixtures implements FixturesInterface
     /**
      * @param E $object
      */
-    public function addToRegistry(object $object, string | int | null $key = null): self
+    public function addToRegistry(object $object, string|int|null $key = null): self
     {
         if ($key) {
-            $this->getRegistry()->set($key, $object);
+            $this->getRegistry()
+                ->set($key, $object);
 
             return $this;
         }
-        $this->getRegistry()->add($object);
+        $this->getRegistry()
+            ->add($object);
 
         return $this;
     }
@@ -99,7 +102,9 @@ abstract class AbstractFixtures implements FixturesInterface
      */
     public function findOneRegistryRecord(Closure $filter): ?object
     {
-        return $this->getRegistry()->filter($filter)->first() ?: null;
+        return $this->getRegistry()
+            ->filter($filter)
+            ->first() ?: null;
     }
 
     public function useCustomId(): bool

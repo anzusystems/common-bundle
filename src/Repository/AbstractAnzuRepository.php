@@ -38,7 +38,7 @@ abstract class AbstractAnzuRepository extends ServiceEntityRepository implements
     /**
      * @return ArrayCollection<int|string, T>
      */
-    public function getAllById(int | string ...$ids): ArrayCollection
+    public function getAllById(int|string ...$ids): ArrayCollection
     {
         return new ArrayCollection(
             $this->createQueryBuilder('entity')
@@ -53,7 +53,7 @@ abstract class AbstractAnzuRepository extends ServiceEntityRepository implements
     /**
      * @return ArrayCollection<int|string, T>
      */
-    public function getAllByIdIndexed(int | string ...$id): ArrayCollection
+    public function getAllByIdIndexed(int|string ...$id): ArrayCollection
     {
         return new ArrayCollection(
             $this->createQueryBuilder('entity', 'entity.id')
@@ -170,7 +170,7 @@ abstract class AbstractAnzuRepository extends ServiceEntityRepository implements
         ;
     }
 
-    public function exists(int | string $id): bool
+    public function exists(int|string $id): bool
     {
         return (bool) $this->count([
             'id' => $id,

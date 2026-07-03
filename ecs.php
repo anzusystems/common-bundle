@@ -38,6 +38,7 @@ use SlevomatCodingStandard\Sniffs\Numbers\RequireNumericLiteralSeparatorSniff;
 use SlevomatCodingStandard\Sniffs\PHP\UselessParenthesesSniff;
 use Symplify\CodingStandard\Fixer\ArrayNotation\ArrayListItemNewlineFixer;
 use Symplify\CodingStandard\Fixer\ArrayNotation\ArrayOpenerAndCloserNewlineFixer;
+use Symplify\CodingStandard\Fixer\Spacing\MethodChainingNewlineFixer;
 use Symplify\EasyCodingStandard\Config\ECSConfig;
 
 return ECSConfig::configure()
@@ -62,6 +63,7 @@ return ECSConfig::configure()
         NotOperatorWithSuccessorSpaceFixer::class => null,
         UselessParenthesesSniff::class => null,
         MethodChainingIndentationFixer::class => ['src/DependencyInjection/*Configuration.php'],
+        MethodChainingNewlineFixer::class => ['src/DependencyInjection/*Configuration.php'],
         'SlevomatCodingStandard\Sniffs\Classes\UnusedPrivateElementsSniff.WriteOnlyProperty' => ['src/Entity/User.php'],
         'SlevomatCodingStandard\Sniffs\Whitespaces\DuplicateSpacesSniff.DuplicateSpaces' => null,
         'SlevomatCodingStandard\Sniffs\Commenting\DisallowCommentAfterCodeSniff.DisallowedCommentAfterCode' => null,

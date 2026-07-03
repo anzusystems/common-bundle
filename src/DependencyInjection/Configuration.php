@@ -28,6 +28,7 @@ use AnzuSystems\CommonBundle\Exception\Handler\AccessDeniedExceptionHandler;
 use AnzuSystems\CommonBundle\Exception\Handler\AppReadOnlyModeExceptionHandler;
 use AnzuSystems\CommonBundle\Exception\Handler\DefaultExceptionHandler;
 use AnzuSystems\CommonBundle\Exception\Handler\ExceptionHandlerInterface;
+use AnzuSystems\CommonBundle\Exception\Handler\HttpExceptionHandler;
 use AnzuSystems\CommonBundle\Exception\Handler\NotFoundExceptionHandler;
 use AnzuSystems\CommonBundle\Exception\Handler\ValidationExceptionHandler;
 use AnzuSystems\CommonBundle\HealthCheck\Module\DataMountModule;
@@ -67,6 +68,7 @@ final class Configuration implements ConfigurationInterface
         AppReadOnlyModeExceptionHandler::class,
         AccessDeniedExceptionHandler::class,
         SerializerExceptionHandler::class,
+        HttpExceptionHandler::class,
     ];
     private const array HEALTH_CHECK_MODULES = [
         MysqlModule::class,

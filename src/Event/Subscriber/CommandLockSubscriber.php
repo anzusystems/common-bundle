@@ -59,7 +59,7 @@ final class CommandLockSubscriber implements EventSubscriberInterface
         }
     }
 
-    public function releaseLock(ConsoleTerminateEvent | ConsoleErrorEvent $event): void
+    public function releaseLock(ConsoleTerminateEvent|ConsoleErrorEvent $event): void
     {
         if ($this->lock && $this->lock->isAcquired()) {
             $this->lock->release();

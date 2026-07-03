@@ -41,7 +41,8 @@ final readonly class AuditLogSubscriber implements EventSubscriberInterface
         }
 
         $this->auditLogger->info(
-            message: (string) $event->getRequest()->attributes->get('_route'),
+            message: (string) $event->getRequest()
+                ->attributes->get('_route'),
             context: $this->logContextFactory->buildFromRequestToArray(
                 $event->getRequest(),
                 $event->getResponse()

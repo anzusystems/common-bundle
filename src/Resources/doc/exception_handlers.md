@@ -46,8 +46,20 @@ anzu_systems_common:
             - AnzuSystems\CommonBundle\Exception\Handler\AppReadOnlyModeExceptionHandler
             - AnzuSystems\CommonBundle\Exception\Handler\AccessDeniedExceptionHandler
             - AnzuSystems\CommonBundle\Serializer\Exception\SerializerExceptionHandler
+            - AnzuSystems\CommonBundle\Exception\Handler\HttpExceptionHandler
 ```
 
 #### Register your own exception handler
 
 To register your own handler, just implement [ExceptionHandlerInterface](https://github.com/anzusystems/common-bundle/blob/main/src/Exception/Handler/ExceptionHandlerInterface.php). If your application is using autoconfiguration, it will autoconfigure your service with tag `anzu_systems_common.logs.exception_handler` and `ExceptionListener` will use your own handler. In case you are not using autoconfiguration, tag your service on your own.
+
+#### Handler ordering
+
+Handlers are sorted by the `priority` attribute of the `anzu_systems_common.logs.exception_handler` tag (higher priority first, default is `0`) and the first handler supporting the thrown exception class wins. [HttpExceptionHandler](https://github.com/anzusystems/common-bundle/blob/main/src/Exception/Handler/HttpExceptionHandler.php) is registered with priority `-100`, so more specific handlers (e.g. [AccessDeniedExceptionHandler](https://github.com/anzusystems/common-bundle/blob/main/src/Exception/Handler/AccessDeniedExceptionHandler.php), [NotFoundExceptionHandler](https://github.com/anzusystems/common-bundle/blob/main/src/Exception/Handler/NotFoundExceptionHandler.php) or your own handlers) always take precedence for their exception classes:
+
+```yaml
+services:
+    App\Exception\Handler\YourExceptionHandler:
+        tags:
+            - { name: anzu_systems_common.logs.exception_handler, priority: 10 }
+```

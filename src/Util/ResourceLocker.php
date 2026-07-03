@@ -29,7 +29,7 @@ final class ResourceLocker
     ) {
     }
 
-    public function lock(BaseIdentifiableInterface | string $resource, bool $blocking = true): bool
+    public function lock(BaseIdentifiableInterface|string $resource, bool $blocking = true): bool
     {
         $lock = $this->createLock($resource);
         $acquired = $lock->acquire();
@@ -49,7 +49,7 @@ final class ResourceLocker
         return $acquired;
     }
 
-    public function unLock(BaseIdentifiableInterface | string $resource): void
+    public function unLock(BaseIdentifiableInterface|string $resource): void
     {
         $lockName = $this->getLockName($resource);
         if (array_key_exists($lockName, $this->locks)) {
@@ -66,7 +66,7 @@ final class ResourceLocker
         }
     }
 
-    private function getLockName(BaseIdentifiableInterface | string $resource): string
+    private function getLockName(BaseIdentifiableInterface|string $resource): string
     {
         if ($resource instanceof BaseIdentifiableInterface) {
             return self::REDIS_LOCK_PREFIX . $resource::getResourceName() . '_' . ((string) $resource->getId());
@@ -75,9 +75,10 @@ final class ResourceLocker
         return self::REDIS_LOCK_PREFIX . $resource;
     }
 
-    private function createLock(BaseIdentifiableInterface | string $resource): LockInterface
+    private function createLock(BaseIdentifiableInterface|string $resource): LockInterface
     {
-        return $this->getLockFactory()->createLock($this->getLockName($resource), 60);
+        return $this->getLockFactory()
+            ->createLock($this->getLockName($resource), 60);
     }
 
     private function getRedisStore(): RedisStore

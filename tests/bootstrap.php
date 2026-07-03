@@ -27,7 +27,7 @@ $app->setAutoExit(false);
 
 $output = new ConsoleOutput();
 
-# Clear cache
+// Clear cache
 $input = new ArrayInput([
     'command' => 'cache:clear',
     '--no-warmup' => true,
@@ -36,7 +36,7 @@ $input = new ArrayInput([
 $input->setInteractive(false);
 $app->run($input, $output);
 
-# Database drop
+// Database drop
 $input = new ArrayInput([
     'command' => 'doctrine:database:drop',
     '--force' => true,
@@ -45,14 +45,14 @@ $input = new ArrayInput([
 $input->setInteractive(false);
 $app->run($input, $output);
 
-# Database create
+// Database create
 $input = new ArrayInput([
     'command' => 'doctrine:database:create',
 ]);
 $input->setInteractive(false);
 $app->run($input, $output);
 
-# Update schema
+// Update schema
 $input = new ArrayInput([
     'command' => 'doctrine:schema:update',
     '--force' => true,
@@ -61,7 +61,7 @@ $input = new ArrayInput([
 $input->setInteractive(false);
 $app->run($input, $output);
 
-# Database fixtures
+// Database fixtures
 $input = new ArrayInput([
     'command' => 'anzusystems:fixtures:generate',
 ]);

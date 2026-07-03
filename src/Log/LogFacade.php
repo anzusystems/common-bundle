@@ -28,10 +28,11 @@ final class LogFacade
     public function create(Request $request, LogDto $logDto): Log
     {
         $context = $this->logContextFactory->buildCustomFromRequest($request, $logDto);
-        $this->journalLogger->{$logDto->getLevel()->logMethodName()}(
-            $logDto->getMessage(),
-            $this->serializer->toArray($context)
-        );
+        $this->journalLogger->{$logDto->getLevel()
+            ->logMethodName()}(
+                $logDto->getMessage(),
+                $this->serializer->toArray($context)
+            );
 
         return LogFactory::buildCustomLog($logDto, $context);
     }

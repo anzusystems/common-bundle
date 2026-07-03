@@ -122,7 +122,8 @@ final class MigrationPrimaryKeyFirstFixer extends AbstractFixer
             array_diff_key($columns, [$pkIndex => true])
         )];
 
-        return (new UnicodeString($fullMatch))->replace($columnsString, implode(', ', $reordered))->toString();
+        return (new UnicodeString($fullMatch))->replace($columnsString, implode(', ', $reordered))
+            ->toString();
     }
 
     /**

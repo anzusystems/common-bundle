@@ -65,7 +65,8 @@ abstract class AbstractManager
 
     public function isTransactionActive(): bool
     {
-        return $this->entityManager->getConnection()->isTransactionActive();
+        return $this->entityManager->getConnection()
+            ->isTransactionActive();
     }
 
     public function clear(): void

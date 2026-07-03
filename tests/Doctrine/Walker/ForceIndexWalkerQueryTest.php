@@ -18,7 +18,7 @@ final class ForceIndexWalkerQueryTest extends AbstractDoctrineQueryTestCase
     public function testForceIndexWalkerFunction(
         string $dql,
         string $type,
-        string | array $index,
+        string|array $index,
         string $expectedSql
     ): void {
         $this->query
