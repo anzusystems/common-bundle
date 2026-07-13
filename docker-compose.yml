@@ -37,7 +37,7 @@ services:
     hostname: redis
 
   mongo:
-    image: mongo:8.0
+    image: mongo:8.2
     command: --logappend ${MONGO_NOTABLESCAN:-}
     env_file:
       - .env.docker.dist
