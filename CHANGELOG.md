@@ -1,3 +1,18 @@
+## [11.3.0](https://github.com/anzusystems/common-bundle/compare/11.2.0...11.3.0) (2026-07-13)
+
+### Features
+* New `LogContextContentProcessor` — expands the JSON-encoded `LogContext::content` string back into an array for handlers that report structured context. Without it, structured log context (e.g. `['taskId' => 1, 'detail' => 'reason']`) reaches Sentry as one opaque JSON string inside `monolog.context.content` — not searchable and easy to miss. Registered as a plain service (no `monolog.processor` tag) on purpose, so the journal/audit mongo pipeline keeps persisting `content` as a string; apps push it onto their outbound handler:
+```php
+$services
+    ->set('sentry.monolog.handler', SentryHandler::class)
+    ->arg('$hub', service(HubInterface::class))
+    ->arg('$level', Level::Warning)
+    ->arg('$bubble', true)
+    ->arg('$fillExtraContext', true)
+    ->call('pushProcessor', [service(LogContextContentProcessor::class)])
+;
+```
+
 ## [11.2.0](https://github.com/anzusystems/common-bundle/compare/11.1.1...11.2.0) (2026-07-03)
 
 ### Features

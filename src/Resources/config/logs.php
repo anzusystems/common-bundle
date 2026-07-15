@@ -17,6 +17,7 @@ use AnzuSystems\CommonBundle\Messenger\Message\JournalLogMessage;
 use AnzuSystems\CommonBundle\Messenger\Middleware\ContextIdentityMiddleware;
 use AnzuSystems\CommonBundle\Messenger\MonologHandler\MessengerHandler;
 use AnzuSystems\CommonBundle\Monolog\ContextProcessor;
+use AnzuSystems\CommonBundle\Monolog\LogContextContentProcessor;
 use AnzuSystems\CommonBundle\Repository\Mongo\AbstractAnzuMongoRepository;
 use AnzuSystems\CommonBundle\Serializer\Service\BsonConverter;
 use AnzuSystems\SerializerBundle\Metadata\MetadataRegistry;
@@ -34,6 +35,8 @@ return static function (ContainerConfigurator $configurator): void {
 
     $services->set(ContextProcessor::class)
         ->tag('monolog.processor');
+
+    $services->set(LogContextContentProcessor::class);
 
     $services->set(LogContextFactory::class)
         ->arg('$userProvider', service(CurrentAnzuUserProvider::class))
