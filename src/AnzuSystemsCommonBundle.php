@@ -7,6 +7,7 @@ namespace AnzuSystems\CommonBundle;
 use AnzuSystems\CommonBundle\DependencyInjection\AnzuSystemsCommonExtension;
 use AnzuSystems\CommonBundle\DependencyInjection\CompilerPass\ExceptionHandlerCompilerPass;
 use AnzuSystems\CommonBundle\DependencyInjection\CompilerPass\HealthCheckModuleCompilerPass;
+use AnzuSystems\CommonBundle\DependencyInjection\CompilerPass\McpCompilerPass;
 use AnzuSystems\SerializerBundle\AnzuSystemsSerializerBundle;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\HttpKernel\Bundle\Bundle;
@@ -24,5 +25,6 @@ final class AnzuSystemsCommonBundle extends Bundle
         $container->registerExtension(new AnzuSystemsCommonExtension());
         $container->addCompilerPass(new ExceptionHandlerCompilerPass());
         $container->addCompilerPass(new HealthCheckModuleCompilerPass());
+        $container->addCompilerPass(new McpCompilerPass());
     }
 }

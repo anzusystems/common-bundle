@@ -37,6 +37,7 @@ use AnzuSystems\CommonBundle\HealthCheck\Module\MongoModule;
 use AnzuSystems\CommonBundle\HealthCheck\Module\MysqlModule;
 use AnzuSystems\CommonBundle\HealthCheck\Module\OpCacheModule;
 use AnzuSystems\CommonBundle\HealthCheck\Module\RedisModule;
+use AnzuSystems\CommonBundle\Mcp\Log\McpLogger;
 use AnzuSystems\CommonBundle\Security\PermissionConfig;
 use AnzuSystems\CommonBundle\Serializer\Exception\SerializerExceptionHandler;
 use AnzuSystems\Contracts\Entity\AnzuUser;
@@ -49,6 +50,7 @@ use Symfony\Component\Config\Definition\ConfigurationInterface;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Messenger\Command\ConsumeMessagesCommand;
+use Throwable;
 
 final class Configuration implements ConfigurationInterface
 {
@@ -119,6 +121,7 @@ final class Configuration implements ConfigurationInterface
                 ->append($this->addSettingsSection())
                 ->append($this->addErrorsSection())
                 ->append($this->addLogSection())
+                ->append($this->addMcpSection())
                 ->append($this->addHealthCheckSection())
                 ->append($this->addPermissionsSection())
                 ->append($this->addJobsSection())
@@ -329,6 +332,65 @@ final class Configuration implements ConfigurationInterface
                             ])
                             ->prototype('scalar')->end()
                         ->end()
+                    ->end()
+                ->end()
+            ->end()
+        ;
+    }
+
+    private function addMcpSection(): NodeDefinition
+    {
+        return (new TreeBuilder('mcp'))->getRootNode()
+            ->addDefaultsIfNotSet()
+            ->canBeEnabled()
+            ->children()
+                ->variableNode('allowed_hosts')->defaultValue([])->end()
+                ->arrayNode('tool_error_exceptions')
+                    ->useAttributeAsKey('name')
+                    ->validate()
+                        ->ifTrue(static function (array $exceptions): bool {
+                            foreach (array_keys($exceptions) as $exceptionClass) {
+                                if (false === is_a($exceptionClass, Throwable::class, true)) {
+                                    return true;
+                                }
+                            }
+
+                            return false;
+                        })
+                        ->thenInvalid('Invalid tool_error_exceptions "%s".')
+                    ->end()
+                    ->scalarPrototype()->end()
+                ->end()
+                ->arrayNode('rate_limiter')
+                    ->addDefaultsIfNotSet()
+                    ->children()
+                        ->scalarNode('limit')->defaultValue(120)->end()
+                        ->scalarNode('interval')->defaultValue('1 minute')->end()
+                        ->scalarNode('cache_pool')->defaultValue('cache.app')->end()
+                    ->end()
+                ->end()
+                ->arrayNode('session')
+                    ->addDefaultsIfNotSet()
+                    ->children()
+                        ->scalarNode('cache_pool')->defaultValue('cache.app')->end()
+                    ->end()
+                ->end()
+                ->arrayNode('logs')
+                    ->addDefaultsIfNotSet()
+                    ->children()
+                        ->arrayNode('mongo')
+                            ->addDefaultsIfNotSet()
+                            ->children()
+                                ->scalarNode('uri')->defaultNull()->end()
+                                ->scalarNode('username')->defaultNull()->end()
+                                ->scalarNode('password')->defaultNull()->end()
+                                ->scalarNode('database')->defaultNull()->end()
+                                ->scalarNode('ssl')->defaultNull()->end()
+                                ->scalarNode('collection')->defaultValue(McpLogger::COLLECTION_NAME)->end()
+                                ->scalarNode('size_mb')->defaultValue(200)->end()
+                            ->end()
+                        ->end()
+                        ->booleanNode('add_to_health_check')->defaultFalse()->end()
                     ->end()
                 ->end()
             ->end()
