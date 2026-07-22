@@ -559,6 +559,9 @@ final class AnzuSystemsCommonExtension extends Extension implements PrependExten
         if (false === class_exists(McpBundle::class)) {
             return;
         }
+        if (false === $container->hasExtension('mcp')) {
+            throw new LogicException('The "mcp" config section requires McpBundle to be registered in bundles.php.');
+        }
 
         $container->prependExtensionConfig('monolog', [
             'channels' => ['mcp'],
@@ -578,9 +581,6 @@ final class AnzuSystemsCommonExtension extends Extension implements PrependExten
         }
         if (false === class_exists(McpBundle::class)) {
             throw new LogicException('The "mcp" config section requires the "symfony/mcp-bundle" package.');
-        }
-        if (false === $container->hasExtension('mcp')) {
-            throw new LogicException('The "mcp" config section requires McpBundle to be registered in bundles.php.');
         }
         if (false === class_exists(RateLimiterFactory::class)) {
             throw new LogicException('The "mcp" config section requires the "symfony/rate-limiter" package.');
