@@ -12,8 +12,9 @@ trait EntityManagerAwareTrait
     protected EntityManagerInterface $entityManager;
 
     #[Required]
-    public function setEntityManager(EntityManagerInterface $entityManager): void
-    {
+    public function setEntityManager(
+        EntityManagerInterface $entityManager
+    ): void {
         $this->entityManager = $entityManager;
     }
 }

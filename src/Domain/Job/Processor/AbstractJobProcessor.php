@@ -28,32 +28,37 @@ abstract class AbstractJobProcessor implements JobProcessorInterface
     protected EventDispatcherInterface $dispatcher;
 
     #[Required]
-    public function setManagerRegistry(ManagerRegistry $doctrine): void
-    {
+    public function setManagerRegistry(
+        ManagerRegistry $doctrine
+    ): void {
         $this->doctrine = $doctrine;
     }
 
     #[Required]
-    public function setEntityManager(EntityManagerInterface $entityManager): void
-    {
+    public function setEntityManager(
+        EntityManagerInterface $entityManager
+    ): void {
         $this->entityManager = $entityManager;
     }
 
     #[Required]
-    public function setCurrentAnzuUserProvider(CurrentAnzuUserProvider $currentAnzuUserProvider): void
-    {
+    public function setCurrentAnzuUserProvider(
+        CurrentAnzuUserProvider $currentAnzuUserProvider
+    ): void {
         $this->currentAnzuUserProvider = $currentAnzuUserProvider;
     }
 
     #[Required]
-    public function setJobManager(JobManager $jobManager): void
-    {
+    public function setJobManager(
+        JobManager $jobManager
+    ): void {
         $this->jobManager = $jobManager;
     }
 
     #[Required]
-    public function setDispatcher(EventDispatcherInterface $dispatcher): void
-    {
+    public function setDispatcher(
+        EventDispatcherInterface $dispatcher
+    ): void {
         $this->dispatcher = $dispatcher;
     }
 

@@ -11,12 +11,10 @@ trait JournalLoggerAwareTrait
 {
     protected ?LoggerInterface $journalLogger = null;
 
-    /**
-     * Sets a journal logger.
-     */
     #[Required]
-    public function setJournalLogger(LoggerInterface $journalLogger): void
-    {
+    public function setJournalLogger(
+        LoggerInterface $journalLogger
+    ): void {
         $this->journalLogger = $journalLogger;
     }
 }
