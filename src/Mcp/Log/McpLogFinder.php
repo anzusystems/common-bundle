@@ -191,7 +191,8 @@ final readonly class McpLogFinder
     private function formatDateTime(mixed $datetime): string
     {
         if ($datetime instanceof UTCDateTime) {
-            return $datetime->toDateTime()->format(DateTimeInterface::ATOM);
+            return $datetime->toDateTime()
+                ->format(DateTimeInterface::ATOM);
         }
 
         return self::EMPTY_STRING;
