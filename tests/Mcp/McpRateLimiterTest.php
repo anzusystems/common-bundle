@@ -18,6 +18,7 @@ use Symfony\Component\RateLimiter\Storage\InMemoryStorage;
 final class McpRateLimiterTest extends TestCase
 {
     private const int LIMIT = 1;
+    private const int INTERVAL_SECONDS = 60;
     private const int USER_ID = 42;
 
     public function testAnonymousUserIsRejected(): void
@@ -48,6 +49,7 @@ final class McpRateLimiterTest extends TestCase
             self::assertArrayHasKey('X-RateLimit-Reset', $headers);
             self::assertArrayHasKey('Retry-After', $headers);
             self::assertGreaterThanOrEqual(0, (int) $headers['Retry-After']);
+            self::assertLessThanOrEqual(self::INTERVAL_SECONDS, (int) $headers['Retry-After']);
         }
     }
 

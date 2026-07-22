@@ -37,15 +37,15 @@ final readonly class McpRateLimiter
         }
 
         $retryAfter = $limit->getRetryAfter();
+        $retryAfterSeconds = max(0, $retryAfter->getTimestamp() - time());
 
         throw new TooManyRequestsHttpException(
-            $retryAfter->getTimestamp(),
+            $retryAfterSeconds,
             'Too many requests',
             headers: [
                 'X-RateLimit-Limit' => (string) $limit->getLimit(),
                 'X-RateLimit-Remaining' => (string) $limit->getRemainingTokens(),
                 'X-RateLimit-Reset' => (string) $retryAfter->getTimestamp(),
-                'Retry-After' => (string) max(0, $retryAfter->getTimestamp() - time()),
             ],
         );
     }

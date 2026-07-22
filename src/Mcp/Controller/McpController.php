@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 namespace AnzuSystems\CommonBundle\Mcp\Controller;
 
+use AnzuSystems\CommonBundle\Helper\StringHelper;
 use AnzuSystems\CommonBundle\Log\Helper\AuditLogResourceHelper;
 use AnzuSystems\CommonBundle\Mcp\McpRateLimiter;
+use LogicException;
 use Mcp\Server;
 use Mcp\Server\Transport\Http\Middleware\DnsRebindingProtectionMiddleware;
 use Mcp\Server\Transport\Http\Middleware\ProtocolVersionMiddleware;
@@ -23,6 +25,11 @@ final readonly class McpController
     private const string STREAMED_CONTENT_TYPE = 'text/event-stream';
 
     /**
+     * @var list<string>
+     */
+    private array $allowedHosts;
+
+    /**
      * @param list<string> $allowedHosts
      */
     public function __construct(
@@ -33,8 +40,13 @@ final readonly class McpController
         private StreamFactoryInterface $streamFactory,
         private McpRateLimiter $rateLimiter,
         private LoggerInterface $logger,
-        private array $allowedHosts,
+        array $allowedHosts,
     ) {
+        $hosts = array_values(array_filter(array_map(trim(...), $allowedHosts), StringHelper::isNotEmpty(...)));
+        if ([] === $hosts) {
+            throw new LogicException('MCP allowed_hosts must not be empty, every request would be rejected with 403.');
+        }
+        $this->allowedHosts = $hosts;
     }
 
     public function handle(Request $request): Response

@@ -44,6 +44,8 @@ infrastructure after a bundle upgrade.
    ```
    The `logs.mongo` connection options (`uri`, `username`, `password`, `database`, `ssl`) default to the
    `logs.journal.mongo` connection, so they only need to be set when the mcp log collection lives elsewhere.
+   The `session.cache_pool` option takes effect only while the McpBundle `http.session` config keeps its default
+   `cache_pool: cache.mcp.sessions` — setting a custom pool there makes this option a silent no-op.
 4. Import the MCP route (`config/routes/mcp.php`):
    ```php
    $routes->import('.', 'mcp');
