@@ -1,3 +1,17 @@
+## [12.0.0](https://github.com/anzusystems/common-bundle/compare/11.3.0...12.0.0) (2026-07-22)
+
+### Features
+* New opt-in `mcp` config section (disabled by default — upgrading without enabling it requires no new packages, env variables or infrastructure) built on `symfony/mcp-bundle`: `McpController` with streamable HTTP transport, DNS-rebinding protection (`allowed_hosts`, required non-empty) and a per-user sliding-window rate limit; `McpToolExecutor` translating `McpToolInputException`, `AccessDeniedException` and a configurable `tool_error_exceptions` FQCN-to-message map into tool error results while logging every call to the `mcp` monolog channel and a capped `mcpLogs` mongo collection; `StrictToolArgumentsRequestHandler` rejecting tool calls with unknown arguments.
+* Diagnostic MCP tools `search_app_logs`, `search_audit_logs` and `get_logs_by_context` over the bundle-owned `appLogs`/`auditLogs` collections and the new `mcpLogs` collection, correlated by `contextId`, windows capped at 31 days and results at 50 rows with long fields truncated.
+* `anzu:mcp:create-log-collection` command provisioning the capped `mcpLogs` collection idempotently; the mcp mongo connection defaults to the `logs.journal.mongo` connection, so no extra env variables are needed in the default setup.
+* `JournalLogRepository::findLatest()`, `AuditLogRepository::findLatest()` and `findLatestByContextId()` — filterable newest-first raw log searches on a new shared `AbstractLogRepository` base.
+* `McpCompilerPass` overriding the McpBundle `mcp.server.controller` and `cache.mcp.sessions` definitions after extension merge, so the bundle controller (rate limit, audit-log exclusion, allowed hosts) and the configured session cache pool always win regardless of bundle order.
+* See `src/Resources/doc/mcp.md` for the enable checklist (requires `symfony/mcp-bundle` + `symfony/rate-limiter`, the `logs` section enabled, host-owned `config/packages/mcp.php` with `client_transports.http: true` and a route import; the MCP endpoint ships without authentication — pair it with the personal access tokens from `anzusystems/auth-bundle`).
+
+### Changes
+* `JournalLogRepository` and `AuditLogRepository` now extend the new `AbstractLogRepository` (public API unchanged).
+* New `conflict` with `symfony/mcp-bundle >=0.11` — the MCP integration compiles against the 0.10 SDK internals.
+
 ## [11.3.0](https://github.com/anzusystems/common-bundle/compare/11.2.0...11.3.0) (2026-07-13)
 
 ### Features
