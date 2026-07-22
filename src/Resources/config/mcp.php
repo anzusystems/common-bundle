@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace Symfony\Component\DependencyInjection\Loader\Configurator;
 
+use AnzuSystems\CommonBundle\Command\CreateMcpLogCollectionCommand;
 use AnzuSystems\CommonBundle\Domain\User\CurrentAnzuUserProvider;
 use AnzuSystems\CommonBundle\Log\Repository\AuditLogRepository;
 use AnzuSystems\CommonBundle\Log\Repository\JournalLogRepository;
-use AnzuSystems\CommonBundle\Mcp\Command\CreateMcpLogCollectionCommand;
 use AnzuSystems\CommonBundle\Mcp\Controller\McpController;
 use AnzuSystems\CommonBundle\Mcp\Handler\StrictToolArgumentsRequestHandler;
 use AnzuSystems\CommonBundle\Mcp\Log\McpLogFinder;

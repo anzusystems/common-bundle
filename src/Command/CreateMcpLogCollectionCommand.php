@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace AnzuSystems\CommonBundle\Mcp\Command;
+namespace AnzuSystems\CommonBundle\Command;
 
 use MongoDB\Database;
 use MongoDB\Driver\Exception\CommandException;
