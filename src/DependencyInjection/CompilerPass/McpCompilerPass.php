@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace AnzuSystems\CommonBundle\DependencyInjection\CompilerPass;
 
 use AnzuSystems\CommonBundle\Mcp\Controller\McpController;
+use LogicException;
 use Symfony\Component\Cache\Psr16Cache;
 use Symfony\Component\DependencyInjection\Compiler\CompilerPassInterface;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
@@ -28,8 +29,13 @@ final class McpCompilerPass implements CompilerPassInterface
             ->setAlias(self::MCP_SERVER_CONTROLLER_ID, McpController::class)
             ->setPublic(true);
 
+        $sessionCachePool = $container->getParameter(self::SESSION_CACHE_POOL_PARAM);
+        if (false === is_string($sessionCachePool)) {
+            throw new LogicException(sprintf('The "%s" parameter must be a cache pool service id.', self::SESSION_CACHE_POOL_PARAM));
+        }
+
         $sessionCacheDefinition = new Definition(Psr16Cache::class);
-        $sessionCacheDefinition->setArgument('$pool', new Reference((string) $container->getParameter(self::SESSION_CACHE_POOL_PARAM)));
+        $sessionCacheDefinition->setArgument('$pool', new Reference($sessionCachePool));
         $container->setDefinition(self::MCP_SESSION_CACHE_ID, $sessionCacheDefinition);
     }
 }

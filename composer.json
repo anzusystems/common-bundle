@@ -51,6 +51,7 @@
     "doctrine/doctrine-bundle": "^3.0",
     "jetbrains/phpstorm-attributes": "^1.0",
     "phpunit/phpunit": "^9.5",
+    "psr/simple-cache": "^3.0",
     "slevomat/coding-standard": "8.20",
     "symfony/mcp-bundle": "^0.10",
     "symfony/rate-limiter": "^7.0|^8.0",
