@@ -26,8 +26,9 @@ abstract class AbstractManager
     private CurrentAnzuUserProvider $currentAnzuUserProvider;
 
     #[Required]
-    public function setCurrentAnzuUserProvider(CurrentAnzuUserProvider $currentAnzuUserProvider): void
-    {
+    public function setCurrentAnzuUserProvider(
+        CurrentAnzuUserProvider $currentAnzuUserProvider
+    ): void {
         $this->currentAnzuUserProvider = $currentAnzuUserProvider;
     }
 

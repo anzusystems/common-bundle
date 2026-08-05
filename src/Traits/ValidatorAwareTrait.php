@@ -12,8 +12,9 @@ trait ValidatorAwareTrait
     protected Validator $validator;
 
     #[Required]
-    public function setValidator(Validator $validator): void
-    {
+    public function setValidator(
+        Validator $validator
+    ): void {
         $this->validator = $validator;
     }
 }

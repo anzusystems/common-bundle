@@ -12,8 +12,9 @@ trait ResourceLockerAwareTrait
     protected ResourceLocker $resourceLocker;
 
     #[Required]
-    public function setResourceLocker(ResourceLocker $resourceLocker): void
-    {
+    public function setResourceLocker(
+        ResourceLocker $resourceLocker
+    ): void {
         $this->resourceLocker = $resourceLocker;
     }
 }

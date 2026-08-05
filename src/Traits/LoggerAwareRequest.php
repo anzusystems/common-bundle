@@ -23,8 +23,9 @@ trait LoggerAwareRequest
     private LogContextFactory $contextFactory;
 
     #[Required]
-    public function setContextFactory(LogContextFactory $contextFactory): void
-    {
+    public function setContextFactory(
+        LogContextFactory $contextFactory
+    ): void {
         $this->contextFactory = $contextFactory;
     }
 

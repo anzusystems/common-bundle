@@ -12,8 +12,9 @@ trait SecurityAwareTrait
     protected Security $security;
 
     #[Required]
-    public function setSecurity(Security $security): void
-    {
+    public function setSecurity(
+        Security $security
+    ): void {
         $this->security = $security;
     }
 }

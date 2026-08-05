@@ -28,12 +28,14 @@ use AnzuSystems\CommonBundle\AnzuTap\Transformer\Node\XRemoveTransformer;
 use AnzuSystems\CommonBundle\AnzuTap\Transformer\Node\XSkipTransformer;
 use AnzuSystems\CommonBundle\AnzuTap\TransformerProvider\AnzuTapMarkNodeTransformerProvider;
 use AnzuSystems\CommonBundle\AnzuTap\TransformerProvider\AnzuTapNodeTransformerProvider;
+use AnzuSystems\CommonBundle\Command\CreateMcpLogCollectionCommand;
 use AnzuSystems\CommonBundle\Command\SyncBaseUsersCommand;
 use AnzuSystems\CommonBundle\Controller\DebugController;
 use AnzuSystems\CommonBundle\Controller\HealthCheckController;
 use AnzuSystems\CommonBundle\Controller\LogController;
 use AnzuSystems\CommonBundle\Controller\PermissionController;
 use AnzuSystems\CommonBundle\DataFixtures\Interfaces\FixturesInterface;
+use AnzuSystems\CommonBundle\DependencyInjection\CompilerPass\McpCompilerPass;
 use AnzuSystems\CommonBundle\Doctrine\Query\AST\DateTime\Year;
 use AnzuSystems\CommonBundle\Doctrine\Query\AST\Numeric\Rand;
 use AnzuSystems\CommonBundle\Doctrine\Query\AST\String\Field;
@@ -68,6 +70,8 @@ use AnzuSystems\CommonBundle\Log\Factory\LogContextFactory;
 use AnzuSystems\CommonBundle\Log\LogFacade;
 use AnzuSystems\CommonBundle\Log\Repository\AuditLogRepository;
 use AnzuSystems\CommonBundle\Log\Repository\JournalLogRepository;
+use AnzuSystems\CommonBundle\Mcp\Controller\McpController;
+use AnzuSystems\CommonBundle\Mcp\McpToolExecutor;
 use AnzuSystems\CommonBundle\Messenger\Message\AuditLogMessage;
 use AnzuSystems\CommonBundle\Messenger\Message\JournalLogMessage;
 use AnzuSystems\CommonBundle\Request\ParamConverter\ApiFilterParamConverter;
@@ -90,8 +94,10 @@ use AnzuSystems\SerializerBundle\Metadata\MetadataRegistry;
 use AnzuSystems\SerializerBundle\Serializer;
 use Doctrine\ORM\EntityManagerInterface;
 use Exception;
+use LogicException;
 use MongoDB;
 use Sensio\Bundle\FrameworkExtraBundle\Request\ParamConverter\ParamConverterInterface;
+use Symfony\AI\McpBundle\McpBundle;
 use Symfony\Component\Config\FileLocator;
 use Symfony\Component\Config\Loader\LoaderInterface;
 use Symfony\Component\DependencyInjection\Argument\IteratorArgument;
@@ -105,9 +111,13 @@ use Symfony\Component\DependencyInjection\Loader\PhpFileLoader;
 use Symfony\Component\DependencyInjection\Reference;
 use Symfony\Component\HttpKernel\Controller\ValueResolverInterface;
 use Symfony\Component\HttpKernel\KernelEvents;
+use Symfony\Component\RateLimiter\RateLimiterFactory;
+use Symfony\Component\RateLimiter\Storage\CacheStorage;
 
 final class AnzuSystemsCommonExtension extends Extension implements PrependExtensionInterface
 {
+    private const string MCP_TOOL_SCAN_DIR = 'vendor/anzusystems/common-bundle/src/Mcp/Tool';
+
     private array $processedConfig;
 
     public function prepend(ContainerBuilder $container): void
@@ -116,6 +126,8 @@ final class AnzuSystemsCommonExtension extends Extension implements PrependExten
             new Configuration(),
             $container->getExtensionConfig($this->getAlias())
         );
+
+        $this->prependMcp($container);
 
         $container->prependExtensionConfig('doctrine', [
             'orm' => [
@@ -207,6 +219,7 @@ final class AnzuSystemsCommonExtension extends Extension implements PrependExten
         $this->loadHealthCheck($container);
         $this->loadErrors($container);
         $this->loadLogs($loader, $container);
+        $this->loadMcp($loader, $container);
         $this->loadAnzuSerializer($container);
         $this->loadPermissions($container);
         $this->loadValueResolvers($container);
@@ -535,6 +548,135 @@ final class AnzuSystemsCommonExtension extends Extension implements PrependExten
             '$logFacade' => new Reference(LogFacade::class),
         ]);
         $container->setDefinition(LogController::class, $definition);
+    }
+
+    private function prependMcp(ContainerBuilder $container): void
+    {
+        $mcp = $this->processedConfig['mcp'];
+        if (false === $mcp['enabled']) {
+            return;
+        }
+        if (false === class_exists(McpBundle::class)) {
+            return;
+        }
+        if (false === $container->hasExtension('mcp')) {
+            throw new LogicException('The "mcp" config section requires McpBundle to be registered in bundles.php.');
+        }
+
+        $container->prependExtensionConfig('monolog', [
+            'channels' => ['mcp'],
+        ]);
+        $container->prependExtensionConfig('mcp', [
+            'discovery' => [
+                'scan_dirs' => [self::MCP_TOOL_SCAN_DIR],
+            ],
+        ]);
+    }
+
+    private function loadMcp(LoaderInterface $loader, ContainerBuilder $container): void
+    {
+        $mcp = $this->processedConfig['mcp'];
+        if (false === $mcp['enabled']) {
+            return;
+        }
+        if (false === class_exists(McpBundle::class)) {
+            throw new LogicException('The "mcp" config section requires the "symfony/mcp-bundle" package.');
+        }
+        if (false === class_exists(RateLimiterFactory::class)) {
+            throw new LogicException('The "mcp" config section requires the "symfony/rate-limiter" package.');
+        }
+        if (false === $this->processedConfig['logs']['enabled']) {
+            throw new LogicException('The "mcp" config section requires the "logs" config section to be enabled.');
+        }
+        if ([] === $mcp['allowed_hosts']) {
+            throw new LogicException('The "mcp" config section requires non-empty "allowed_hosts", otherwise every request is rejected with 403.');
+        }
+
+        $loader->load('mcp.php');
+
+        $mongo = $this->resolveMcpLogMongo();
+        $clientDefinition = new Definition(MongoDB\Client::class);
+        $clientDefinition->setArgument('$uri', $mongo['uri']);
+        $clientDefinition->setArgument('$uriOptions', [
+            'username' => $mongo['username'],
+            'password' => $mongo['password'],
+            'ssl' => $mongo['ssl'],
+        ]);
+        $container->setDefinition('anzu_mongo_mcp_log_client', $clientDefinition);
+        $container->registerAliasForArgument('anzu_mongo_mcp_log_client', MongoDB\Client::class, '$mcpLogClient');
+
+        $databaseDefinition = new Definition(MongoDB\Database::class);
+        $databaseDefinition->setFactory([new Reference('anzu_mongo_mcp_log_client'), 'selectDatabase']);
+        $databaseDefinition->setArgument('$databaseName', $mongo['database']);
+        $container->setDefinition('anzu_mongo_mcp_log_database', $databaseDefinition);
+        $container->registerAliasForArgument('anzu_mongo_mcp_log_database', MongoDB\Database::class, '$mcpLogDatabase');
+
+        $collectionDefinition = new Definition(MongoDB\Collection::class);
+        $collectionDefinition->setFactory([new Reference('anzu_mongo_mcp_log_client'), 'selectCollection']);
+        $collectionDefinition->setArgument('$databaseName', $mongo['database']);
+        $collectionDefinition->setArgument('$collectionName', $mongo['collection']);
+        $container->setDefinition('anzu_mongo_mcp_log_collection', $collectionDefinition);
+        $container->registerAliasForArgument('anzu_mongo_mcp_log_collection', MongoDB\Collection::class, '$mcpLogCollection');
+
+        $container->setParameter(McpCompilerPass::SESSION_CACHE_POOL_PARAM, $mcp['session']['cache_pool']);
+
+        $rateLimiterStorageDefinition = new Definition(CacheStorage::class);
+        $rateLimiterStorageDefinition->setArgument('$pool', new Reference($mcp['rate_limiter']['cache_pool']));
+        $container->setDefinition('anzu_systems_common.mcp.rate_limiter_storage', $rateLimiterStorageDefinition);
+
+        $rateLimiterFactoryDefinition = new Definition(RateLimiterFactory::class);
+        $rateLimiterFactoryDefinition->setArgument('$config', [
+            'id' => 'mcp',
+            'policy' => 'sliding_window',
+            'limit' => $mcp['rate_limiter']['limit'],
+            'interval' => $mcp['rate_limiter']['interval'],
+        ]);
+        $rateLimiterFactoryDefinition->setArgument('$storage', new Reference('anzu_systems_common.mcp.rate_limiter_storage'));
+        $container->setDefinition('anzu_systems_common.mcp.rate_limiter_factory', $rateLimiterFactoryDefinition);
+
+        $container
+            ->getDefinition(McpController::class)
+            ->replaceArgument('$allowedHosts', $mcp['allowed_hosts']);
+
+        $container
+            ->getDefinition(McpToolExecutor::class)
+            ->replaceArgument('$toolErrorExceptions', $mcp['tool_error_exceptions']);
+
+        $container
+            ->getDefinition(CreateMcpLogCollectionCommand::class)
+            ->replaceArgument('$mcpLogCollectionName', $mongo['collection'])
+            ->replaceArgument('$mcpLogCollectionSizeMb', $mongo['size_mb']);
+
+        $this->addMcpLogCollectionToHealthCheck($container, $mcp);
+    }
+
+    private function addMcpLogCollectionToHealthCheck(ContainerBuilder $container, array $mcp): void
+    {
+        if (false === $mcp['logs']['add_to_health_check']) {
+            return;
+        }
+        if (false === $container->hasDefinition(MongoModule::class)) {
+            throw new LogicException('The "mcp.logs.add_to_health_check" option requires the "health_check" config section with the MongoModule enabled.');
+        }
+
+        $definition = $container->getDefinition(MongoModule::class);
+        /** @var IteratorArgument $collections */
+        $collections = $definition->getArgument('$collections');
+        $definition->replaceArgument('$collections', new IteratorArgument([
+            ...$collections->getValues(),
+            new Reference('anzu_mongo_mcp_log_collection'),
+        ]));
+    }
+
+    private function resolveMcpLogMongo(): array
+    {
+        $mongo = $this->processedConfig['mcp']['logs']['mongo'];
+        $journalMongo = $this->processedConfig['logs']['journal']['mongo'] ?? [];
+        foreach (['uri', 'username', 'password', 'database', 'ssl'] as $option) {
+            $mongo[$option] ??= $journalMongo[$option] ?? null;
+        }
+
+        return $mongo;
     }
 
     private function loadAnzuSerializer(ContainerBuilder $container): void
