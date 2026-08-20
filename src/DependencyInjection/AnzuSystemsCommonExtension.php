@@ -640,12 +640,8 @@ final class AnzuSystemsCommonExtension extends Extension implements PrependExten
 
         $container
             ->getDefinition(McpRateLimiter::class)
-            ->replaceArgument('$rateLimiterConfig', [
-                'id' => 'mcp',
-                'policy' => 'sliding_window',
-                'limit' => $mcp['rate_limiter']['limit'],
-                'interval' => $mcp['rate_limiter']['interval'],
-            ]);
+            ->replaceArgument('$limit', $mcp['rate_limiter']['limit'])
+            ->replaceArgument('$interval', $mcp['rate_limiter']['interval']);
 
         $container
             ->getDefinition(McpController::class)

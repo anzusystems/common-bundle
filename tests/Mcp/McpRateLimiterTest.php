@@ -27,12 +27,7 @@ final class McpRateLimiterTest extends TestCase
     private const string TOKEN_KEY = 'pat_7';
     private const string FIREWALL_NAME = 'mcp';
     private const string USER_IDENTIFIER = 'mcp-user';
-    private const array RATE_LIMITER_CONFIG = [
-        'id' => 'mcp_test',
-        'policy' => 'sliding_window',
-        'limit' => self::LIMIT,
-        'interval' => '1 minute',
-    ];
+    private const string INTERVAL = '1 minute';
 
     public function testAnonymousUserIsRejected(): void
     {
@@ -98,7 +93,8 @@ final class McpRateLimiterTest extends TestCase
             ->willReturn($token);
 
         return new McpRateLimiter(
-            self::RATE_LIMITER_CONFIG,
+            self::LIMIT,
+            self::INTERVAL,
             $storage ?? new InMemoryStorage(),
             $currentUserProvider,
             $security,

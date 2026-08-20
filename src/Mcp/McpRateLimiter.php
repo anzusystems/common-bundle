@@ -19,13 +19,12 @@ final readonly class McpRateLimiter
     public const string TOKEN_ATTRIBUTE_KEY = 'mcp_rate_limit_key';
     public const string TOKEN_ATTRIBUTE_LIMIT = 'mcp_rate_limit';
 
-    private const string CONFIG_LIMIT = 'limit';
+    private const string LIMITER_ID = 'mcp';
+    private const string LIMITER_POLICY = 'sliding_window';
 
-    /**
-     * @param array<string, mixed> $rateLimiterConfig
-     */
     public function __construct(
-        private array $rateLimiterConfig,
+        private int $limit,
+        private string $interval,
         private StorageInterface $storage,
         private CurrentAnzuUserProvider $currentUserProvider,
         private Security $security,
@@ -74,12 +73,16 @@ final readonly class McpRateLimiter
 
     private function createLimiter(string $key, mixed $limitOverride): LimiterInterface
     {
-        $config = $this->rateLimiterConfig;
-        if (is_int($limitOverride) && $limitOverride > 0) {
-            $config[self::CONFIG_LIMIT] = $limitOverride;
-        }
+        $limit = is_int($limitOverride) && $limitOverride > 0 ? $limitOverride : $this->limit;
 
-        return new RateLimiterFactory($config, $this->storage)
-            ->create($key);
+        return new RateLimiterFactory(
+            [
+                'id' => self::LIMITER_ID,
+                'policy' => self::LIMITER_POLICY,
+                'limit' => $limit,
+                'interval' => $this->interval,
+            ],
+            $this->storage,
+        )->create($key);
     }
 }

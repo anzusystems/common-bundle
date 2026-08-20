@@ -81,7 +81,8 @@ return static function (ContainerConfigurator $configurator): void {
     ;
 
     $services->set(McpRateLimiter::class)
-        ->arg('$rateLimiterConfig', null)
+        ->arg('$limit', null)
+        ->arg('$interval', null)
         ->arg('$storage', service('anzu_systems_common.mcp.rate_limiter_storage'))
         ->arg('$currentUserProvider', service(CurrentAnzuUserProvider::class))
         ->arg('$security', service('security.helper'))
