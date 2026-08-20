@@ -1,3 +1,9 @@
+## [Unreleased]
+
+### Features
+* Per-tool MCP permissions: every tool requires `mcp_tool_<toolNameCamelCase>` (`McpToolPermission::forTool()`), voted by `McpToolPermissionVoter` through the standard permission model (no implicit access, super admin bypass). `McpToolExecutor::execute()` answers unauthorized `tools/call` with a tool error result logged into `mcpLogs` before running the tool callback (BC: the executor now requires `Security`), `FilterToolsListRequestHandler` hides unauthorized tools from `tools/list`. `McpToolPermission::SEARCH_APP_LOGS|SEARCH_AUDIT_LOGS|GET_LOGS_BY_CONTEXT` name the bundle tool permissions. The bundle prepends the `mcp_tool` permission subject with its log tools into the `permissions` config; projects add their own tool actions (see "Tool permissions" in `src/Resources/doc/mcp.md`).
+* `McpRateLimiter` honours a per-caller override from the security token attributes `McpRateLimiter::TOKEN_ATTRIBUTE_KEY` (bucket key) and `McpRateLimiter::TOKEN_ATTRIBUTE_LIMIT` (limit replacing the configured default), so authenticators can rate-limit per personal access token; the limiter now takes the rate limiter config array + storage directly (the `anzu_systems_common.mcp.rate_limiter_factory` service is gone).
+
 ## [12.0.0](https://github.com/anzusystems/common-bundle/compare/11.3.0...12.0.0) (2026-07-22)
 
 ### Features
@@ -11,6 +17,7 @@
 ### Changes
 * `JournalLogRepository` and `AuditLogRepository` now extend the new `AbstractLogRepository` (public API unchanged).
 * New `conflict` with `symfony/mcp-bundle >=0.11` — the MCP integration compiles against the 0.10 SDK internals.
+* Log search queries (`JournalLogRepository::findLatest()`, `AuditLogRepository::findLatest()`, `findLatestByContextId()`, `McpLogRepository::findLatestByContextId()`) are bounded and sorted by the built-in `_id` index instead of the unindexed `datetime` sort; new `MongoHelper` with `minObjectIdFor()` / `maxObjectIdFor()` / `sortNewestFirst()`. See the "Log query bounds" section of `src/Resources/doc/mcp.md` for the slack assumptions.
 
 ## [11.3.0](https://github.com/anzusystems/common-bundle/compare/11.2.0...11.3.0) (2026-07-13)
 

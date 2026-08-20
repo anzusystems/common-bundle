@@ -71,7 +71,12 @@ use AnzuSystems\CommonBundle\Log\LogFacade;
 use AnzuSystems\CommonBundle\Log\Repository\AuditLogRepository;
 use AnzuSystems\CommonBundle\Log\Repository\JournalLogRepository;
 use AnzuSystems\CommonBundle\Mcp\Controller\McpController;
+use AnzuSystems\CommonBundle\Mcp\McpRateLimiter;
 use AnzuSystems\CommonBundle\Mcp\McpToolExecutor;
+use AnzuSystems\CommonBundle\Mcp\Security\McpToolPermissionConfig;
+use AnzuSystems\CommonBundle\Mcp\Tool\GetLogsByContextTool;
+use AnzuSystems\CommonBundle\Mcp\Tool\SearchAppLogsTool;
+use AnzuSystems\CommonBundle\Mcp\Tool\SearchAuditLogsTool;
 use AnzuSystems\CommonBundle\Messenger\Message\AuditLogMessage;
 use AnzuSystems\CommonBundle\Messenger\Message\JournalLogMessage;
 use AnzuSystems\CommonBundle\Request\ParamConverter\ApiFilterParamConverter;
@@ -117,6 +122,11 @@ use Symfony\Component\RateLimiter\Storage\CacheStorage;
 final class AnzuSystemsCommonExtension extends Extension implements PrependExtensionInterface
 {
     private const string MCP_TOOL_SCAN_DIR = 'vendor/anzusystems/common-bundle/src/Mcp/Tool';
+    private const array MCP_TOOL_NAMES = [
+        SearchAppLogsTool::NAME,
+        SearchAuditLogsTool::NAME,
+        GetLogsByContextTool::NAME,
+    ];
 
     private array $processedConfig;
 
@@ -212,6 +222,7 @@ final class AnzuSystemsCommonExtension extends Extension implements PrependExten
      */
     public function load(array $configs, ContainerBuilder $container): void
     {
+        $this->processedConfig = $this->processConfiguration(new Configuration(), $configs);
         $loader = new PhpFileLoader($container, new FileLocator(__DIR__ . '/../Resources/config'));
         $loader->load('services.php');
 
@@ -571,6 +582,9 @@ final class AnzuSystemsCommonExtension extends Extension implements PrependExten
                 'scan_dirs' => [self::MCP_TOOL_SCAN_DIR],
             ],
         ]);
+        $container->prependExtensionConfig($this->getAlias(), [
+            'permissions' => McpToolPermissionConfig::forTools(self::MCP_TOOL_NAMES),
+        ]);
     }
 
     private function loadMcp(LoaderInterface $loader, ContainerBuilder $container): void
@@ -624,15 +638,14 @@ final class AnzuSystemsCommonExtension extends Extension implements PrependExten
         $rateLimiterStorageDefinition->setArgument('$pool', new Reference($mcp['rate_limiter']['cache_pool']));
         $container->setDefinition('anzu_systems_common.mcp.rate_limiter_storage', $rateLimiterStorageDefinition);
 
-        $rateLimiterFactoryDefinition = new Definition(RateLimiterFactory::class);
-        $rateLimiterFactoryDefinition->setArgument('$config', [
-            'id' => 'mcp',
-            'policy' => 'sliding_window',
-            'limit' => $mcp['rate_limiter']['limit'],
-            'interval' => $mcp['rate_limiter']['interval'],
-        ]);
-        $rateLimiterFactoryDefinition->setArgument('$storage', new Reference('anzu_systems_common.mcp.rate_limiter_storage'));
-        $container->setDefinition('anzu_systems_common.mcp.rate_limiter_factory', $rateLimiterFactoryDefinition);
+        $container
+            ->getDefinition(McpRateLimiter::class)
+            ->replaceArgument('$rateLimiterConfig', [
+                'id' => 'mcp',
+                'policy' => 'sliding_window',
+                'limit' => $mcp['rate_limiter']['limit'],
+                'interval' => $mcp['rate_limiter']['interval'],
+            ]);
 
         $container
             ->getDefinition(McpController::class)

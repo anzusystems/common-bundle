@@ -8,12 +8,14 @@ use AnzuSystems\CommonBundle\Domain\User\CurrentAnzuUserProvider;
 use AnzuSystems\CommonBundle\Mcp\Exception\McpToolInputException;
 use AnzuSystems\CommonBundle\Mcp\Log\McpLogger;
 use AnzuSystems\CommonBundle\Mcp\McpToolExecutor;
+use AnzuSystems\CommonBundle\Mcp\Security\McpToolPermission;
 use AnzuSystems\Contracts\Entity\AnzuUser;
 use MongoDB\Collection;
 use MongoDB\InsertOneResult;
 use PHPUnit\Framework\TestCase;
 use Psr\Log\NullLogger;
 use RuntimeException;
+use Symfony\Bundle\SecurityBundle\Security;
 use Symfony\Component\Security\Core\Exception\AccessDeniedException;
 
 final class McpToolExecutorTest extends TestCase
@@ -51,6 +53,16 @@ final class McpToolExecutorTest extends TestCase
         self::assertSame('Invalid input.', $result[McpToolExecutor::ERROR_KEY]);
         self::assertSame(McpLogger::LEVEL_NAME_ERROR, $this->insertedDocuments[0]['levelName']);
         self::assertSame('Invalid input.', $this->insertedDocuments[0]['error']);
+    }
+
+    public function testMissingToolPermissionIsReturnedAsToolErrorWithoutRunningCallback(): void
+    {
+        $result = $this->createExecutor(toolGranted: false)
+            ->execute(self::TOOL_NAME, [], static fn (): array => throw new RuntimeException('must not run'));
+
+        self::assertStringContainsString('Access denied', $result[McpToolExecutor::ERROR_KEY]);
+        self::assertStringContainsString(self::TOOL_NAME, $result[McpToolExecutor::ERROR_KEY]);
+        self::assertSame(McpLogger::LEVEL_NAME_ERROR, $this->insertedDocuments[0]['levelName']);
     }
 
     public function testAccessDeniedIsReturnedAsToolError(): void
@@ -98,7 +110,7 @@ final class McpToolExecutorTest extends TestCase
     /**
      * @param array<class-string, string> $toolErrorExceptions
      */
-    private function createExecutor(array $toolErrorExceptions = []): McpToolExecutor
+    private function createExecutor(array $toolErrorExceptions = [], bool $toolGranted = true): McpToolExecutor
     {
         $this->insertedDocuments = [];
 
@@ -116,10 +128,17 @@ final class McpToolExecutorTest extends TestCase
         $currentUserProvider->method('getCurrentUser')
             ->willReturn($user);
 
+        $security = $this->createMock(Security::class);
+        $security->method('isGranted')
+            ->willReturnCallback(
+                static fn (mixed $attribute): bool => $toolGranted && McpToolPermission::forTool(self::TOOL_NAME) === $attribute
+            );
+
         return new McpToolExecutor(
             $currentUserProvider,
             new NullLogger(),
             new McpLogger($collection),
+            $security,
             $toolErrorExceptions,
         );
     }
