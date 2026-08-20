@@ -65,10 +65,11 @@ final class McpRateLimiterTest extends TestCase
 
     public function testTokenAttributesOverrideLimitAndKey(): void
     {
+        $storage = new InMemoryStorage();
         $rateLimiter = $this->createRateLimiter(token: $this->createToken([
             McpRateLimiter::TOKEN_ATTRIBUTE_KEY => self::TOKEN_KEY,
             McpRateLimiter::TOKEN_ATTRIBUTE_LIMIT => self::LIMIT_OVERRIDE,
-        ]));
+        ]), storage: $storage);
         $rateLimiter->checkRateLimit();
         $rateLimiter->checkRateLimit();
 
@@ -78,10 +79,16 @@ final class McpRateLimiterTest extends TestCase
         } catch (TooManyRequestsHttpException $exception) {
             self::assertSame((string) self::LIMIT_OVERRIDE, $exception->getHeaders()['X-RateLimit-Limit']);
         }
+
+        $this->createRateLimiter(token: $this->createToken([]), storage: $storage)
+            ->checkRateLimit();
     }
 
-    private function createRateLimiter(int $userId = self::USER_ID, ?TokenInterface $token = null): McpRateLimiter
-    {
+    private function createRateLimiter(
+        int $userId = self::USER_ID,
+        ?TokenInterface $token = null,
+        ?InMemoryStorage $storage = null,
+    ): McpRateLimiter {
         $user = $this->createConfiguredMock(AnzuUser::class, ['getId' => $userId]);
         $currentUserProvider = $this->createMock(CurrentAnzuUserProvider::class);
         $currentUserProvider->method('getCurrentUser')
@@ -90,7 +97,12 @@ final class McpRateLimiterTest extends TestCase
         $security->method('getToken')
             ->willReturn($token);
 
-        return new McpRateLimiter(self::RATE_LIMITER_CONFIG, new InMemoryStorage(), $currentUserProvider, $security);
+        return new McpRateLimiter(
+            self::RATE_LIMITER_CONFIG,
+            $storage ?? new InMemoryStorage(),
+            $currentUserProvider,
+            $security,
+        );
     }
 
     /**

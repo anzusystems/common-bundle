@@ -29,9 +29,7 @@ final class AnzuSystemsCommonExtensionMcpPermissionsTest extends TestCase
     public function testBundleToolPermissionsAreMergedWithProjectPermissions(): void
     {
         $container = new ContainerBuilder();
-        $container->setParameter('kernel.project_dir', sys_get_temp_dir());
         $container->setParameter('kernel.environment', self::KERNEL_ENVIRONMENT);
-        $container->setParameter('kernel.debug', false);
         $container->registerExtension($this->createMcpExtensionStub());
         $extension = new AnzuSystemsCommonExtension();
         $container->registerExtension($extension);

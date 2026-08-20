@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace AnzuSystems\CommonBundle\Mcp;
 
 use AnzuSystems\CommonBundle\Domain\User\CurrentAnzuUserProvider;
+use AnzuSystems\CommonBundle\Helper\StringHelper;
 use AnzuSystems\Contracts\AnzuApp;
 use Symfony\Bundle\SecurityBundle\Security;
 use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
@@ -45,7 +46,7 @@ final readonly class McpRateLimiter
 
         $key = $this->resolveTokenAttribute(self::TOKEN_ATTRIBUTE_KEY);
         $limit = $this->createLimiter(
-            is_string($key) ? $key : (string) $userId,
+            is_string($key) && StringHelper::isNotEmpty($key) ? $key : (string) $userId,
             $this->resolveTokenAttribute(self::TOKEN_ATTRIBUTE_LIMIT),
         )->consume();
         if ($limit->isAccepted()) {
