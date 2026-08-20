@@ -11,7 +11,6 @@ use AnzuSystems\CommonBundle\Mcp\Tool\SearchAppLogsTool;
 use AnzuSystems\CommonBundle\Mcp\Tool\SearchAuditLogsTool;
 use AnzuSystems\Contracts\Entity\AnzuUser;
 use AnzuSystems\Contracts\Security\Grant;
-use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use Symfony\Bundle\SecurityBundle\Security;
 use Symfony\Component\Security\Core\Authentication\Token\TokenInterface;
@@ -33,8 +32,9 @@ final class McpToolPermissionVoterTest extends TestCase
 
     /**
      * @param array<string, int> $resolvedPermissions
+     *
+     * @dataProvider voteProvider
      */
-    #[DataProvider('voteProvider')]
     public function testVote(array $resolvedPermissions, string $attribute, int $expectedVote): void
     {
         $user = $this->createConfiguredMock(AnzuUser::class, ['getResolvedPermissions' => $resolvedPermissions]);
