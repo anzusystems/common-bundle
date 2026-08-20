@@ -40,10 +40,12 @@ final readonly class FilterToolsListRequestHandler implements RequestHandlerInte
         }
 
         $page = $this->registry->getTools($this->pageSize, $request->cursor);
-        $grantedTools = array_values(array_filter(
-            $page->references,
-            fn (Tool $tool): bool => $this->security->isGranted(McpToolPermission::forTool($tool->name)),
-        ));
+        $grantedTools = [];
+        foreach ($page->references as $reference) {
+            if ($reference instanceof Tool && $this->security->isGranted(McpToolPermission::forTool($reference->name))) {
+                $grantedTools[] = $reference;
+            }
+        }
 
         return new Response(
             $request->getId(),

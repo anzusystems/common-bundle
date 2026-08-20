@@ -18,6 +18,7 @@ final class AnzuSystemsCommonExtensionMcpPermissionsTest extends TestCase
 {
     private const string EXTENSION_ALIAS = 'anzu_systems_common';
     private const string PROJECT_ACTION = 'listSites';
+    private const string KERNEL_ENVIRONMENT = 'test';
     private const array MONGO = [
         'uri' => 'mongodb://localhost',
         'username' => 'user',
@@ -29,6 +30,8 @@ final class AnzuSystemsCommonExtensionMcpPermissionsTest extends TestCase
     {
         $container = new ContainerBuilder();
         $container->setParameter('kernel.project_dir', sys_get_temp_dir());
+        $container->setParameter('kernel.environment', self::KERNEL_ENVIRONMENT);
+        $container->setParameter('kernel.debug', false);
         $container->registerExtension($this->createMcpExtensionStub());
         $extension = new AnzuSystemsCommonExtension();
         $container->registerExtension($extension);

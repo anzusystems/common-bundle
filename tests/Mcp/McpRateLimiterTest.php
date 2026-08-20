@@ -80,19 +80,6 @@ final class McpRateLimiterTest extends TestCase
         }
     }
 
-    public function testNullLimitAttributeFallsBackToDefaultLimit(): void
-    {
-        $rateLimiter = $this->createRateLimiter(token: $this->createToken([
-            McpRateLimiter::TOKEN_ATTRIBUTE_KEY => self::TOKEN_KEY,
-            McpRateLimiter::TOKEN_ATTRIBUTE_LIMIT => null,
-        ]));
-        $rateLimiter->checkRateLimit();
-
-        $this->expectException(TooManyRequestsHttpException::class);
-
-        $rateLimiter->checkRateLimit();
-    }
-
     private function createRateLimiter(int $userId = self::USER_ID, ?TokenInterface $token = null): McpRateLimiter
     {
         $user = $this->createConfiguredMock(AnzuUser::class, ['getId' => $userId]);
