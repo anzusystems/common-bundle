@@ -1,3 +1,13 @@
+## [Unreleased]
+
+### Features
+* Per-tool MCP permissions: `mcp.tool_permissions` maps every tool name to an existing host permission, resolved by `McpToolAccessChecker` through the host's standard permission model (unmapped tool = denied, super admin bypass). `McpToolExecutor::execute()` answers unauthorized `tools/call` with a tool error result logged into `mcpLogs` before running the tool callback (BC: the executor now requires `McpToolAccessChecker`), `FilterToolsListRequestHandler` hides unauthorized tools from `tools/list`.
+* Log search queries (`JournalLogRepository::findLatest()`, `AuditLogRepository::findLatest()`, `findLatestByContextId()`, `McpLogRepository::findLatestByContextId()`) are bounded and sorted by the built-in `_id` index instead of the unindexed `datetime` sort; new `MongoHelper` with `minObjectIdFor()` / `maxObjectIdFor()` / `sortNewestFirst()` and `FIELD_ID` / `SORT_DESC` constants. See the "Log query bounds" section of `src/Resources/doc/mcp.md` for the slack assumptions.
+* `McpRateLimiter` honours a per-caller override from the security token attributes `McpRateLimiter::TOKEN_ATTRIBUTE_KEY` (bucket key) and `McpRateLimiter::TOKEN_ATTRIBUTE_LIMIT` (limit replacing the configured default), so authenticators can rate-limit per personal access token; the limiter now takes the configured `limit` + `interval` and the storage directly (the `anzu_systems_common.mcp.rate_limiter_factory` service is gone).
+
+### Changes
+* BC change: `AbstractLogRepository::FIELD_ID` (protected) moved to `MongoHelper::FIELD_ID`; `McpToolExecutor` requires `McpToolAccessChecker` (its tool-permission check).
+
 ## [12.0.0](https://github.com/anzusystems/common-bundle/compare/11.3.0...12.0.0) (2026-07-22)
 
 ### Features

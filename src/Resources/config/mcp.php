@@ -9,6 +9,7 @@ use AnzuSystems\CommonBundle\Domain\User\CurrentAnzuUserProvider;
 use AnzuSystems\CommonBundle\Log\Repository\AuditLogRepository;
 use AnzuSystems\CommonBundle\Log\Repository\JournalLogRepository;
 use AnzuSystems\CommonBundle\Mcp\Controller\McpController;
+use AnzuSystems\CommonBundle\Mcp\Handler\FilterToolsListRequestHandler;
 use AnzuSystems\CommonBundle\Mcp\Handler\StrictToolArgumentsRequestHandler;
 use AnzuSystems\CommonBundle\Mcp\Log\McpLogFinder;
 use AnzuSystems\CommonBundle\Mcp\Log\McpLogger;
@@ -17,6 +18,7 @@ use AnzuSystems\CommonBundle\Mcp\McpRateLimiter;
 use AnzuSystems\CommonBundle\Mcp\McpToolExecutor;
 use AnzuSystems\CommonBundle\Mcp\Resolver\McpContextIdResolver;
 use AnzuSystems\CommonBundle\Mcp\Resolver\McpDateWindowResolver;
+use AnzuSystems\CommonBundle\Mcp\Security\McpToolAccessChecker;
 use AnzuSystems\CommonBundle\Mcp\Tool\GetLogsByContextTool;
 use AnzuSystems\CommonBundle\Mcp\Tool\SearchAppLogsTool;
 use AnzuSystems\CommonBundle\Mcp\Tool\SearchAuditLogsTool;
@@ -41,6 +43,18 @@ return static function (ContainerConfigurator $configurator): void {
         ->tag('monolog.logger', ['channel' => 'mcp'])
     ;
 
+    $services->set(McpToolAccessChecker::class)
+        ->arg('$toolPermissions', null)
+        ->arg('$security', service('security.helper'))
+    ;
+
+    $services->set(FilterToolsListRequestHandler::class)
+        ->arg('$registry', service('mcp.registry'))
+        ->arg('$toolAccessChecker', service(McpToolAccessChecker::class))
+        ->arg('$pageSize', param('mcp.pagination_limit'))
+        ->tag('mcp.request_handler')
+    ;
+
     $services->set(McpLogger::class)
         ->arg('$mcpLogCollection', service('anzu_mongo_mcp_log_collection'))
     ;
@@ -61,13 +75,17 @@ return static function (ContainerConfigurator $configurator): void {
         ->arg('$currentUserProvider', service(CurrentAnzuUserProvider::class))
         ->arg('$logger', service('logger'))
         ->arg('$mcpLogger', service(McpLogger::class))
+        ->arg('$toolAccessChecker', service(McpToolAccessChecker::class))
         ->arg('$toolErrorExceptions', null)
         ->tag('monolog.logger', ['channel' => 'mcp'])
     ;
 
     $services->set(McpRateLimiter::class)
-        ->arg('$mcpLimiter', service('anzu_systems_common.mcp.rate_limiter_factory'))
+        ->arg('$limit', null)
+        ->arg('$interval', null)
+        ->arg('$storage', service('anzu_systems_common.mcp.rate_limiter_storage'))
         ->arg('$currentUserProvider', service(CurrentAnzuUserProvider::class))
+        ->arg('$security', service('security.helper'))
     ;
 
     $services->set(McpController::class)

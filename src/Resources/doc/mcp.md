@@ -62,10 +62,70 @@ infrastructure after a bundle upgrade.
 ## Provided services
 
 * `McpController` (alias `mcp.server.controller`) — streamable HTTP transport endpoint with DNS-rebinding protection
-  (`allowed_hosts`) and a per-user sliding-window rate limit.
+  (`allowed_hosts`) and a sliding-window rate limit (per user, or per caller when the security token carries the
+  rate-limit attributes — see below).
 * `McpToolExecutor` — wraps tool callbacks: converts `McpToolInputException`, `AccessDeniedException` and configured
   `tool_error_exceptions` into tool error results, logs every call to the monolog `mcp` channel and to the `mcpLogs`
   capped collection.
 * `StrictToolArgumentsRequestHandler` — rejects tool calls with unknown arguments.
+* `McpToolAccessChecker` + `FilterToolsListRequestHandler` — per-tool permissions mapped to host permissions (see
+  below); the call-side check lives in `McpToolExecutor`.
 * `SearchAppLogsTool`, `SearchAuditLogsTool`, `GetLogsByContextTool` — diagnostic tools over the shared log
   collections, correlated by `contextId`.
+
+## Rate limit override per caller
+
+`McpRateLimiter` keys the sliding window by the current user id and applies the configured `rate_limiter.limit`.
+An authenticator can override both by setting attributes on the security token:
+
+```php
+$token->setAttribute(McpRateLimiter::TOKEN_ATTRIBUTE_KEY, 'pat_' . $personalAccessToken->getId());
+$token->setAttribute(McpRateLimiter::TOKEN_ATTRIBUTE_LIMIT, $personalAccessToken->getRateLimit());
+```
+
+`TOKEN_ATTRIBUTE_KEY` (string) selects the bucket (e.g. one bucket per personal access token), `TOKEN_ATTRIBUTE_LIMIT`
+(positive `int`) replaces the configured limit for that bucket — `null`, a missing attribute or a non-positive value
+keeps the configured default. Tokens without the attributes fall back to the per-user bucket. The configured
+`rate_limiter.interval` applies to every bucket. The personal access token authenticator from
+[anzusystems/auth-bundle](https://github.com/anzusystems/auth-bundle) sets both attributes.
+
+## Tool permissions
+
+Every tool is mapped to an existing permission of the host application in `mcp.tool_permissions` (tool name →
+permission name); `McpToolAccessChecker` resolves it through the host's standard permission model
+(`Security::isGranted()` → the host voters, super admin bypass). A tool that is not mapped is denied — there is no
+implicit access.
+
+```yaml
+anzu_systems_common:
+    mcp:
+        tool_permissions:
+            search_app_logs: cms_log_read
+            search_audit_logs: cms_log_read
+            get_logs_by_context: cms_log_read
+            list_sites: cms_site_read
+```
+
+* `tools/call` of a tool the current user may not use returns a tool error result (`{"error": "Access denied — …"}`) from
+  `McpToolExecutor::execute()` before the tool callback runs, and the denied call is written to the `mcpLogs` collection
+  with the error (so every tool must route through the executor, as the bundle tools do).
+* `tools/list` returns only the tools the current user may call — the filter runs after registry pagination, so a
+  page may come back with fewer tools (even none) while `nextCursor` is still set; clients follow the cursor as usual.
+
+## Log query bounds
+
+The log repositories behind the diagnostic tools (`JournalLogRepository::findLatest()`, `AuditLogRepository::findLatest()`,
+`findLatestByContextId()` and `McpLogRepository::findLatestByContextId()`) have no index on `datetime`; they bound and sort
+every query by the built-in `_id` index instead, deriving the ObjectId range from the `datetime` window via
+`MongoHelper::minObjectIdFor()` / `maxObjectIdFor()`. The `datetime` filter stays in place, so the `_id` range only
+narrows the scan. Assumptions behind the bounds:
+
+* Journal and audit records are written asynchronously (Messenger consumer), so the `_id` timestamp is the insertion time,
+  not the record `datetime`. The range is widened by `-1 minute` below and `+1 day` above the window; a record inserted more
+  than one day after its `datetime` (consumer outage, failed-message replay) falls outside a historical window.
+* Records are selected in insertion (`_id`) order and the returned page is re-sorted by `datetime`; with a `limit`, the
+  selected newest rows are those inserted last, which can differ from a strict `datetime` ordering when consumers run in
+  parallel.
+* For selective filters (`contextId`, `onlyErrors`) over large windows the scan still fetches every document in the `_id`
+  range until `limit` is filled, guarded only by `mongo_query_max_time_ms`; a compound `{ 'context.contextId': 1, _id: -1 }`
+  index on `appLogs` / `auditLogs` is the real fix for by-context lookups on busy collections.

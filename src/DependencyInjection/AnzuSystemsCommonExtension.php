@@ -71,7 +71,9 @@ use AnzuSystems\CommonBundle\Log\LogFacade;
 use AnzuSystems\CommonBundle\Log\Repository\AuditLogRepository;
 use AnzuSystems\CommonBundle\Log\Repository\JournalLogRepository;
 use AnzuSystems\CommonBundle\Mcp\Controller\McpController;
+use AnzuSystems\CommonBundle\Mcp\McpRateLimiter;
 use AnzuSystems\CommonBundle\Mcp\McpToolExecutor;
+use AnzuSystems\CommonBundle\Mcp\Security\McpToolAccessChecker;
 use AnzuSystems\CommonBundle\Messenger\Message\AuditLogMessage;
 use AnzuSystems\CommonBundle\Messenger\Message\JournalLogMessage;
 use AnzuSystems\CommonBundle\Request\ParamConverter\ApiFilterParamConverter;
@@ -624,15 +626,10 @@ final class AnzuSystemsCommonExtension extends Extension implements PrependExten
         $rateLimiterStorageDefinition->setArgument('$pool', new Reference($mcp['rate_limiter']['cache_pool']));
         $container->setDefinition('anzu_systems_common.mcp.rate_limiter_storage', $rateLimiterStorageDefinition);
 
-        $rateLimiterFactoryDefinition = new Definition(RateLimiterFactory::class);
-        $rateLimiterFactoryDefinition->setArgument('$config', [
-            'id' => 'mcp',
-            'policy' => 'sliding_window',
-            'limit' => $mcp['rate_limiter']['limit'],
-            'interval' => $mcp['rate_limiter']['interval'],
-        ]);
-        $rateLimiterFactoryDefinition->setArgument('$storage', new Reference('anzu_systems_common.mcp.rate_limiter_storage'));
-        $container->setDefinition('anzu_systems_common.mcp.rate_limiter_factory', $rateLimiterFactoryDefinition);
+        $container
+            ->getDefinition(McpRateLimiter::class)
+            ->replaceArgument('$limit', $mcp['rate_limiter']['limit'])
+            ->replaceArgument('$interval', $mcp['rate_limiter']['interval']);
 
         $container
             ->getDefinition(McpController::class)
@@ -641,6 +638,10 @@ final class AnzuSystemsCommonExtension extends Extension implements PrependExten
         $container
             ->getDefinition(McpToolExecutor::class)
             ->replaceArgument('$toolErrorExceptions', $mcp['tool_error_exceptions']);
+
+        $container
+            ->getDefinition(McpToolAccessChecker::class)
+            ->replaceArgument('$toolPermissions', $mcp['tool_permissions']);
 
         $container
             ->getDefinition(CreateMcpLogCollectionCommand::class)

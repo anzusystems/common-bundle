@@ -8,18 +8,21 @@ use AnzuSystems\CommonBundle\Domain\User\CurrentAnzuUserProvider;
 use AnzuSystems\CommonBundle\Mcp\Exception\McpToolInputException;
 use AnzuSystems\CommonBundle\Mcp\Log\McpLogger;
 use AnzuSystems\CommonBundle\Mcp\McpToolExecutor;
+use AnzuSystems\CommonBundle\Mcp\Security\McpToolAccessChecker;
 use AnzuSystems\Contracts\Entity\AnzuUser;
 use MongoDB\Collection;
 use MongoDB\InsertOneResult;
 use PHPUnit\Framework\TestCase;
 use Psr\Log\NullLogger;
 use RuntimeException;
+use Symfony\Bundle\SecurityBundle\Security;
 use Symfony\Component\Security\Core\Exception\AccessDeniedException;
 
 final class McpToolExecutorTest extends TestCase
 {
     private const int USER_ID = 42;
     private const string TOOL_NAME = 'test_tool';
+    private const string TOOL_PERMISSION = 'cms_test_read';
     private const string BACKEND_ERROR_MESSAGE = 'Backend is temporarily unavailable, retry the call.';
 
     private array $insertedDocuments = [];
@@ -51,6 +54,16 @@ final class McpToolExecutorTest extends TestCase
         self::assertSame('Invalid input.', $result[McpToolExecutor::ERROR_KEY]);
         self::assertSame(McpLogger::LEVEL_NAME_ERROR, $this->insertedDocuments[0]['levelName']);
         self::assertSame('Invalid input.', $this->insertedDocuments[0]['error']);
+    }
+
+    public function testMissingToolPermissionIsReturnedAsToolErrorWithoutRunningCallback(): void
+    {
+        $result = $this->createExecutor(toolGranted: false)
+            ->execute(self::TOOL_NAME, [], static fn (): array => throw new RuntimeException('must not run'));
+
+        self::assertStringContainsString('Access denied', $result[McpToolExecutor::ERROR_KEY]);
+        self::assertStringContainsString(self::TOOL_NAME, $result[McpToolExecutor::ERROR_KEY]);
+        self::assertSame(McpLogger::LEVEL_NAME_ERROR, $this->insertedDocuments[0]['levelName']);
     }
 
     public function testAccessDeniedIsReturnedAsToolError(): void
@@ -98,7 +111,7 @@ final class McpToolExecutorTest extends TestCase
     /**
      * @param array<class-string, string> $toolErrorExceptions
      */
-    private function createExecutor(array $toolErrorExceptions = []): McpToolExecutor
+    private function createExecutor(array $toolErrorExceptions = [], bool $toolGranted = true): McpToolExecutor
     {
         $this->insertedDocuments = [];
 
@@ -116,10 +129,15 @@ final class McpToolExecutorTest extends TestCase
         $currentUserProvider->method('getCurrentUser')
             ->willReturn($user);
 
+        $security = $this->createMock(Security::class);
+        $security->method('isGranted')
+            ->willReturn($toolGranted);
+
         return new McpToolExecutor(
             $currentUserProvider,
             new NullLogger(),
             new McpLogger($collection),
+            new McpToolAccessChecker([self::TOOL_NAME => self::TOOL_PERMISSION], $security),
             $toolErrorExceptions,
         );
     }
