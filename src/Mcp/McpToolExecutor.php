@@ -7,11 +7,10 @@ namespace AnzuSystems\CommonBundle\Mcp;
 use AnzuSystems\CommonBundle\Domain\User\CurrentAnzuUserProvider;
 use AnzuSystems\CommonBundle\Mcp\Exception\McpToolInputException;
 use AnzuSystems\CommonBundle\Mcp\Log\McpLogger;
-use AnzuSystems\CommonBundle\Mcp\Security\McpToolPermission;
+use AnzuSystems\CommonBundle\Mcp\Security\McpToolAccessChecker;
 use Closure;
 use Monolog\Attribute\WithMonologChannel;
 use Psr\Log\LoggerInterface;
-use Symfony\Bundle\SecurityBundle\Security;
 use Symfony\Component\Security\Core\Exception\AccessDeniedException;
 use Throwable;
 
@@ -29,7 +28,7 @@ final readonly class McpToolExecutor
         private CurrentAnzuUserProvider $currentUserProvider,
         private LoggerInterface $logger,
         private McpLogger $mcpLogger,
-        private Security $security,
+        private McpToolAccessChecker $toolAccessChecker,
         private array $toolErrorExceptions = [],
     ) {
     }
@@ -46,7 +45,7 @@ final readonly class McpToolExecutor
         $error = null;
 
         try {
-            if (false === $this->security->isGranted(McpToolPermission::forTool($toolName))) {
+            if (false === $this->toolAccessChecker->isToolGranted($toolName)) {
                 $error = sprintf(self::TOOL_ACCESS_DENIED_MESSAGE, $toolName);
 
                 return [self::ERROR_KEY => $error];

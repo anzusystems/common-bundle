@@ -18,7 +18,7 @@ use AnzuSystems\CommonBundle\Mcp\McpRateLimiter;
 use AnzuSystems\CommonBundle\Mcp\McpToolExecutor;
 use AnzuSystems\CommonBundle\Mcp\Resolver\McpContextIdResolver;
 use AnzuSystems\CommonBundle\Mcp\Resolver\McpDateWindowResolver;
-use AnzuSystems\CommonBundle\Mcp\Security\Voter\McpToolPermissionVoter;
+use AnzuSystems\CommonBundle\Mcp\Security\McpToolAccessChecker;
 use AnzuSystems\CommonBundle\Mcp\Tool\GetLogsByContextTool;
 use AnzuSystems\CommonBundle\Mcp\Tool\SearchAppLogsTool;
 use AnzuSystems\CommonBundle\Mcp\Tool\SearchAuditLogsTool;
@@ -43,16 +43,16 @@ return static function (ContainerConfigurator $configurator): void {
         ->tag('monolog.logger', ['channel' => 'mcp'])
     ;
 
-    $services->set(FilterToolsListRequestHandler::class)
-        ->arg('$registry', service('mcp.registry'))
+    $services->set(McpToolAccessChecker::class)
+        ->arg('$toolPermissions', null)
         ->arg('$security', service('security.helper'))
-        ->arg('$pageSize', param('mcp.pagination_limit'))
-        ->tag('mcp.request_handler')
     ;
 
-    $services->set(McpToolPermissionVoter::class)
-        ->call('setSecurity', [service('security.helper')])
-        ->tag('security.voter')
+    $services->set(FilterToolsListRequestHandler::class)
+        ->arg('$registry', service('mcp.registry'))
+        ->arg('$toolAccessChecker', service(McpToolAccessChecker::class))
+        ->arg('$pageSize', param('mcp.pagination_limit'))
+        ->tag('mcp.request_handler')
     ;
 
     $services->set(McpLogger::class)
@@ -75,7 +75,7 @@ return static function (ContainerConfigurator $configurator): void {
         ->arg('$currentUserProvider', service(CurrentAnzuUserProvider::class))
         ->arg('$logger', service('logger'))
         ->arg('$mcpLogger', service(McpLogger::class))
-        ->arg('$security', service('security.helper'))
+        ->arg('$toolAccessChecker', service(McpToolAccessChecker::class))
         ->arg('$toolErrorExceptions', null)
         ->tag('monolog.logger', ['channel' => 'mcp'])
     ;

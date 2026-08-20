@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace AnzuSystems\CommonBundle\Mcp\Handler;
 
-use AnzuSystems\CommonBundle\Mcp\Security\McpToolPermission;
+use AnzuSystems\CommonBundle\Mcp\Security\McpToolAccessChecker;
 use Mcp\Capability\RegistryInterface;
 use Mcp\Schema\JsonRpc\Error;
 use Mcp\Schema\JsonRpc\Request;
@@ -14,7 +14,6 @@ use Mcp\Schema\Result\ListToolsResult;
 use Mcp\Schema\Tool;
 use Mcp\Server\Handler\Request\RequestHandlerInterface;
 use Mcp\Server\Session\SessionInterface;
-use Symfony\Bundle\SecurityBundle\Security;
 
 /**
  * @implements RequestHandlerInterface<ListToolsResult>
@@ -23,7 +22,7 @@ final readonly class FilterToolsListRequestHandler implements RequestHandlerInte
 {
     public function __construct(
         private RegistryInterface $registry,
-        private Security $security,
+        private McpToolAccessChecker $toolAccessChecker,
         private int $pageSize,
     ) {
     }
@@ -42,7 +41,7 @@ final readonly class FilterToolsListRequestHandler implements RequestHandlerInte
         $page = $this->registry->getTools($this->pageSize, $request->cursor);
         $grantedTools = [];
         foreach ($page->references as $reference) {
-            if ($reference instanceof Tool && $this->security->isGranted(McpToolPermission::forTool($reference->name))) {
+            if ($reference instanceof Tool && $this->toolAccessChecker->isToolGranted($reference->name)) {
                 $grantedTools[] = $reference;
             }
         }

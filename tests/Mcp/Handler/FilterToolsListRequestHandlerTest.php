@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace AnzuSystems\CommonBundle\Tests\Mcp\Handler;
 
 use AnzuSystems\CommonBundle\Mcp\Handler\FilterToolsListRequestHandler;
-use AnzuSystems\CommonBundle\Mcp\Security\McpToolPermission;
+use AnzuSystems\CommonBundle\Mcp\Security\McpToolAccessChecker;
 use Mcp\Capability\RegistryInterface;
 use Mcp\Schema\JsonRpc\Response;
 use Mcp\Schema\Page;
@@ -21,6 +21,8 @@ final class FilterToolsListRequestHandlerTest extends TestCase
 {
     private const string GRANTED_TOOL_NAME = 'list_sites';
     private const string DENIED_TOOL_NAME = 'search_app_logs';
+    private const string GRANTED_PERMISSION = 'cms_site_read';
+    private const string DENIED_PERMISSION = 'cms_log_read';
     private const int PAGE_SIZE = 20;
     private const int REQUEST_ID = 1;
 
@@ -56,8 +58,12 @@ final class FilterToolsListRequestHandlerTest extends TestCase
 
         $security = $this->createMock(Security::class);
         $security->method('isGranted')
-            ->willReturnCallback(static fn (mixed $attribute): bool => McpToolPermission::forTool(self::GRANTED_TOOL_NAME) === $attribute);
+            ->willReturnCallback(static fn (mixed $attribute): bool => self::GRANTED_PERMISSION === $attribute);
+        $toolAccessChecker = new McpToolAccessChecker(
+            [self::GRANTED_TOOL_NAME => self::GRANTED_PERMISSION, self::DENIED_TOOL_NAME => self::DENIED_PERMISSION],
+            $security,
+        );
 
-        return new FilterToolsListRequestHandler($registry, $security, self::PAGE_SIZE);
+        return new FilterToolsListRequestHandler($registry, $toolAccessChecker, self::PAGE_SIZE);
     }
 }

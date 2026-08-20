@@ -8,7 +8,7 @@ use AnzuSystems\CommonBundle\Domain\User\CurrentAnzuUserProvider;
 use AnzuSystems\CommonBundle\Mcp\Exception\McpToolInputException;
 use AnzuSystems\CommonBundle\Mcp\Log\McpLogger;
 use AnzuSystems\CommonBundle\Mcp\McpToolExecutor;
-use AnzuSystems\CommonBundle\Mcp\Security\McpToolPermission;
+use AnzuSystems\CommonBundle\Mcp\Security\McpToolAccessChecker;
 use AnzuSystems\Contracts\Entity\AnzuUser;
 use MongoDB\Collection;
 use MongoDB\InsertOneResult;
@@ -22,6 +22,7 @@ final class McpToolExecutorTest extends TestCase
 {
     private const int USER_ID = 42;
     private const string TOOL_NAME = 'test_tool';
+    private const string TOOL_PERMISSION = 'cms_test_read';
     private const string BACKEND_ERROR_MESSAGE = 'Backend is temporarily unavailable, retry the call.';
 
     private array $insertedDocuments = [];
@@ -130,15 +131,13 @@ final class McpToolExecutorTest extends TestCase
 
         $security = $this->createMock(Security::class);
         $security->method('isGranted')
-            ->willReturnCallback(
-                static fn (mixed $attribute): bool => $toolGranted && McpToolPermission::forTool(self::TOOL_NAME) === $attribute
-            );
+            ->willReturn($toolGranted);
 
         return new McpToolExecutor(
             $currentUserProvider,
             new NullLogger(),
             new McpLogger($collection),
-            $security,
+            new McpToolAccessChecker([self::TOOL_NAME => self::TOOL_PERMISSION], $security),
             $toolErrorExceptions,
         );
     }

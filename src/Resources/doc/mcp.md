@@ -68,8 +68,8 @@ infrastructure after a bundle upgrade.
   `tool_error_exceptions` into tool error results, logs every call to the monolog `mcp` channel and to the `mcpLogs`
   capped collection.
 * `StrictToolArgumentsRequestHandler` — rejects tool calls with unknown arguments.
-* `McpToolPermissionVoter` + `FilterToolsListRequestHandler` — per-tool permissions (see below); the call-side check
-  lives in `McpToolExecutor`.
+* `McpToolAccessChecker` + `FilterToolsListRequestHandler` — per-tool permissions mapped to host permissions (see
+  below); the call-side check lives in `McpToolExecutor`.
 * `SearchAppLogsTool`, `SearchAuditLogsTool`, `GetLogsByContextTool` — diagnostic tools over the shared log
   collections, correlated by `contextId`.
 
@@ -91,34 +91,26 @@ keeps the configured default. Tokens without the attributes fall back to the per
 
 ## Tool permissions
 
-Every registered tool requires the permission `mcp_tool_<toolNameCamelCase>` (`McpToolPermission::forTool()`), e.g.
-`search_app_logs` → `mcp_tool_searchAppLogs`. The permission is resolved through the standard permission model
-(`AnzuUser::getResolvedPermissions()` from the user's permissions + permission groups, `Grant::ALLOW`/`Grant::DENY`,
-super admin bypass) by `McpToolPermissionVoter`; a permission that is not granted denies the tool — there is no
+Every tool is mapped to an existing permission of the host application in `mcp.tool_permissions` (tool name →
+permission name); `McpToolAccessChecker` resolves it through the host's standard permission model
+(`Security::isGranted()` → the host voters, super admin bypass). A tool that is not mapped is denied — there is no
 implicit access.
 
-* `tools/call` of a tool without the grant returns a tool error result (`{"error": "Access denied — …"}`) from
+```yaml
+anzu_systems_common:
+    mcp:
+        tool_permissions:
+            search_app_logs: cms_log_read
+            search_audit_logs: cms_log_read
+            get_logs_by_context: cms_log_read
+            list_sites: cms_site_read
+```
+
+* `tools/call` of a tool the current user may not use returns a tool error result (`{"error": "Access denied — …"}`) from
   `McpToolExecutor::execute()` before the tool callback runs, and the denied call is written to the `mcpLogs` collection
   with the error (so every tool must route through the executor, as the bundle tools do).
 * `tools/list` returns only the tools the current user may call — the filter runs after registry pagination, so a
   page may come back with fewer tools (even none) while `nextCursor` is still set; clients follow the cursor as usual.
-
-The bundle prepends the `mcp_tool` subject with its own tool actions (`searchAppLogs`, `searchAuditLogs`,
-`getLogsByContext`) and their translations into the `permissions` config, so they show up in the admin permission
-editor. Projects add their own tools to the same subject (`McpToolPermission::toAction()` gives the action name):
-
-```yaml
-anzu_systems_common:
-    permissions:
-        config:
-            mcp_tool:
-                listPublishedArticles:
-                getArticles:
-        translation:
-            actions:
-                listPublishedArticles: { en: List published articles, sk: Zoznam publikovaných článkov }
-                getArticles: { en: Get articles, sk: Detail článkov }
-```
 
 ## Log query bounds
 
