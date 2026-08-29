@@ -97,7 +97,8 @@ final readonly class McpDateWindowResolver
             return $from;
         }
 
-        return ($until ?? $now)->modify(sprintf('-%d days', self::DATE_RANGE_MAX_DAYS));
+        return ($until ?? $now)
+            ->modify(sprintf('-%d days', self::DATE_RANGE_MAX_DAYS));
     }
 
     private function clampUntil(DateTimeImmutable $clampedFrom, ?DateTimeImmutable $until): DateTimeImmutable

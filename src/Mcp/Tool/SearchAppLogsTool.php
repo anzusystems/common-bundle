@@ -63,14 +63,16 @@ final readonly class SearchAppLogsTool
                 'until' => $until,
                 'limit' => $limit,
             ],
-            fn (): array => $this->logFinder->findAppLogs(
-                level: $level,
-                messageContains: $messageContains,
-                contextId: $this->contextIdResolver->resolveOptional($contextId),
-                from: $from,
-                until: $until,
-                limit: $limit,
-            )->toToolResponse(logsKey: 'appLogs', hint: self::HINT_CONTEXT_ID),
+            fn (): array => $this->logFinder
+                ->findAppLogs(
+                    level: $level,
+                    messageContains: $messageContains,
+                    contextId: $this->contextIdResolver->resolveOptional($contextId),
+                    from: $from,
+                    until: $until,
+                    limit: $limit,
+                )
+                ->toToolResponse(logsKey: 'appLogs', hint: self::HINT_CONTEXT_ID),
         );
     }
 }

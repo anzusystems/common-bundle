@@ -74,16 +74,18 @@ final readonly class SearchAuditLogsTool
                 'until' => $until,
                 'limit' => $limit,
             ],
-            fn (): array => $this->logFinder->findAuditLogs(new McpAuditLogFilter(
-                userId: $userId,
-                onlyErrors: $onlyErrors,
-                pathContains: $pathContains,
-                resourceName: $resourceName,
-                contextId: $this->contextIdResolver->resolveOptional($contextId),
-                from: $from,
-                until: $until,
-                limit: $limit,
-            ))->toToolResponse(logsKey: 'auditLogs', hint: self::HINT_CONTEXT_ID),
+            fn (): array => $this->logFinder
+                ->findAuditLogs(new McpAuditLogFilter(
+                    userId: $userId,
+                    onlyErrors: $onlyErrors,
+                    pathContains: $pathContains,
+                    resourceName: $resourceName,
+                    contextId: $this->contextIdResolver->resolveOptional($contextId),
+                    from: $from,
+                    until: $until,
+                    limit: $limit,
+                ))
+                ->toToolResponse(logsKey: 'auditLogs', hint: self::HINT_CONTEXT_ID),
         );
     }
 }

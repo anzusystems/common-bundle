@@ -68,12 +68,10 @@ final class McpDateWindowResolverTest extends TestCase
     public function testArticleWindowWithoutDatesIsNotTruncated(): void
     {
         $window = $this->resolver->resolveArticleWindow(null, null);
+        $length = $window->from->diff($window->until);
 
         self::assertFalse($window->truncated);
-        self::assertSame(
-            McpDateWindowResolver::DATE_RANGE_MAX_DAYS,
-            (int) $window->from->diff($window->until)->days,
-        );
+        self::assertSame(McpDateWindowResolver::DATE_RANGE_MAX_DAYS, (int) $length->days);
     }
 
     public function testOpenEndedArticleWindowOlderThanCapIsTruncated(): void
