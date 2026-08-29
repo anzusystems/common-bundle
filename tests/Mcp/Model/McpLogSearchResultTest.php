@@ -17,7 +17,7 @@ final class McpLogSearchResultTest extends TestCase
 
     public function testCompleteResultCarriesNoWarnings(): void
     {
-        $response = $this->createResult(truncated: false, limit: 20, requestedLimit: 20)
+        $response = $this->createSearchResult(truncated: false, limit: 20, requestedLimit: 20)
             ->toToolResponse(logsKey: self::LOGS_KEY, hint: self::HINT);
 
         self::assertSame([['message' => 'first']], $response[self::LOGS_KEY]);
@@ -30,7 +30,7 @@ final class McpLogSearchResultTest extends TestCase
 
     public function testTruncatedWindowAndClampedLimitAreBothReported(): void
     {
-        $response = $this->createResult(truncated: true, limit: 50, requestedLimit: 500)
+        $response = $this->createSearchResult(truncated: true, limit: 50, requestedLimit: 500)
             ->toToolResponse(logsKey: self::LOGS_KEY, hint: self::HINT);
 
         self::assertCount(2, $response[McpToolExecutor::WARNINGS_KEY]);
@@ -38,7 +38,7 @@ final class McpLogSearchResultTest extends TestCase
         self::assertStringContainsString('500', $response[McpToolExecutor::WARNINGS_KEY][1]);
     }
 
-    private function createResult(bool $truncated, int $limit, int $requestedLimit): McpLogSearchResult
+    private function createSearchResult(bool $truncated, int $limit, int $requestedLimit): McpLogSearchResult
     {
         return new McpLogSearchResult(
             [['message' => 'first']],
