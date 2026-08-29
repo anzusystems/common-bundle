@@ -18,6 +18,7 @@ use AnzuSystems\CommonBundle\Mcp\McpRateLimiter;
 use AnzuSystems\CommonBundle\Mcp\McpToolExecutor;
 use AnzuSystems\CommonBundle\Mcp\Resolver\McpContextIdResolver;
 use AnzuSystems\CommonBundle\Mcp\Resolver\McpDateWindowResolver;
+use AnzuSystems\CommonBundle\Mcp\Resolver\McpPageWindowResolver;
 use AnzuSystems\CommonBundle\Mcp\Security\McpToolAccessChecker;
 use AnzuSystems\CommonBundle\Mcp\Tool\GetLogsByContextTool;
 use AnzuSystems\CommonBundle\Mcp\Tool\SearchAppLogsTool;
@@ -35,6 +36,8 @@ return static function (ContainerConfigurator $configurator): void {
     $services->set(McpContextIdResolver::class);
 
     $services->set(McpDateWindowResolver::class);
+
+    $services->set(McpPageWindowResolver::class);
 
     $services->set(StrictToolArgumentsRequestHandler::class)
         ->arg('$registry', service('mcp.registry'))

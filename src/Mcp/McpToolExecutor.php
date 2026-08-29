@@ -18,6 +18,7 @@ use Throwable;
 final readonly class McpToolExecutor
 {
     public const string ERROR_KEY = 'error';
+    public const string WARNINGS_KEY = 'warnings';
 
     private const string TOOL_ACCESS_DENIED_MESSAGE = 'Access denied — the current MCP user is not allowed to use the tool "%s".';
 

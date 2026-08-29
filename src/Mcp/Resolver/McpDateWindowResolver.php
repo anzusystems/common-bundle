@@ -23,9 +23,11 @@ final readonly class McpDateWindowResolver
     {
         $from = $this->parseDateTime('publishedFrom', $publishedFrom);
         $until = $this->parseDateTime('publishedUntil', $publishedUntil);
-        $clampedFrom = $this->clampFrom($from, $until);
+        $now = AnzuApp::date();
+        $clampedFrom = $this->clampFrom($from, $until, $now);
+        $clampedUntil = $this->clampUntil($clampedFrom, $until);
 
-        return new McpDateWindow($clampedFrom, $this->clampUntil($clampedFrom, $until));
+        return new McpDateWindow($clampedFrom, $clampedUntil, $this->isUntilTruncated($from, $until, $clampedUntil, $now));
     }
 
     public function resolveLogWindow(?string $from, ?string $until): McpDateWindow
@@ -36,8 +38,9 @@ final readonly class McpDateWindowResolver
         if ($resolvedUntil < $resolvedFrom) {
             throw new McpToolInputException(self::ERROR_INVERTED_LOG_WINDOW);
         }
+        $clampedFrom = $this->clampLogFrom($resolvedFrom, $resolvedUntil);
 
-        return new McpDateWindow($this->clampLogFrom($resolvedFrom, $resolvedUntil), $resolvedUntil);
+        return new McpDateWindow($clampedFrom, $resolvedUntil, $clampedFrom > $resolvedFrom);
     }
 
     public function parseDateTime(string $paramName, ?string $value): ?DateTimeImmutable
@@ -62,6 +65,22 @@ final readonly class McpDateWindowResolver
         }
     }
 
+    private function isUntilTruncated(
+        ?DateTimeImmutable $from,
+        ?DateTimeImmutable $until,
+        DateTimeImmutable $clampedUntil,
+        DateTimeImmutable $now,
+    ): bool {
+        if ($until instanceof DateTimeImmutable) {
+            return $clampedUntil < $until;
+        }
+        if ($from instanceof DateTimeImmutable) {
+            return $clampedUntil < $now;
+        }
+
+        return false;
+    }
+
     private function clampLogFrom(DateTimeImmutable $from, DateTimeImmutable $until): DateTimeImmutable
     {
         $minFrom = $until->modify(sprintf('-%d days', self::LOG_WINDOW_MAX_DAYS));
@@ -72,13 +91,13 @@ final readonly class McpDateWindowResolver
         return $from;
     }
 
-    private function clampFrom(?DateTimeImmutable $from, ?DateTimeImmutable $until): DateTimeImmutable
+    private function clampFrom(?DateTimeImmutable $from, ?DateTimeImmutable $until, DateTimeImmutable $now): DateTimeImmutable
     {
         if ($from instanceof DateTimeImmutable) {
             return $from;
         }
 
-        return ($until ?? AnzuApp::date())->modify(sprintf('-%d days', self::DATE_RANGE_MAX_DAYS));
+        return ($until ?? $now)->modify(sprintf('-%d days', self::DATE_RANGE_MAX_DAYS));
     }
 
     private function clampUntil(DateTimeImmutable $clampedFrom, ?DateTimeImmutable $until): DateTimeImmutable

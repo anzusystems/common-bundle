@@ -20,8 +20,10 @@ use Mcp\Capability\Attribute\Schema;
         . 'Diagnostic workflow: when a user reports a failed action (e.g. could not save a record), search with '
         . 'their userId, onlyErrors, and a time window around the incident, then pass the failing record\'s contextId '
         . 'to get_logs_by_context to see the application errors behind it; the same contextId correlates logs across '
-        . 'the services of this platform. The time window defaults to the last day and is capped at 31 days; results '
-        . 'are newest first and long fields are truncated.',
+        . 'the services of this platform. The time window defaults to the last day and is capped at 31 days: the '
+        . 'response echoes the effective from and until, and a longer requested window is shortened and reported in '
+        . 'warnings — repeat the search on the remaining days. Results are newest first and long fields are '
+        . 'truncated.',
 )]
 final readonly class SearchAuditLogsTool
 {
@@ -72,19 +74,16 @@ final readonly class SearchAuditLogsTool
                 'until' => $until,
                 'limit' => $limit,
             ],
-            fn (): array => [
-                'auditLogs' => $this->logFinder->findAuditLogs(new McpAuditLogFilter(
-                    userId: $userId,
-                    onlyErrors: $onlyErrors,
-                    pathContains: $pathContains,
-                    resourceName: $resourceName,
-                    contextId: $this->contextIdResolver->resolveOptional($contextId),
-                    from: $from,
-                    until: $until,
-                    limit: $limit,
-                )),
-                'hint' => self::HINT_CONTEXT_ID,
-            ],
+            fn (): array => $this->logFinder->findAuditLogs(new McpAuditLogFilter(
+                userId: $userId,
+                onlyErrors: $onlyErrors,
+                pathContains: $pathContains,
+                resourceName: $resourceName,
+                contextId: $this->contextIdResolver->resolveOptional($contextId),
+                from: $from,
+                until: $until,
+                limit: $limit,
+            ))->toToolResponse(logsKey: 'auditLogs', hint: self::HINT_CONTEXT_ID),
         );
     }
 }

@@ -17,8 +17,9 @@ use Mcp\Capability\Attribute\Schema;
         . 'case-insensitive message substring, or a contextId taken from an audit log record. Diagnostic workflow: '
         . 'find the failed request via search_audit_logs first, then look up the application errors behind it either '
         . 'here by contextId or with get_logs_by_context; the same contextId correlates logs across the services of '
-        . 'this platform. The time window defaults to the last day and is capped at 31 days; results are newest first '
-        . 'and long messages are truncated.',
+        . 'this platform. The time window defaults to the last day and is capped at 31 days: the response echoes the '
+        . 'effective from and until, and a longer requested window is shortened and reported in warnings — '
+        . 'repeat the search on the remaining days. Results are newest first and long messages are truncated.',
 )]
 final readonly class SearchAppLogsTool
 {
@@ -62,17 +63,14 @@ final readonly class SearchAppLogsTool
                 'until' => $until,
                 'limit' => $limit,
             ],
-            fn (): array => [
-                'appLogs' => $this->logFinder->findAppLogs(
-                    level: $level,
-                    messageContains: $messageContains,
-                    contextId: $this->contextIdResolver->resolveOptional($contextId),
-                    from: $from,
-                    until: $until,
-                    limit: $limit,
-                ),
-                'hint' => self::HINT_CONTEXT_ID,
-            ],
+            fn (): array => $this->logFinder->findAppLogs(
+                level: $level,
+                messageContains: $messageContains,
+                contextId: $this->contextIdResolver->resolveOptional($contextId),
+                from: $from,
+                until: $until,
+                limit: $limit,
+            )->toToolResponse(logsKey: 'appLogs', hint: self::HINT_CONTEXT_ID),
         );
     }
 }

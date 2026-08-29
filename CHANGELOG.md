@@ -1,12 +1,14 @@
 ## [Unreleased]
 
 ### Features
+* MCP pagination reports its own clamping: new `McpPageWindowResolver` + `McpPageWindow` (page capped at `PAGE_MAX` 200, limit at the caller's maximum) give host tools one place to clamp page and limit, exposing `isClamped()`, `getOffset()` and `getReachableRows()`. New `McpToolExecutor::WARNINGS_KEY` (`warnings`, a `list<string>`) is the one convention for reporting a narrowed result, for bundle and host tools alike.
+* MCP date windows report their own truncation: `McpDateWindow` carries `truncated`, set by `McpDateWindowResolver` when the requested range was cut down to the 31-day cap (article window: `until` pulled back to `from + 31 days` or, with no `publishedUntil`, back from now; log window: `from` pushed forward to `until - 31 days`). `search_app_logs` and `search_audit_logs` now echo the effective `from`/`until` and add a `warnings` entry when the window or the limit was shortened, so a partial result can no longer be read as a complete one.
 * Per-tool MCP permissions: `mcp.tool_permissions` maps every tool name to an existing host permission, resolved by `McpToolAccessChecker` through the host's standard permission model (unmapped tool = denied, super admin bypass). `McpToolExecutor::execute()` answers unauthorized `tools/call` with a tool error result logged into `mcpLogs` before running the tool callback (BC: the executor now requires `McpToolAccessChecker`), `FilterToolsListRequestHandler` hides unauthorized tools from `tools/list`.
 * Log search queries (`JournalLogRepository::findLatest()`, `AuditLogRepository::findLatest()`, `findLatestByContextId()`, `McpLogRepository::findLatestByContextId()`) are bounded and sorted by the built-in `_id` index instead of the unindexed `datetime` sort; new `MongoHelper` with `minObjectIdFor()` / `maxObjectIdFor()` / `sortNewestFirst()` and `FIELD_ID` / `SORT_DESC` constants. See the "Log query bounds" section of `src/Resources/doc/mcp.md` for the slack assumptions.
 * `McpRateLimiter` honours a per-caller override from the security token attributes `McpRateLimiter::TOKEN_ATTRIBUTE_KEY` (bucket key) and `McpRateLimiter::TOKEN_ATTRIBUTE_LIMIT` (limit replacing the configured default), so authenticators can rate-limit per personal access token; the limiter now takes the configured `limit` + `interval` and the storage directly (the `anzu_systems_common.mcp.rate_limiter_factory` service is gone).
 
 ### Changes
-* BC change: `AbstractLogRepository::FIELD_ID` (protected) moved to `MongoHelper::FIELD_ID`; `McpToolExecutor` requires `McpToolAccessChecker` (its tool-permission check).
+* BC change: `AbstractLogRepository::FIELD_ID` (protected) moved to `MongoHelper::FIELD_ID`; `McpToolExecutor` requires `McpToolAccessChecker` (its tool-permission check); `McpLogFinder::findAppLogs()` and `findAuditLogs()` return a `McpLogSearchResult` (rows plus the resolved `McpDateWindow` and the effective/requested limit) instead of a plain row list, and `McpLogSearchResult::toToolResponse()` builds the log tool response envelope from it.
 
 ## [12.0.0](https://github.com/anzusystems/common-bundle/compare/11.3.0...12.0.0) (2026-07-22)
 

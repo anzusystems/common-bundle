@@ -112,6 +112,27 @@ anzu_systems_common:
 * `tools/list` returns only the tools the current user may call — the filter runs after registry pagination, so a
   page may come back with fewer tools (even none) while `nextCursor` is still set; clients follow the cursor as usual.
 
+## Date windows
+
+`McpDateWindowResolver` caps both the article window (`resolveArticleWindow()`) and the log window
+(`resolveLogWindow()`) at `DATE_RANGE_MAX_DAYS` (31). The cap is applied silently to the effective window, so
+`McpDateWindow::$truncated` reports whether the caller asked for more than it got:
+
+* `resolveArticleWindow()` — `true` when the resolved `until` is earlier than the requested one, or (when `publishedUntil`
+  was omitted) earlier than now, i.e. whenever the range was cut short at `publishedFrom + 31 days`.
+* `resolveLogWindow()` — `true` when `from` was moved forward to `until - 31 days`.
+
+`McpPageWindowResolver` does the same for pagination: `resolve($page, $limit, $limitMax)` clamps the page at
+`PAGE_MAX` (200) and the limit at the caller's maximum, and the returned `McpPageWindow` reports `isClamped()` plus
+the offset and the number of rows still reachable through pagination.
+
+Tools must surface both. The single convention is `McpToolExecutor::WARNINGS_KEY` (`warnings`): a `list<string>` of
+plain-language sentences saying what was narrowed and what to do about it, present only when something was.
+`McpLogSearchResult::toToolResponse()` builds the log tool response envelope that way — rows, the effective
+`from`/`until`, the effective `limit`, the tool hint, and `warnings` when the window or the limit was shortened — so a
+client cannot mistake a partial result for a complete one. Host tools are expected to use the same key rather than
+inventing their own.
+
 ## Log query bounds
 
 The log repositories behind the diagnostic tools (`JournalLogRepository::findLatest()`, `AuditLogRepository::findLatest()`,

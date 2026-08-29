@@ -7,6 +7,7 @@ namespace AnzuSystems\CommonBundle\Mcp\Log;
 use AnzuSystems\CommonBundle\Log\Repository\AuditLogRepository;
 use AnzuSystems\CommonBundle\Log\Repository\JournalLogRepository;
 use AnzuSystems\CommonBundle\Mcp\Model\McpAuditLogFilter;
+use AnzuSystems\CommonBundle\Mcp\Model\McpLogSearchResult;
 use AnzuSystems\CommonBundle\Mcp\Resolver\McpDateWindowResolver;
 use AnzuSystems\Contracts\AnzuApp;
 use DateTimeImmutable;
@@ -32,10 +33,7 @@ final readonly class McpLogFinder
     ) {
     }
 
-    /**
-     * @return list<array<string, mixed>>
-     */
-    public function findAuditLogs(McpAuditLogFilter $filter): array
+    public function findAuditLogs(McpAuditLogFilter $filter): McpLogSearchResult
     {
         $window = $this->dateWindowResolver->resolveLogWindow($filter->from, $filter->until);
         $documents = $this->auditLogRepository->findLatest(
@@ -49,12 +47,14 @@ final readonly class McpLogFinder
             limit: $this->clampLimit($filter->limit),
         );
 
-        return array_map($this->mapAuditLog(...), $documents);
+        return new McpLogSearchResult(
+            array_map($this->mapAuditLog(...), $documents),
+            $window,
+            $this->clampLimit($filter->limit),
+            $filter->limit,
+        );
     }
 
-    /**
-     * @return list<array<string, mixed>>
-     */
     public function findAppLogs(
         ?string $level,
         ?string $messageContains,
@@ -62,7 +62,7 @@ final readonly class McpLogFinder
         ?string $from,
         ?string $until,
         int $limit,
-    ): array {
+    ): McpLogSearchResult {
         $window = $this->dateWindowResolver->resolveLogWindow($from, $until);
         $documents = $this->journalLogRepository->findLatest(
             from: $window->from,
@@ -73,7 +73,12 @@ final readonly class McpLogFinder
             limit: $this->clampLimit($limit),
         );
 
-        return array_map($this->mapAppLog(...), $documents);
+        return new McpLogSearchResult(
+            array_map($this->mapAppLog(...), $documents),
+            $window,
+            $this->clampLimit($limit),
+            $limit,
+        );
     }
 
     /**
