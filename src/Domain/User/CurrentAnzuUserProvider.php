@@ -9,8 +9,9 @@ use AnzuSystems\Contracts\Entity\AnzuUser;
 use Doctrine\ORM\EntityManagerInterface;
 use LogicException;
 use Symfony\Bundle\SecurityBundle\Security;
+use Symfony\Contracts\Service\ResetInterface;
 
-class CurrentAnzuUserProvider
+class CurrentAnzuUserProvider implements ResetInterface
 {
     private ?AnzuUser $currentUser = null;
 
@@ -22,6 +23,11 @@ class CurrentAnzuUserProvider
         private readonly EntityManagerInterface $entityManager,
         private readonly string $userEntityClass,
     ) {
+    }
+
+    public function reset(): void
+    {
+        $this->currentUser = null;
     }
 
     public function getCurrentUser(): AnzuUser
