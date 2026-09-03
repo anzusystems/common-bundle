@@ -1,4 +1,14 @@
-## [12.0.0](https://github.com/anzusystems/common-bundle/compare/11.3.0...12.0.0) (2026-07-22)
+## [11.4.2](https://github.com/anzusystems/common-bundle/compare/11.4.1...11.4.2) (2026-09-02)
+
+### Changes
+* `CurrentAnzuUserProvider` implements `ResetInterface` and its service carries the `kernel.reset` tag, so the memoized current user is dropped whenever the kernel resets its services (between requests of one process, between tests that keep one kernel per class). Subclasses inherit it; an application service definition with autoconfiguration picks the tag up automatically.
+
+## [11.4.1](https://github.com/anzusystems/common-bundle/compare/11.4.0...11.4.1) (2026-08-17)
+
+### Changes
+* `symfony/mcp-bundle` requirement raised from `^0.10` to `^0.11` (the `suggest` entry accepts `^0.10|^0.11`); the `conflict` moves to `>=0.12`.
+
+## [11.4.0](https://github.com/anzusystems/common-bundle/compare/11.3.0...11.4.0) (2026-08-05)
 
 ### Features
 * New opt-in `mcp` config section (disabled by default — upgrading without enabling it requires no new packages, env variables or infrastructure) built on `symfony/mcp-bundle`: `McpController` with streamable HTTP transport, DNS-rebinding protection (`allowed_hosts`, required non-empty) and a per-user sliding-window rate limit; `McpToolExecutor` translating `McpToolInputException`, `AccessDeniedException` and a configurable `tool_error_exceptions` FQCN-to-message map into tool error results while logging every call to the `mcp` monolog channel and a capped `mcpLogs` mongo collection; `StrictToolArgumentsRequestHandler` rejecting tool calls with unknown arguments.
