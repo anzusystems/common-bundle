@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace AnzuSystems\CommonBundle\DependencyInjection\CompilerPass;
 
 use AnzuSystems\CommonBundle\Mcp\Controller\McpController;
+use LogicException;
 use Symfony\Component\DependencyInjection\Compiler\CompilerPassInterface;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 
@@ -20,6 +21,10 @@ final class McpCompilerPass implements CompilerPassInterface
         }
 
         $serverName = $container->getParameter(self::SERVER_NAME_PARAM);
+        if (false === is_string($serverName)) {
+            throw new LogicException(sprintf('The "%s" parameter must be the mcp server name.', self::SERVER_NAME_PARAM));
+        }
+
         $container
             ->setAlias(sprintf('mcp.server.%s.controller', $serverName), McpController::class)
             ->setPublic(true);
