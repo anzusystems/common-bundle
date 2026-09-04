@@ -48,6 +48,7 @@ return static function (ContainerConfigurator $configurator): void {
         ->arg('$security', service('security.helper'))
         ->arg('$entityManager', service(EntityManagerInterface::class))
         ->arg('$userEntityClass', null)
+        ->tag('kernel.reset', ['method' => 'reset'])
     ;
 
     $services->set(ResourceLocker::class)
