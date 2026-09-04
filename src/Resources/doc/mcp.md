@@ -13,26 +13,29 @@ infrastructure after a bundle upgrade.
    ```console
    $ composer require symfony/mcp-bundle symfony/rate-limiter
    ```
-2. Register `Symfony\AI\McpBundle\McpBundle` in `config/bundles.php` and configure it
-   (`config/packages/mcp.php` — server name, version, instructions, `discovery.scan_dirs` for the project's own tools,
-   `client_transports: { http: true }`, `http.path`, `session.store: cache`). `client_transports.http` is mandatory —
-   without it McpBundle registers neither the PSR HTTP factories nor the `mcp` routing loader. The bundle prepends its
-   own tool directory to `discovery.scan_dirs` and provides the `cache.mcp.sessions` service, so only project-specific
-   values belong here. Two discovery caveats: once any `scan_dirs` value exists (including the prepended one), the
-   McpBundle default `['src']` no longer applies — always list the project tool directories explicitly; and the
-   prepended vendor path assumes the default composer `vendor` directory relative to the project root.
+2. Register `Symfony\AI\McpBundle\McpBundle` in `config/bundles.php` and configure one server under `servers`
+   (`config/packages/mcp.php` — `name`, `version`, `instructions`, `transports: { http: true }`, `http.path`, and
+   `registry.tools` listing the project's own tool namespace). `transports.http` is mandatory — without it McpBundle
+   registers neither the controller nor the route for that server. McpBundle 0.12 replaced file-based discovery:
+   a tool is exposed when its service carries the `mcp.tool` tag (autoconfigured from `#[McpTool]`) **and** matches a
+   `registry` pattern, so a namespace prefix must end with a trailing backslash. The bundle appends its own tools and
+   the session store to that server, so only project-specific values belong here.
 3. Enable the section (requires the `logs` section to be enabled; `allowed_hosts` must be non-empty — an empty list
-   would reject every request with 403):
+   would reject every request with 403). `server_name` must match the key used under `mcp.servers`, because the bundle
+   attaches its controller, tools and session store to that server:
    ```yaml
    anzu_systems_common:
        mcp:
            enabled: true
+           server_name: 'default'
            allowed_hosts: '%env(csv:ANZU_MCP_ALLOWED_HOSTS)%'
            tool_error_exceptions:
                App\Exception\SomeBackendException: 'Backend is temporarily unavailable, retry the call.'
            rate_limiter:
                limit: 120
                interval: '1 minute'
+               elevated_role: ROLE_SYS_MCP
+               elevated_limit: 600
                cache_pool: 'some_redis.cache'
            session:
                cache_pool: 'some_redis.cache'
@@ -44,8 +47,10 @@ infrastructure after a bundle upgrade.
    ```
    The `logs.mongo` connection options (`uri`, `username`, `password`, `database`, `ssl`) default to the
    `logs.journal.mongo` connection, so they only need to be set when the mcp log collection lives elsewhere.
-   The `session.cache_pool` option takes effect only while the McpBundle `http.session` config keeps its default
-   `cache_pool: cache.mcp.sessions` — setting a custom pool there makes this option a silent no-op.
+   `session.cache_pool` is a PSR-6 pool; the bundle wraps it in a `Psr16Cache` and prepends it as the McpBundle
+   `session` store of the configured server, so the McpBundle `session` config needs no host-side value.
+   `allowed_hosts` stays on this side rather than in the McpBundle `http.allowed_hosts`, because that option is
+   validated as an array at compile time and an env-driven list is still an unresolved placeholder by then.
 4. Import the MCP route (`config/routes/mcp.php`):
    ```php
    $routes->import('.', 'mcp');
@@ -61,38 +66,59 @@ infrastructure after a bundle upgrade.
 
 ## Provided services
 
-* `McpController` (alias `mcp.server.controller`) — streamable HTTP transport endpoint with DNS-rebinding protection
-  (`allowed_hosts`) and a sliding-window rate limit (per user, or per caller when the security token carries the
-  rate-limit attributes — see below).
-* `McpToolExecutor` — wraps tool callbacks: converts `McpToolInputException`, `AccessDeniedException` and configured
-  `tool_error_exceptions` into tool error results, logs every call to the monolog `mcp` channel and to the `mcpLogs`
-  capped collection.
+* `McpController` (alias `mcp.server.<server_name>.controller`) — streamable HTTP transport endpoint with
+  DNS-rebinding protection
+  (`allowed_hosts`, applied through the McpBundle `MiddlewareFactory` so the SDK's other default middleware stays in
+  place) and a sliding-window rate limit per user, charged one token per JSON-RPC message of the request (members of
+  `rate_limiter.elevated_role` get `rate_limiter.elevated_limit` — see below).
+* `McpToolExecutor` — wraps tool callbacks: checks the tool permission, validates the request object with the Symfony
+  validator, serializes an object result with the anzu serializer, converts `McpToolInputException`,
+  `AccessDeniedException` and configured `tool_error_exceptions` into `CallToolResult`s with `isError: true`, logs
+  every call (with the serialized request as `params`) to the monolog `mcp` channel and to the `mcpLogs` capped
+  collection (see below).
 * `StrictToolArgumentsRequestHandler` — rejects tool calls with unknown arguments.
 * `McpToolAccessChecker` + `FilterToolsListRequestHandler` — per-tool permissions mapped to host permissions (see
   below); the call-side check lives in `McpToolExecutor`.
 * `SearchAppLogsTool`, `SearchAuditLogsTool`, `GetLogsByContextTool` — diagnostic tools over the shared log
   collections, correlated by `contextId`.
 
-## Rate limit override per caller
+## Rate limit by role
 
 `McpRateLimiter` keys the sliding window by the current user id and applies the configured `rate_limiter.limit`.
-An authenticator can override both by setting attributes on the security token:
+When `rate_limiter.elevated_role` is set and `Security::isGranted()` grants it to the current user (so role hierarchy
+applies), `rate_limiter.elevated_limit` replaces the configured limit for that user — `null` or a non-positive
+`elevated_limit`, or an unset role, keeps the default. The configured `rate_limiter.interval` applies to every bucket.
 
-```php
-$token->setAttribute(McpRateLimiter::TOKEN_ATTRIBUTE_KEY, 'pat_' . $personalAccessToken->getId());
-$token->setAttribute(McpRateLimiter::TOKEN_ATTRIBUTE_LIMIT, $personalAccessToken->getRateLimit());
-```
+The endpoint accepts JSON-RPC batches, so `McpController` counts the messages of the request body and charges that
+many tokens (clamped at the bucket size), otherwise one batch of up to `MessageFactory::DEFAULT_MAX_BATCH_SIZE` (100)
+tool calls would cost a single token. A request that is not a JSON array of messages costs one token.
 
-`TOKEN_ATTRIBUTE_KEY` (string) selects the bucket (e.g. one bucket per personal access token), `TOKEN_ATTRIBUTE_LIMIT`
-(positive `int`) replaces the configured limit for that bucket — `null`, a missing attribute or a non-positive value
-keeps the configured default. Tokens without the attributes fall back to the per-user bucket. The configured
-`rate_limiter.interval` applies to every bucket. The personal access token authenticator from
-[anzusystems/auth-bundle](https://github.com/anzusystems/auth-bundle) sets both attributes.
+## Tool requests and responses
+
+Every tool routes through
+`McpToolExecutor::execute(string $toolName, ?object $request, Closure $callback): CallToolResult`:
+
+1. the tool permission is checked (see below);
+2. when `$request` is an object it is validated with the Symfony validator — any violation answers the call with a
+   tool error `Invalid arguments: <propertyPath>: <message> …` before the callback runs, so constraint messages should
+   be plain English sentences ending with a period (e.g. `limit must be at least 1.`);
+3. the callback runs; an object result is turned into the tool result array with the anzu serializer
+   (`#[Serialize]` properties/getters), an array result is used as is;
+4. the payload is returned as a `CallToolResult` carrying it as `structuredContent` — a tool error additionally sets
+   `isError: true`, so the protocol client sees a failed call instead of a successful one with an `error` key;
+5. the call is logged with `params` = the serialized request (`[]` for a `null` request).
+
+The bundle tools follow this shape: `Mcp/Model/Request/*Request` (readonly, `#[Serialize]` + `#[Assert]`) built from
+the `#[Schema]` parameters, `McpLogFinder` returning a `McpLogSearchResult` / `McpLogsByContextResult` (facts only),
+and `Mcp/Model/Response/*Response` owning the JSON shape, the hint and the warning texts. Log rows that are already
+serialized arrays are exposed through `#[Serialize(handler: RawArrayHandler::class)]`, which passes them through the
+serializer untouched (the default array handling re-indexes nested maps).
 
 ## Tool permissions
 
 Every tool is mapped to an existing permission of the host application in `mcp.tool_permissions` (tool name →
-permission name); `McpToolAccessChecker` resolves it through the host's standard permission model
+permission name; the map must not be empty — the bundle fails at compile time otherwise, because an empty map hides
+every tool and denies every call); `McpToolAccessChecker` resolves it through the host's standard permission model
 (`Security::isGranted()` → the host voters, super admin bypass). A tool that is not mapped is denied — there is no
 implicit access.
 
@@ -106,9 +132,10 @@ anzu_systems_common:
             list_sites: cms_site_read
 ```
 
-* `tools/call` of a tool the current user may not use returns a tool error result (`{"error": "Access denied — …"}`) from
-  `McpToolExecutor::execute()` before the tool callback runs, and the denied call is written to the `mcpLogs` collection
-  with the error (so every tool must route through the executor, as the bundle tools do).
+* `tools/call` of a tool the current user may not use returns a tool error result (`isError: true` with
+  `{"error": "Access denied — …"}`) from `McpToolExecutor::execute()` before the tool callback runs, and the denied
+  call is written to the `mcpLogs` collection with the error (so every tool must route through the executor, as the
+  bundle tools do).
 * `tools/list` returns only the tools the current user may call — the filter runs after registry pagination, so a
   page may come back with fewer tools (even none) while `nextCursor` is still set; clients follow the cursor as usual.
 
@@ -127,10 +154,12 @@ anzu_systems_common:
 the offset and the number of rows still reachable through pagination.
 
 Tools must surface both. The single convention is `McpToolExecutor::WARNINGS_KEY` (`warnings`): a `list<string>` of
-plain-language sentences saying what was narrowed and what to do about it, present only when something was.
-`McpLogSearchResult::toToolResponse()` builds the log tool response envelope that way — rows, the effective
-`from`/`until`, the effective `limit`, the tool hint, and `warnings` when the window or the limit was shortened — so a
-client cannot mistake a partial result for a complete one. Host tools are expected to use the same key rather than
+plain-language sentences saying what was narrowed and what to do about it, always present (`[]` when nothing was).
+`McpAppLogSearchResponse` / `McpAuditLogSearchResponse` build the log tool response envelope that way from the
+`McpLogSearchResult` — rows, the effective `from`/`until`, the effective `limit`, the tool hint, and the `warnings`
+for a shortened window or for results that were actually cut off — so a client cannot mistake a partial result for a
+complete one. `McpLogFinder` fetches one row beyond the effective limit to tell the two apart, so the warning reports
+real truncation rather than a clamped `limit` argument. Host tools are expected to use the same key rather than
 inventing their own.
 
 ## Log query bounds

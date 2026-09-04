@@ -16,11 +16,10 @@ use Symfony\Component\RateLimiter\Storage\StorageInterface;
 
 final readonly class McpRateLimiter
 {
-    public const string TOKEN_ATTRIBUTE_KEY = 'mcp_rate_limit_key';
-    public const string TOKEN_ATTRIBUTE_LIMIT = 'mcp_rate_limit';
-
     private const string LIMITER_ID = 'mcp';
     private const string LIMITER_POLICY = 'sliding_window';
+    private const int LIMIT_MIN = 1;
+    private const int MESSAGES_MIN = 1;
 
     public function __construct(
         private int $limit,
@@ -28,6 +27,8 @@ final readonly class McpRateLimiter
         private StorageInterface $storage,
         private CurrentAnzuUserProvider $currentUserProvider,
         private Security $security,
+        private ?string $elevatedRole = null,
+        private ?int $elevatedLimit = null,
     ) {
     }
 
@@ -35,7 +36,7 @@ final readonly class McpRateLimiter
      * @throws AccessDeniedHttpException
      * @throws TooManyRequestsHttpException
      */
-    public function checkRateLimit(): void
+    public function checkRateLimit(int $messages = self::MESSAGES_MIN): void
     {
         $userId = (int) $this->currentUserProvider->getCurrentUser()
             ->getId();
@@ -43,38 +44,34 @@ final readonly class McpRateLimiter
             throw new AccessDeniedHttpException('Anonymous access to the MCP endpoint is not allowed.');
         }
 
-        $key = $this->resolveTokenAttribute(self::TOKEN_ATTRIBUTE_KEY);
-        $limit = $this->createLimiter(
-            is_string($key) && StringHelper::isNotEmpty($key) ? $key : (string) $userId,
-            $this->resolveTokenAttribute(self::TOKEN_ATTRIBUTE_LIMIT),
-        )->consume();
-        if ($limit->isAccepted()) {
+        $limit = $this->resolveLimit();
+        $rateLimit = $this->createLimiter((string) $userId, $limit)
+            ->consume($this->resolveTokens($messages, $limit));
+        if ($rateLimit->isAccepted()) {
             return;
         }
 
-        $retryAfter = $limit->getRetryAfter();
+        $retryAfter = $rateLimit->getRetryAfter();
         $retryAfterSeconds = max(0, $retryAfter->getTimestamp() - time());
 
         throw new TooManyRequestsHttpException(
             $retryAfterSeconds,
             'Too many requests',
             headers: [
-                'X-RateLimit-Limit' => (string) $limit->getLimit(),
-                'X-RateLimit-Remaining' => (string) $limit->getRemainingTokens(),
+                'X-RateLimit-Limit' => (string) $rateLimit->getLimit(),
+                'X-RateLimit-Remaining' => (string) $rateLimit->getRemainingTokens(),
                 'X-RateLimit-Reset' => (string) $retryAfter->getTimestamp(),
             ],
         );
     }
 
-    private function resolveTokenAttribute(string $name): mixed
+    private function resolveTokens(int $messages, int $limit): int
     {
-        return $this->security->getToken()?->getAttributes()[$name] ?? null;
+        return min(max($messages, self::MESSAGES_MIN), $limit);
     }
 
-    private function createLimiter(string $key, mixed $limitOverride): LimiterInterface
+    private function createLimiter(string $key, int $limit): LimiterInterface
     {
-        $limit = is_int($limitOverride) && $limitOverride > 0 ? $limitOverride : $this->limit;
-
         return new RateLimiterFactory(
             [
                 'id' => self::LIMITER_ID,
@@ -84,5 +81,20 @@ final readonly class McpRateLimiter
             ],
             $this->storage,
         )->create($key);
+    }
+
+    private function resolveLimit(): int
+    {
+        if (null === $this->elevatedRole || StringHelper::isEmpty($this->elevatedRole)) {
+            return $this->limit;
+        }
+        if (null === $this->elevatedLimit || $this->elevatedLimit < self::LIMIT_MIN) {
+            return $this->limit;
+        }
+        if ($this->security->isGranted($this->elevatedRole)) {
+            return $this->elevatedLimit;
+        }
+
+        return $this->limit;
     }
 }

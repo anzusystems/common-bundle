@@ -23,6 +23,7 @@ use AnzuSystems\CommonBundle\Mcp\Security\McpToolAccessChecker;
 use AnzuSystems\CommonBundle\Mcp\Tool\GetLogsByContextTool;
 use AnzuSystems\CommonBundle\Mcp\Tool\SearchAppLogsTool;
 use AnzuSystems\CommonBundle\Mcp\Tool\SearchAuditLogsTool;
+use AnzuSystems\SerializerBundle\Serializer;
 
 return static function (ContainerConfigurator $configurator): void {
     $services = $configurator->services();
@@ -40,7 +41,7 @@ return static function (ContainerConfigurator $configurator): void {
     $services->set(McpPageWindowResolver::class);
 
     $services->set(StrictToolArgumentsRequestHandler::class)
-        ->arg('$registry', service('mcp.registry'))
+        ->arg('$registry', null)
         ->arg('$logger', service('logger'))
         ->tag('mcp.request_handler')
         ->tag('monolog.logger', ['channel' => 'mcp'])
@@ -52,9 +53,9 @@ return static function (ContainerConfigurator $configurator): void {
     ;
 
     $services->set(FilterToolsListRequestHandler::class)
-        ->arg('$registry', service('mcp.registry'))
+        ->arg('$registry', null)
         ->arg('$toolAccessChecker', service(McpToolAccessChecker::class))
-        ->arg('$pageSize', param('mcp.pagination_limit'))
+        ->arg('$pageSize', null)
         ->tag('mcp.request_handler')
     ;
 
@@ -72,6 +73,7 @@ return static function (ContainerConfigurator $configurator): void {
         ->arg('$journalLogRepository', service(JournalLogRepository::class))
         ->arg('$mcpLogRepository', service(McpLogRepository::class))
         ->arg('$dateWindowResolver', service(McpDateWindowResolver::class))
+        ->arg('$contextIdResolver', service(McpContextIdResolver::class))
     ;
 
     $services->set(McpToolExecutor::class)
@@ -79,6 +81,8 @@ return static function (ContainerConfigurator $configurator): void {
         ->arg('$logger', service('logger'))
         ->arg('$mcpLogger', service(McpLogger::class))
         ->arg('$toolAccessChecker', service(McpToolAccessChecker::class))
+        ->arg('$validator', service('validator'))
+        ->arg('$serializer', service(Serializer::class))
         ->arg('$toolErrorExceptions', null)
         ->tag('monolog.logger', ['channel' => 'mcp'])
     ;
@@ -89,10 +93,12 @@ return static function (ContainerConfigurator $configurator): void {
         ->arg('$storage', service('anzu_systems_common.mcp.rate_limiter_storage'))
         ->arg('$currentUserProvider', service(CurrentAnzuUserProvider::class))
         ->arg('$security', service('security.helper'))
+        ->arg('$elevatedRole', null)
+        ->arg('$elevatedLimit', null)
     ;
 
     $services->set(McpController::class)
-        ->arg('$server', service('mcp.server'))
+        ->arg('$server', null)
         ->arg('$httpMessageFactory', service('mcp.psr_http_factory'))
         ->arg('$httpFoundationFactory', service('mcp.http_foundation_factory'))
         ->arg('$responseFactory', service('mcp.psr17_factory'))
@@ -114,21 +120,18 @@ return static function (ContainerConfigurator $configurator): void {
 
     $services->set(SearchAppLogsTool::class)
         ->arg('$logFinder', service(McpLogFinder::class))
-        ->arg('$contextIdResolver', service(McpContextIdResolver::class))
         ->arg('$toolExecutor', service(McpToolExecutor::class))
         ->tag('mcp.tool')
     ;
 
     $services->set(SearchAuditLogsTool::class)
         ->arg('$logFinder', service(McpLogFinder::class))
-        ->arg('$contextIdResolver', service(McpContextIdResolver::class))
         ->arg('$toolExecutor', service(McpToolExecutor::class))
         ->tag('mcp.tool')
     ;
 
     $services->set(GetLogsByContextTool::class)
         ->arg('$logFinder', service(McpLogFinder::class))
-        ->arg('$contextIdResolver', service(McpContextIdResolver::class))
         ->arg('$toolExecutor', service(McpToolExecutor::class))
         ->tag('mcp.tool')
     ;

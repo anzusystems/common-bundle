@@ -6,9 +6,12 @@ namespace AnzuSystems\CommonBundle\Mcp\Tool;
 
 use AnzuSystems\CommonBundle\Mcp\Log\McpLogFinder;
 use AnzuSystems\CommonBundle\Mcp\McpToolExecutor;
-use AnzuSystems\CommonBundle\Mcp\Resolver\McpContextIdResolver;
+use AnzuSystems\CommonBundle\Mcp\Model\Request\SearchAppLogsRequest;
+use AnzuSystems\CommonBundle\Mcp\Model\Response\McpAppLogSearchResponse;
 use Mcp\Capability\Attribute\McpTool;
+
 use Mcp\Capability\Attribute\Schema;
+use Mcp\Schema\Result\CallToolResult;
 
 #[McpTool(
     name: SearchAppLogsTool::NAME,
@@ -25,19 +28,12 @@ final readonly class SearchAppLogsTool
 {
     public const string NAME = 'search_app_logs';
 
-    private const string HINT_CONTEXT_ID = 'Pass a record\'s contextId to get_logs_by_context to see the request and '
-        . 'MCP tool calls behind it; the same contextId correlates logs across the services of this platform.';
-
     public function __construct(
         private McpLogFinder $logFinder,
-        private McpContextIdResolver $contextIdResolver,
         private McpToolExecutor $toolExecutor,
     ) {
     }
 
-    /**
-     * @return array<string, mixed>
-     */
     #[Schema(additionalProperties: false)]
     public function __invoke(
         #[Schema(description: 'Log level name, e.g. "ERROR", "WARNING", "INFO". Case-insensitive, exact match. Omit for all levels.')]
@@ -52,27 +48,20 @@ final readonly class SearchAppLogsTool
         ?string $until = null,
         #[Schema(description: 'Maximum number of records, capped at 50.')]
         int $limit = McpLogFinder::LIMIT_DEFAULT,
-    ): array {
+    ): CallToolResult {
+        $request = new SearchAppLogsRequest(
+            level: $level,
+            messageContains: $messageContains,
+            contextId: $contextId,
+            from: $from,
+            until: $until,
+            limit: $limit,
+        );
+
         return $this->toolExecutor->execute(
             self::NAME,
-            [
-                'level' => $level,
-                'messageContains' => $messageContains,
-                'contextId' => $contextId,
-                'from' => $from,
-                'until' => $until,
-                'limit' => $limit,
-            ],
-            fn (): array => $this->logFinder
-                ->findAppLogs(
-                    level: $level,
-                    messageContains: $messageContains,
-                    contextId: $this->contextIdResolver->resolveOptional($contextId),
-                    from: $from,
-                    until: $until,
-                    limit: $limit,
-                )
-                ->toToolResponse(logsKey: 'appLogs', hint: self::HINT_CONTEXT_ID),
+            $request,
+            fn (): McpAppLogSearchResponse => new McpAppLogSearchResponse($this->logFinder->findAppLogs($request)),
         );
     }
 }

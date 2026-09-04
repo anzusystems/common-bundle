@@ -6,9 +6,12 @@ namespace AnzuSystems\CommonBundle\Mcp\Tool;
 
 use AnzuSystems\CommonBundle\Mcp\Log\McpLogFinder;
 use AnzuSystems\CommonBundle\Mcp\McpToolExecutor;
-use AnzuSystems\CommonBundle\Mcp\Resolver\McpContextIdResolver;
+use AnzuSystems\CommonBundle\Mcp\Model\Request\GetLogsByContextRequest;
+use AnzuSystems\CommonBundle\Mcp\Model\Response\McpLogsByContextResponse;
 use Mcp\Capability\Attribute\McpTool;
+
 use Mcp\Capability\Attribute\Schema;
+use Mcp\Schema\Result\CallToolResult;
 
 #[McpTool(
     name: GetLogsByContextTool::NAME,
@@ -24,41 +27,23 @@ final readonly class GetLogsByContextTool
 {
     public const string NAME = 'get_logs_by_context';
 
-    private const string HINT_CROSS_SERVICE = 'The same contextId correlates logs across the services of this '
-        . 'platform; look it up in the logs of the other services to follow the request end to end.';
-
     public function __construct(
         private McpLogFinder $logFinder,
-        private McpContextIdResolver $contextIdResolver,
         private McpToolExecutor $toolExecutor,
     ) {
     }
 
-    /**
-     * @return array<string, mixed>
-     */
     #[Schema(additionalProperties: false)]
     public function __invoke(
         #[Schema(description: 'The contextId (UUID) of one request, taken from an audit log, application log, or MCP tool call record.')]
         string $contextId,
-    ): array {
+    ): CallToolResult {
+        $request = new GetLogsByContextRequest(contextId: $contextId);
+
         return $this->toolExecutor->execute(
             self::NAME,
-            ['contextId' => $contextId],
-            fn (): array => $this->getLogsByContext($this->contextIdResolver->resolve($contextId)),
+            $request,
+            fn (): McpLogsByContextResponse => new McpLogsByContextResponse($this->logFinder->findLogsByContext($request)),
         );
-    }
-
-    /**
-     * @return array<string, mixed>
-     */
-    private function getLogsByContext(string $contextId): array
-    {
-        return [
-            'auditLogs' => $this->logFinder->findAuditLogsByContextId($contextId),
-            'appLogs' => $this->logFinder->findAppLogsByContextId($contextId),
-            'mcpToolCalls' => $this->logFinder->findMcpLogsByContextId($contextId),
-            'hint' => self::HINT_CROSS_SERVICE,
-        ];
     }
 }
