@@ -9,7 +9,6 @@ use AnzuSystems\CommonBundle\Mcp\McpToolExecutor;
 use AnzuSystems\CommonBundle\Mcp\Model\Request\SearchAppLogsRequest;
 use AnzuSystems\CommonBundle\Mcp\Model\Response\McpAppLogSearchResponse;
 use Mcp\Capability\Attribute\McpTool;
-
 use Mcp\Capability\Attribute\Schema;
 use Mcp\Schema\Result\CallToolResult;
 

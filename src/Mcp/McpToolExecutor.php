@@ -109,7 +109,8 @@ final readonly class McpToolExecutor
     private function createSuccessResult(array $payload): CallToolResult
     {
         return new CallToolResult(
-            new ToolResultFormatter()->format($payload),
+            new ToolResultFormatter()
+                ->format($payload),
             structuredContent: $payload,
         );
     }
@@ -119,7 +120,8 @@ final readonly class McpToolExecutor
         $payload = [self::ERROR_KEY => $error];
 
         return new CallToolResult(
-            new ToolResultFormatter()->format($payload),
+            new ToolResultFormatter()
+                ->format($payload),
             isError: true,
             structuredContent: $payload,
         );

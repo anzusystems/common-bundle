@@ -18,7 +18,6 @@ trait McpLogSearchResponseTrait
         . 'Narrow the filters or the window instead of raising the limit.';
 
     private readonly McpLogSearchResult $result;
-
     private readonly string $hint;
 
     #[Serialize]
