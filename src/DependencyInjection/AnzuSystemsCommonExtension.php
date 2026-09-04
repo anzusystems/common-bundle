@@ -71,7 +71,11 @@ use AnzuSystems\CommonBundle\Log\LogFacade;
 use AnzuSystems\CommonBundle\Log\Repository\AuditLogRepository;
 use AnzuSystems\CommonBundle\Log\Repository\JournalLogRepository;
 use AnzuSystems\CommonBundle\Mcp\Controller\McpController;
+use AnzuSystems\CommonBundle\Mcp\Handler\FilterToolsListRequestHandler;
+use AnzuSystems\CommonBundle\Mcp\Handler\StrictToolArgumentsRequestHandler;
+use AnzuSystems\CommonBundle\Mcp\McpRateLimiter;
 use AnzuSystems\CommonBundle\Mcp\McpToolExecutor;
+use AnzuSystems\CommonBundle\Mcp\Security\McpToolAccessChecker;
 use AnzuSystems\CommonBundle\Messenger\Message\AuditLogMessage;
 use AnzuSystems\CommonBundle\Messenger\Message\JournalLogMessage;
 use AnzuSystems\CommonBundle\Request\ParamConverter\ApiFilterParamConverter;
@@ -83,6 +87,7 @@ use AnzuSystems\CommonBundle\Request\ValueResolver\ValueObjectValueResolver;
 use AnzuSystems\CommonBundle\Security\PermissionConfig;
 use AnzuSystems\CommonBundle\Serializer\Exception\SerializerExceptionHandler;
 use AnzuSystems\CommonBundle\Serializer\Handler\Handlers\GeolocationHandler;
+use AnzuSystems\CommonBundle\Serializer\Handler\Handlers\RawArrayHandler;
 use AnzuSystems\CommonBundle\Serializer\Handler\Handlers\ValueObjectHandler;
 use AnzuSystems\CommonBundle\Serializer\Service\BsonConverter;
 use AnzuSystems\CommonBundle\Util\ResourceLocker;
@@ -98,6 +103,7 @@ use LogicException;
 use MongoDB;
 use Sensio\Bundle\FrameworkExtraBundle\Request\ParamConverter\ParamConverterInterface;
 use Symfony\AI\McpBundle\McpBundle;
+use Symfony\Component\Cache\Psr16Cache;
 use Symfony\Component\Config\FileLocator;
 use Symfony\Component\Config\Loader\LoaderInterface;
 use Symfony\Component\DependencyInjection\Argument\IteratorArgument;
@@ -116,7 +122,9 @@ use Symfony\Component\RateLimiter\Storage\CacheStorage;
 
 final class AnzuSystemsCommonExtension extends Extension implements PrependExtensionInterface
 {
-    private const string MCP_TOOL_SCAN_DIR = 'vendor/anzusystems/common-bundle/src/Mcp/Tool';
+    private const string MCP_TOOL_NAMESPACE = 'AnzuSystems\\CommonBundle\\Mcp\\Tool\\';
+    private const string MCP_SESSION_STORE_CACHE = 'cache';
+    private const int MCP_PAGINATION_LIMIT_DEFAULT = 50;
 
     private array $processedConfig;
 
@@ -567,10 +575,30 @@ final class AnzuSystemsCommonExtension extends Extension implements PrependExten
             'channels' => ['mcp'],
         ]);
         $container->prependExtensionConfig('mcp', [
-            'discovery' => [
-                'scan_dirs' => [self::MCP_TOOL_SCAN_DIR],
+            'servers' => [
+                $mcp['server_name'] => [
+                    'session' => [
+                        'store' => self::MCP_SESSION_STORE_CACHE,
+                        'cache_pool' => McpCompilerPass::SESSION_CACHE_ID,
+                    ],
+                    'registry' => [
+                        'tools' => [self::MCP_TOOL_NAMESPACE],
+                    ],
+                ],
             ],
         ]);
+    }
+
+    private function resolveMcpPaginationLimit(ContainerBuilder $container, string $serverName): int
+    {
+        foreach (array_reverse($container->getExtensionConfig('mcp')) as $config) {
+            $limit = $config['servers'][$serverName]['pagination_limit'] ?? null;
+            if (is_numeric($limit)) {
+                return (int) $limit;
+            }
+        }
+
+        return self::MCP_PAGINATION_LIMIT_DEFAULT;
     }
 
     private function loadMcp(LoaderInterface $loader, ContainerBuilder $container): void
@@ -590,6 +618,9 @@ final class AnzuSystemsCommonExtension extends Extension implements PrependExten
         }
         if ([] === $mcp['allowed_hosts']) {
             throw new LogicException('The "mcp" config section requires non-empty "allowed_hosts", otherwise every request is rejected with 403.');
+        }
+        if ([] === $mcp['tool_permissions']) {
+            throw new LogicException('The "mcp" config section requires non-empty "tool_permissions", otherwise every tool is hidden and every tool call is denied.');
         }
 
         $loader->load('mcp.php');
@@ -618,29 +649,46 @@ final class AnzuSystemsCommonExtension extends Extension implements PrependExten
         $container->setDefinition('anzu_mongo_mcp_log_collection', $collectionDefinition);
         $container->registerAliasForArgument('anzu_mongo_mcp_log_collection', MongoDB\Collection::class, '$mcpLogCollection');
 
-        $container->setParameter(McpCompilerPass::SESSION_CACHE_POOL_PARAM, $mcp['session']['cache_pool']);
+        $container->setParameter(McpCompilerPass::SERVER_NAME_PARAM, $mcp['server_name']);
+
+        $sessionCacheDefinition = new Definition(Psr16Cache::class);
+        $sessionCacheDefinition->setArgument('$pool', new Reference($mcp['session']['cache_pool']));
+        $container->setDefinition(McpCompilerPass::SESSION_CACHE_ID, $sessionCacheDefinition);
 
         $rateLimiterStorageDefinition = new Definition(CacheStorage::class);
         $rateLimiterStorageDefinition->setArgument('$pool', new Reference($mcp['rate_limiter']['cache_pool']));
         $container->setDefinition('anzu_systems_common.mcp.rate_limiter_storage', $rateLimiterStorageDefinition);
 
-        $rateLimiterFactoryDefinition = new Definition(RateLimiterFactory::class);
-        $rateLimiterFactoryDefinition->setArgument('$config', [
-            'id' => 'mcp',
-            'policy' => 'sliding_window',
-            'limit' => $mcp['rate_limiter']['limit'],
-            'interval' => $mcp['rate_limiter']['interval'],
-        ]);
-        $rateLimiterFactoryDefinition->setArgument('$storage', new Reference('anzu_systems_common.mcp.rate_limiter_storage'));
-        $container->setDefinition('anzu_systems_common.mcp.rate_limiter_factory', $rateLimiterFactoryDefinition);
+        $container
+            ->getDefinition(McpRateLimiter::class)
+            ->replaceArgument('$limit', $mcp['rate_limiter']['limit'])
+            ->replaceArgument('$interval', $mcp['rate_limiter']['interval'])
+            ->replaceArgument('$elevatedRole', $mcp['rate_limiter']['elevated_role'])
+            ->replaceArgument('$elevatedLimit', $mcp['rate_limiter']['elevated_limit']);
 
+        $serverName = $mcp['server_name'];
         $container
             ->getDefinition(McpController::class)
+            ->replaceArgument('$server', new Reference(sprintf('mcp.server.%s', $serverName)))
             ->replaceArgument('$allowedHosts', $mcp['allowed_hosts']);
+
+        $registryReference = new Reference(sprintf('mcp.server.%s.registry', $serverName));
+        $container
+            ->getDefinition(StrictToolArgumentsRequestHandler::class)
+            ->replaceArgument('$registry', $registryReference);
+
+        $container
+            ->getDefinition(FilterToolsListRequestHandler::class)
+            ->replaceArgument('$registry', $registryReference)
+            ->replaceArgument('$pageSize', $this->resolveMcpPaginationLimit($container, $serverName));
 
         $container
             ->getDefinition(McpToolExecutor::class)
             ->replaceArgument('$toolErrorExceptions', $mcp['tool_error_exceptions']);
+
+        $container
+            ->getDefinition(McpToolAccessChecker::class)
+            ->replaceArgument('$toolPermissions', $mcp['tool_permissions']);
 
         $container
             ->getDefinition(CreateMcpLogCollectionCommand::class)
@@ -689,6 +737,11 @@ final class AnzuSystemsCommonExtension extends Extension implements PrependExten
         $container->setDefinition(
             GeolocationHandler::class,
             (new Definition(GeolocationHandler::class))
+                ->addTag(AnzuSystemsCommonBundle::TAG_SERIALIZER_HANDLER)
+        );
+        $container->setDefinition(
+            RawArrayHandler::class,
+            (new Definition(RawArrayHandler::class))
                 ->addTag(AnzuSystemsCommonBundle::TAG_SERIALIZER_HANDLER)
         );
 

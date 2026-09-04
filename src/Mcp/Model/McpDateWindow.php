@@ -11,6 +11,7 @@ final readonly class McpDateWindow
     public function __construct(
         public DateTimeImmutable $from,
         public DateTimeImmutable $until,
+        public bool $truncated = false,
     ) {
     }
 }

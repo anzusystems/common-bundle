@@ -6,10 +6,11 @@ namespace AnzuSystems\CommonBundle\Mcp\Tool;
 
 use AnzuSystems\CommonBundle\Mcp\Log\McpLogFinder;
 use AnzuSystems\CommonBundle\Mcp\McpToolExecutor;
-use AnzuSystems\CommonBundle\Mcp\Model\McpAuditLogFilter;
-use AnzuSystems\CommonBundle\Mcp\Resolver\McpContextIdResolver;
+use AnzuSystems\CommonBundle\Mcp\Model\Request\SearchAuditLogsRequest;
+use AnzuSystems\CommonBundle\Mcp\Model\Response\McpAuditLogSearchResponse;
 use Mcp\Capability\Attribute\McpTool;
 use Mcp\Capability\Attribute\Schema;
+use Mcp\Schema\Result\CallToolResult;
 
 #[McpTool(
     name: SearchAuditLogsTool::NAME,
@@ -20,27 +21,21 @@ use Mcp\Capability\Attribute\Schema;
         . 'Diagnostic workflow: when a user reports a failed action (e.g. could not save a record), search with '
         . 'their userId, onlyErrors, and a time window around the incident, then pass the failing record\'s contextId '
         . 'to get_logs_by_context to see the application errors behind it; the same contextId correlates logs across '
-        . 'the services of this platform. The time window defaults to the last day and is capped at 31 days; results '
-        . 'are newest first and long fields are truncated.',
+        . 'the services of this platform. The time window defaults to the last day and is capped at 31 days: the '
+        . 'response echoes the effective from and until, and a longer requested window is shortened and reported in '
+        . 'warnings — repeat the search on the remaining days. Results are newest first and long fields are '
+        . 'truncated.',
 )]
 final readonly class SearchAuditLogsTool
 {
     public const string NAME = 'search_audit_logs';
 
-    private const string HINT_CONTEXT_ID = 'Pass a record\'s contextId to get_logs_by_context to see the application '
-        . 'errors and MCP tool calls behind that request; the same contextId correlates logs across the services of '
-        . 'this platform.';
-
     public function __construct(
         private McpLogFinder $logFinder,
-        private McpContextIdResolver $contextIdResolver,
         private McpToolExecutor $toolExecutor,
     ) {
     }
 
-    /**
-     * @return array<string, mixed>
-     */
     #[Schema(additionalProperties: false)]
     public function __invoke(
         #[Schema(description: 'Filter by the id of the user who made the request. Omit to search requests of all users.')]
@@ -59,32 +54,22 @@ final readonly class SearchAuditLogsTool
         ?string $until = null,
         #[Schema(description: 'Maximum number of records, capped at 50.')]
         int $limit = McpLogFinder::LIMIT_DEFAULT,
-    ): array {
+    ): CallToolResult {
+        $request = new SearchAuditLogsRequest(
+            userId: $userId,
+            onlyErrors: $onlyErrors,
+            pathContains: $pathContains,
+            resourceName: $resourceName,
+            contextId: $contextId,
+            from: $from,
+            until: $until,
+            limit: $limit,
+        );
+
         return $this->toolExecutor->execute(
             self::NAME,
-            [
-                'userId' => $userId,
-                'onlyErrors' => $onlyErrors,
-                'pathContains' => $pathContains,
-                'resourceName' => $resourceName,
-                'contextId' => $contextId,
-                'from' => $from,
-                'until' => $until,
-                'limit' => $limit,
-            ],
-            fn (): array => [
-                'auditLogs' => $this->logFinder->findAuditLogs(new McpAuditLogFilter(
-                    userId: $userId,
-                    onlyErrors: $onlyErrors,
-                    pathContains: $pathContains,
-                    resourceName: $resourceName,
-                    contextId: $this->contextIdResolver->resolveOptional($contextId),
-                    from: $from,
-                    until: $until,
-                    limit: $limit,
-                )),
-                'hint' => self::HINT_CONTEXT_ID,
-            ],
+            $request,
+            fn (): McpAuditLogSearchResponse => new McpAuditLogSearchResponse($this->logFinder->findAuditLogs($request)),
         );
     }
 }
