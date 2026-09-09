@@ -13,6 +13,8 @@ use Symfony\Bundle\SecurityBundle\Security;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
 use Symfony\Component\HttpKernel\Exception\TooManyRequestsHttpException;
+use Symfony\Component\Lock\LockFactory;
+use Symfony\Component\Lock\Store\InMemoryStore;
 use Symfony\Component\RateLimiter\Storage\InMemoryStorage;
 
 final class McpRateLimiterTest extends TestCase
@@ -109,6 +111,7 @@ final class McpRateLimiterTest extends TestCase
             $security,
             self::ELEVATED_ROLE,
             self::ELEVATED_LIMIT,
+            new LockFactory(new InMemoryStore()),
         );
     }
 }

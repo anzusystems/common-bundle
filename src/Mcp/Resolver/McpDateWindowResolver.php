@@ -27,7 +27,11 @@ final readonly class McpDateWindowResolver
         $clampedFrom = $this->clampFrom($from, $until, $now);
         $clampedUntil = $this->clampUntil($clampedFrom, $until);
 
-        return new McpDateWindow($clampedFrom, $clampedUntil, $this->isUntilTruncated($from, $until, $clampedUntil, $now));
+        return new McpDateWindow(
+            $clampedFrom,
+            $clampedUntil,
+            truncated: $this->isUntilTruncated($from, $until, $clampedUntil, $now),
+        );
     }
 
     public function resolveLogWindow(?string $from, ?string $until): McpDateWindow
@@ -40,7 +44,11 @@ final readonly class McpDateWindowResolver
         }
         $clampedFrom = $this->clampLogFrom($resolvedFrom, $resolvedUntil);
 
-        return new McpDateWindow($clampedFrom, $resolvedUntil, $clampedFrom > $resolvedFrom);
+        return new McpDateWindow(
+            $clampedFrom,
+            $resolvedUntil,
+            truncated: $this->isFromTruncated($resolvedFrom, $clampedFrom),
+        );
     }
 
     public function parseDateTime(string $paramName, ?string $value): ?DateTimeImmutable
@@ -63,6 +71,11 @@ final readonly class McpDateWindowResolver
         if ($from instanceof DateTimeImmutable && $until instanceof DateTimeImmutable && $until < $from) {
             throw new McpToolInputException(self::ERROR_INVERTED_DATE_WINDOW);
         }
+    }
+
+    private function isFromTruncated(DateTimeImmutable $from, DateTimeImmutable $clampedFrom): bool
+    {
+        return $clampedFrom > $from;
     }
 
     private function isUntilTruncated(

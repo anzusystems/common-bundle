@@ -374,6 +374,7 @@ final class Configuration implements ConfigurationInterface
                         ->scalarNode('elevated_role')->defaultNull()->end()
                         ->scalarNode('elevated_limit')->defaultNull()->end()
                         ->scalarNode('cache_pool')->defaultValue('cache.app')->end()
+                        ->scalarNode('lock_factory')->defaultNull()->end()
                     ->end()
                 ->end()
                 ->arrayNode('session')

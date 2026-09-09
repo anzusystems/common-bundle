@@ -95,6 +95,7 @@ return static function (ContainerConfigurator $configurator): void {
         ->arg('$security', service('security.helper'))
         ->arg('$elevatedRole', null)
         ->arg('$elevatedLimit', null)
+        ->arg('$lockFactory', null)
     ;
 
     $services->set(McpController::class)

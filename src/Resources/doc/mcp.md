@@ -37,6 +37,7 @@ infrastructure after a bundle upgrade.
                elevated_role: ROLE_SYS_MCP
                elevated_limit: 600
                cache_pool: 'some_redis.cache'
+               lock_factory: 'some.lock.factory'
            session:
                cache_pool: 'some_redis.cache'
            logs:
@@ -88,6 +89,10 @@ infrastructure after a bundle upgrade.
 When `rate_limiter.elevated_role` is set and `Security::isGranted()` grants it to the current user (so role hierarchy
 applies), `rate_limiter.elevated_limit` replaces the configured limit for that user — `null` or a non-positive
 `elevated_limit`, or an unset role, keeps the default. The configured `rate_limiter.interval` applies to every bucket.
+
+The sliding window is read and written under a lock, so parallel requests of one user cannot both pass on the same
+pre-consume state. The lock store is Redis (`settings.app_redis`), shared by every pod, unless
+`rate_limiter.lock_factory` names a host `LockFactory` service to use instead.
 
 The endpoint accepts JSON-RPC batches, so `McpController` counts the messages of the request body and charges that
 many tokens (clamped at the bucket size), otherwise one batch of up to `MessageFactory::DEFAULT_MAX_BATCH_SIZE` (100)

@@ -10,6 +10,7 @@ use AnzuSystems\Contracts\AnzuApp;
 use Symfony\Bundle\SecurityBundle\Security;
 use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
 use Symfony\Component\HttpKernel\Exception\TooManyRequestsHttpException;
+use Symfony\Component\Lock\LockFactory;
 use Symfony\Component\RateLimiter\LimiterInterface;
 use Symfony\Component\RateLimiter\RateLimiterFactory;
 use Symfony\Component\RateLimiter\Storage\StorageInterface;
@@ -29,6 +30,7 @@ final readonly class McpRateLimiter
         private Security $security,
         private ?string $elevatedRole = null,
         private ?int $elevatedLimit = null,
+        private ?LockFactory $lockFactory = null,
     ) {
     }
 
@@ -80,6 +82,7 @@ final readonly class McpRateLimiter
                 'interval' => $this->interval,
             ],
             $this->storage,
+            $this->lockFactory,
         )->create($key);
     }
 

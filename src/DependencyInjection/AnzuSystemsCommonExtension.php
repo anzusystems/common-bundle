@@ -66,6 +66,7 @@ use AnzuSystems\CommonBundle\HealthCheck\Module\MongoModule;
 use AnzuSystems\CommonBundle\HealthCheck\Module\MysqlModule;
 use AnzuSystems\CommonBundle\HealthCheck\Module\OpCacheModule;
 use AnzuSystems\CommonBundle\HealthCheck\Module\RedisModule;
+use AnzuSystems\CommonBundle\Helper\StringHelper;
 use AnzuSystems\CommonBundle\Log\Factory\LogContextFactory;
 use AnzuSystems\CommonBundle\Log\LogFacade;
 use AnzuSystems\CommonBundle\Log\Repository\AuditLogRepository;
@@ -117,6 +118,8 @@ use Symfony\Component\DependencyInjection\Loader\PhpFileLoader;
 use Symfony\Component\DependencyInjection\Reference;
 use Symfony\Component\HttpKernel\Controller\ValueResolverInterface;
 use Symfony\Component\HttpKernel\KernelEvents;
+use Symfony\Component\Lock\LockFactory;
+use Symfony\Component\Lock\Store\RedisStore;
 use Symfony\Component\RateLimiter\RateLimiterFactory;
 use Symfony\Component\RateLimiter\Storage\CacheStorage;
 
@@ -125,6 +128,8 @@ final class AnzuSystemsCommonExtension extends Extension implements PrependExten
     private const string MCP_TOOL_NAMESPACE = 'AnzuSystems\\CommonBundle\\Mcp\\Tool\\';
     private const string MCP_SESSION_STORE_CACHE = 'cache';
     private const int MCP_PAGINATION_LIMIT_DEFAULT = 50;
+    private const string MCP_RATE_LIMITER_LOCK_STORE_ID = 'anzu_systems_common.mcp.rate_limiter_lock_store';
+    private const string MCP_RATE_LIMITER_LOCK_FACTORY_ID = 'anzu_systems_common.mcp.rate_limiter_lock_factory';
 
     private array $processedConfig;
 
@@ -664,7 +669,8 @@ final class AnzuSystemsCommonExtension extends Extension implements PrependExten
             ->replaceArgument('$limit', $mcp['rate_limiter']['limit'])
             ->replaceArgument('$interval', $mcp['rate_limiter']['interval'])
             ->replaceArgument('$elevatedRole', $mcp['rate_limiter']['elevated_role'])
-            ->replaceArgument('$elevatedLimit', $mcp['rate_limiter']['elevated_limit']);
+            ->replaceArgument('$elevatedLimit', $mcp['rate_limiter']['elevated_limit'])
+            ->replaceArgument('$lockFactory', $this->resolveMcpRateLimiterLockFactory($container, $mcp));
 
         $serverName = $mcp['server_name'];
         $container
@@ -696,6 +702,24 @@ final class AnzuSystemsCommonExtension extends Extension implements PrependExten
             ->replaceArgument('$mcpLogCollectionSizeMb', $mongo['size_mb']);
 
         $this->addMcpLogCollectionToHealthCheck($container, $mcp);
+    }
+
+    private function resolveMcpRateLimiterLockFactory(ContainerBuilder $container, array $mcp): Reference
+    {
+        $lockFactory = $mcp['rate_limiter']['lock_factory'];
+        if (is_string($lockFactory) && StringHelper::isNotEmpty($lockFactory)) {
+            return new Reference($lockFactory);
+        }
+
+        $storeDefinition = new Definition(RedisStore::class);
+        $storeDefinition->setArgument('$redis', new Reference($this->processedConfig['settings']['app_redis']));
+        $container->setDefinition(self::MCP_RATE_LIMITER_LOCK_STORE_ID, $storeDefinition);
+
+        $lockFactoryDefinition = new Definition(LockFactory::class);
+        $lockFactoryDefinition->setArgument('$store', new Reference(self::MCP_RATE_LIMITER_LOCK_STORE_ID));
+        $container->setDefinition(self::MCP_RATE_LIMITER_LOCK_FACTORY_ID, $lockFactoryDefinition);
+
+        return new Reference(self::MCP_RATE_LIMITER_LOCK_FACTORY_ID);
     }
 
     private function addMcpLogCollectionToHealthCheck(ContainerBuilder $container, array $mcp): void
