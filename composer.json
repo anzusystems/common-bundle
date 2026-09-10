@@ -88,6 +88,11 @@
       "composer/package-versions-deprecated": true,
       "dealerdirect/phpcodesniffer-composer-installer": true,
       "symfony/runtime": true
+    },
+    "audit": {
+      "ignore": {
+        "PKSA-61k5-cqr9-b8b4": "TODO: mongodb/mongodb 2.4.1 (rejects '.' and NUL bytes in database and collection names, CVE-2026-81525) requires ext-mongodb ^2.4, but the anzusystems/php 5.1.0 images ship 2.3.3. Not exploitable here — database and collection names come from bundle configuration, never from user input. Remove once the base image carries ext-mongodb >= 2.4 and mongodb/mongodb is updated."
+      }
     }
   }
 }
