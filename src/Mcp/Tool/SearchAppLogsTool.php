@@ -6,9 +6,11 @@ namespace AnzuSystems\CommonBundle\Mcp\Tool;
 
 use AnzuSystems\CommonBundle\Mcp\Log\McpLogFinder;
 use AnzuSystems\CommonBundle\Mcp\McpToolExecutor;
-use AnzuSystems\CommonBundle\Mcp\Resolver\McpContextIdResolver;
+use AnzuSystems\CommonBundle\Mcp\Model\Request\SearchAppLogsRequest;
+use AnzuSystems\CommonBundle\Mcp\Model\Response\McpAppLogSearchResponse;
 use Mcp\Capability\Attribute\McpTool;
 use Mcp\Capability\Attribute\Schema;
+use Mcp\Schema\Result\CallToolResult;
 
 #[McpTool(
     name: SearchAppLogsTool::NAME,
@@ -17,26 +19,20 @@ use Mcp\Capability\Attribute\Schema;
         . 'case-insensitive message substring, or a contextId taken from an audit log record. Diagnostic workflow: '
         . 'find the failed request via search_audit_logs first, then look up the application errors behind it either '
         . 'here by contextId or with get_logs_by_context; the same contextId correlates logs across the services of '
-        . 'this platform. The time window defaults to the last day and is capped at 31 days; results are newest first '
-        . 'and long messages are truncated.',
+        . 'this platform. The time window defaults to the last day and is capped at 31 days: the response echoes the '
+        . 'effective from and until, and a longer requested window is shortened and reported in warnings — '
+        . 'repeat the search on the remaining days. Results are newest first and long messages are truncated.',
 )]
 final readonly class SearchAppLogsTool
 {
     public const string NAME = 'search_app_logs';
 
-    private const string HINT_CONTEXT_ID = 'Pass a record\'s contextId to get_logs_by_context to see the request and '
-        . 'MCP tool calls behind it; the same contextId correlates logs across the services of this platform.';
-
     public function __construct(
         private McpLogFinder $logFinder,
-        private McpContextIdResolver $contextIdResolver,
         private McpToolExecutor $toolExecutor,
     ) {
     }
 
-    /**
-     * @return array<string, mixed>
-     */
     #[Schema(additionalProperties: false)]
     public function __invoke(
         #[Schema(description: 'Log level name, e.g. "ERROR", "WARNING", "INFO". Case-insensitive, exact match. Omit for all levels.')]
@@ -51,28 +47,20 @@ final readonly class SearchAppLogsTool
         ?string $until = null,
         #[Schema(description: 'Maximum number of records, capped at 50.')]
         int $limit = McpLogFinder::LIMIT_DEFAULT,
-    ): array {
+    ): CallToolResult {
+        $request = new SearchAppLogsRequest(
+            level: $level,
+            messageContains: $messageContains,
+            contextId: $contextId,
+            from: $from,
+            until: $until,
+            limit: $limit,
+        );
+
         return $this->toolExecutor->execute(
             self::NAME,
-            [
-                'level' => $level,
-                'messageContains' => $messageContains,
-                'contextId' => $contextId,
-                'from' => $from,
-                'until' => $until,
-                'limit' => $limit,
-            ],
-            fn (): array => [
-                'appLogs' => $this->logFinder->findAppLogs(
-                    level: $level,
-                    messageContains: $messageContains,
-                    contextId: $this->contextIdResolver->resolveOptional($contextId),
-                    from: $from,
-                    until: $until,
-                    limit: $limit,
-                ),
-                'hint' => self::HINT_CONTEXT_ID,
-            ],
+            $request,
+            fn (): McpAppLogSearchResponse => new McpAppLogSearchResponse($this->logFinder->findAppLogs($request)),
         );
     }
 }

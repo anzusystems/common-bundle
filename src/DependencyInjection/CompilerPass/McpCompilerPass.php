@@ -6,18 +6,13 @@ namespace AnzuSystems\CommonBundle\DependencyInjection\CompilerPass;
 
 use AnzuSystems\CommonBundle\Mcp\Controller\McpController;
 use LogicException;
-use Symfony\Component\Cache\Psr16Cache;
 use Symfony\Component\DependencyInjection\Compiler\CompilerPassInterface;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
-use Symfony\Component\DependencyInjection\Definition;
-use Symfony\Component\DependencyInjection\Reference;
 
 final class McpCompilerPass implements CompilerPassInterface
 {
-    public const string SESSION_CACHE_POOL_PARAM = 'anzu_systems_common.mcp.session_cache_pool';
-
-    private const string MCP_SERVER_CONTROLLER_ID = 'mcp.server.controller';
-    private const string MCP_SESSION_CACHE_ID = 'cache.mcp.sessions';
+    public const string SERVER_NAME_PARAM = 'anzu_systems_common.mcp.server_name';
+    public const string SESSION_CACHE_ID = 'anzu_systems_common.mcp.session_cache';
 
     public function process(ContainerBuilder $container): void
     {
@@ -25,17 +20,13 @@ final class McpCompilerPass implements CompilerPassInterface
             return;
         }
 
-        $container
-            ->setAlias(self::MCP_SERVER_CONTROLLER_ID, McpController::class)
-            ->setPublic(true);
-
-        $sessionCachePool = $container->getParameter(self::SESSION_CACHE_POOL_PARAM);
-        if (false === is_string($sessionCachePool)) {
-            throw new LogicException(sprintf('The "%s" parameter must be a cache pool service id.', self::SESSION_CACHE_POOL_PARAM));
+        $serverName = $container->getParameter(self::SERVER_NAME_PARAM);
+        if (false === is_string($serverName)) {
+            throw new LogicException(sprintf('The "%s" parameter must be the mcp server name.', self::SERVER_NAME_PARAM));
         }
 
-        $sessionCacheDefinition = new Definition(Psr16Cache::class);
-        $sessionCacheDefinition->setArgument('$pool', new Reference($sessionCachePool));
-        $container->setDefinition(self::MCP_SESSION_CACHE_ID, $sessionCacheDefinition);
+        $container
+            ->setAlias(sprintf('mcp.server.%s.controller', $serverName), McpController::class)
+            ->setPublic(true);
     }
 }

@@ -23,6 +23,7 @@ final class McpDateWindowResolverTest extends TestCase
 
         self::assertSame('2026-07-19T12:00:00+00:00', $window->from->format(DATE_ATOM));
         self::assertSame('2026-07-20T12:00:00+00:00', $window->until->format(DATE_ATOM));
+        self::assertFalse($window->truncated);
     }
 
     public function testLogWindowFromIsClampedToMaxDays(): void
@@ -30,6 +31,7 @@ final class McpDateWindowResolverTest extends TestCase
         $window = $this->resolver->resolveLogWindow('2026-01-01T00:00:00+00:00', '2026-07-20T00:00:00+00:00');
 
         self::assertSame('2026-06-19T00:00:00+00:00', $window->from->format(DATE_ATOM));
+        self::assertTrue($window->truncated);
     }
 
     public function testLogWindowInvertedThrows(): void
@@ -52,6 +54,7 @@ final class McpDateWindowResolverTest extends TestCase
 
         self::assertSame('2026-07-01T00:00:00+00:00', $window->from->format(DATE_ATOM));
         self::assertSame('2026-07-10T00:00:00+00:00', $window->until->format(DATE_ATOM));
+        self::assertFalse($window->truncated);
     }
 
     public function testArticleWindowUntilIsCappedToMaxDaysAfterFrom(): void
@@ -59,6 +62,24 @@ final class McpDateWindowResolverTest extends TestCase
         $window = $this->resolver->resolveArticleWindow('2026-01-01T00:00:00+00:00', '2026-06-01T00:00:00+00:00');
 
         self::assertSame('2026-02-01T00:00:00+00:00', $window->until->format(DATE_ATOM));
+        self::assertTrue($window->truncated);
+    }
+
+    public function testArticleWindowWithoutDatesIsNotTruncated(): void
+    {
+        $window = $this->resolver->resolveArticleWindow(null, null);
+        $length = $window->from->diff($window->until);
+
+        self::assertFalse($window->truncated);
+        self::assertSame(McpDateWindowResolver::DATE_RANGE_MAX_DAYS, (int) $length->days);
+    }
+
+    public function testOpenEndedArticleWindowOlderThanCapIsTruncated(): void
+    {
+        $window = $this->resolver->resolveArticleWindow('2020-01-01T00:00:00+00:00', null);
+
+        self::assertSame('2020-02-01T00:00:00+00:00', $window->until->format(DATE_ATOM));
+        self::assertTrue($window->truncated);
     }
 
     public function testArticleWindowInvertedThrows(): void

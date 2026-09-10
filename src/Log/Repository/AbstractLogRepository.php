@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace AnzuSystems\CommonBundle\Log\Repository;
 
 use AnzuSystems\CommonBundle\Document\Log;
+use AnzuSystems\CommonBundle\Helper\MongoHelper;
 use AnzuSystems\CommonBundle\Repository\Mongo\AbstractAnzuMongoRepository;
 use DateTimeImmutable;
 use MongoDB\BSON\UTCDateTime;
@@ -24,7 +25,8 @@ abstract class AbstractLogRepository extends AbstractAnzuMongoRepository
     protected const string MONGO_EXISTS = '$exists';
 
     private const int LIMIT_MIN = 1;
-    private const int SORT_DESC = -1;
+    private const string ID_LOWER_BOUND_SLACK = '-1 minute';
+    private const string ID_UPPER_BOUND_SLACK = '+1 day';
     private const array RAW_ARRAY_TYPE_MAP = [
         'root' => 'array',
         'document' => 'array',
@@ -40,6 +42,9 @@ abstract class AbstractLogRepository extends AbstractAnzuMongoRepository
             self::FIELD_CONTEXT_CONTEXT_ID => $contextId,
             self::FIELD_DATETIME => [
                 self::MONGO_GTE => new UTCDateTime($from),
+            ],
+            MongoHelper::FIELD_ID => [
+                self::MONGO_GTE => MongoHelper::minObjectIdFor($from->modify(self::ID_LOWER_BOUND_SLACK)),
             ],
         ], $limit);
     }
@@ -58,14 +63,14 @@ abstract class AbstractLogRepository extends AbstractAnzuMongoRepository
     {
         $documents = $this->collection->find($match, [
             'sort' => [
-                self::FIELD_DATETIME => self::SORT_DESC,
+                MongoHelper::FIELD_ID => MongoHelper::SORT_DESC,
             ],
             'limit' => max(self::LIMIT_MIN, $limit),
             'maxTimeMS' => $this->queryMaxTimeMs,
             'typeMap' => self::RAW_ARRAY_TYPE_MAP,
         ]);
 
-        return array_values($documents->toArray());
+        return MongoHelper::sortNewestFirst(array_values($documents->toArray()), self::FIELD_DATETIME);
     }
 
     /**
@@ -77,6 +82,10 @@ abstract class AbstractLogRepository extends AbstractAnzuMongoRepository
             self::FIELD_DATETIME => [
                 self::MONGO_GTE => new UTCDateTime($from),
                 self::MONGO_LTE => new UTCDateTime($until),
+            ],
+            MongoHelper::FIELD_ID => [
+                self::MONGO_GTE => MongoHelper::minObjectIdFor($from->modify(self::ID_LOWER_BOUND_SLACK)),
+                self::MONGO_LTE => MongoHelper::maxObjectIdFor($until->modify(self::ID_UPPER_BOUND_SLACK)),
             ],
         ];
     }

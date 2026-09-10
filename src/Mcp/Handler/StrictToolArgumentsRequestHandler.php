@@ -56,7 +56,7 @@ final readonly class StrictToolArgumentsRequestHandler implements RequestHandler
 
         return new Response(
             $request->getId(),
-            new CallToolResult(new ToolResultFormatter()->format($payload), structuredContent: $payload),
+            new CallToolResult(new ToolResultFormatter()->format($payload), isError: true, structuredContent: $payload),
         );
     }
 

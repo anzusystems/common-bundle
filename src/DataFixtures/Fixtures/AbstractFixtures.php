@@ -69,6 +69,7 @@ abstract class AbstractFixtures implements FixturesInterface
      */
     public function getOneFromRegistry(string|int $key): object
     {
+        /** @var E|null $object */
         $object = $this->getRegistry()
             ->get($key);
         if (null === $object) {

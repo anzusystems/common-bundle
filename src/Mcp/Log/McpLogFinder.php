@@ -6,7 +6,12 @@ namespace AnzuSystems\CommonBundle\Mcp\Log;
 
 use AnzuSystems\CommonBundle\Log\Repository\AuditLogRepository;
 use AnzuSystems\CommonBundle\Log\Repository\JournalLogRepository;
-use AnzuSystems\CommonBundle\Mcp\Model\McpAuditLogFilter;
+use AnzuSystems\CommonBundle\Mcp\Model\McpLogsByContextResult;
+use AnzuSystems\CommonBundle\Mcp\Model\McpLogSearchResult;
+use AnzuSystems\CommonBundle\Mcp\Model\Request\GetLogsByContextRequest;
+use AnzuSystems\CommonBundle\Mcp\Model\Request\SearchAppLogsRequest;
+use AnzuSystems\CommonBundle\Mcp\Model\Request\SearchAuditLogsRequest;
+use AnzuSystems\CommonBundle\Mcp\Resolver\McpContextIdResolver;
 use AnzuSystems\CommonBundle\Mcp\Resolver\McpDateWindowResolver;
 use AnzuSystems\Contracts\AnzuApp;
 use DateTimeImmutable;
@@ -17,11 +22,13 @@ final readonly class McpLogFinder
 {
     public const int LIMIT_DEFAULT = 20;
     public const int LIMIT_MAX = 50;
+    public const int LIMIT_MIN = 1;
+    public const string LIMIT_MIN_MESSAGE = 'limit must be at least {{ compared_value }}.';
     public const int FIELD_TRUNCATE_LENGTH = 2_000;
     public const string TRUNCATED_SUFFIX = '…(truncated)';
 
-    private const int LIMIT_MIN = 1;
     private const int BY_CONTEXT_SCAN_DAYS = McpDateWindowResolver::LOG_WINDOW_MAX_DAYS;
+    private const int LOOKAHEAD = 1;
     private const string EMPTY_STRING = '';
 
     public function __construct(
@@ -29,81 +36,64 @@ final readonly class McpLogFinder
         private JournalLogRepository $journalLogRepository,
         private McpLogRepository $mcpLogRepository,
         private McpDateWindowResolver $dateWindowResolver,
+        private McpContextIdResolver $contextIdResolver,
     ) {
     }
 
-    /**
-     * @return list<array<string, mixed>>
-     */
-    public function findAuditLogs(McpAuditLogFilter $filter): array
+    public function findAuditLogs(SearchAuditLogsRequest $request): McpLogSearchResult
     {
-        $window = $this->dateWindowResolver->resolveLogWindow($filter->from, $filter->until);
+        $window = $this->dateWindowResolver->resolveLogWindow($request->from, $request->until);
+        $limit = $this->clampLimit($request->limit);
         $documents = $this->auditLogRepository->findLatest(
             from: $window->from,
             until: $window->until,
-            userId: $filter->userId,
-            pathContains: $filter->pathContains,
-            resourceName: $filter->resourceName,
-            contextId: $filter->contextId,
-            onlyErrors: $filter->onlyErrors,
-            limit: $this->clampLimit($filter->limit),
+            userId: $request->userId,
+            pathContains: $request->pathContains,
+            resourceName: $request->resourceName,
+            contextId: $this->contextIdResolver->resolveOptional($request->contextId),
+            onlyErrors: $request->onlyErrors,
+            limit: $limit + self::LOOKAHEAD,
         );
 
-        return array_map($this->mapAuditLog(...), $documents);
+        return new McpLogSearchResult(
+            array_map($this->mapAuditLog(...), array_slice($documents, 0, $limit)),
+            $window,
+            $limit,
+            count($documents) > $limit,
+        );
     }
 
-    /**
-     * @return list<array<string, mixed>>
-     */
-    public function findAppLogs(
-        ?string $level,
-        ?string $messageContains,
-        ?string $contextId,
-        ?string $from,
-        ?string $until,
-        int $limit,
-    ): array {
-        $window = $this->dateWindowResolver->resolveLogWindow($from, $until);
+    public function findAppLogs(SearchAppLogsRequest $request): McpLogSearchResult
+    {
+        $window = $this->dateWindowResolver->resolveLogWindow($request->from, $request->until);
+        $limit = $this->clampLimit($request->limit);
         $documents = $this->journalLogRepository->findLatest(
             from: $window->from,
             until: $window->until,
-            levelName: null === $level ? null : strtoupper($level),
-            messageContains: $messageContains,
-            contextId: $contextId,
-            limit: $this->clampLimit($limit),
+            levelName: null === $request->level ? null : strtoupper($request->level),
+            messageContains: $request->messageContains,
+            contextId: $this->contextIdResolver->resolveOptional($request->contextId),
+            limit: $limit + self::LOOKAHEAD,
         );
 
-        return array_map($this->mapAppLog(...), $documents);
+        return new McpLogSearchResult(
+            array_map($this->mapAppLog(...), array_slice($documents, 0, $limit)),
+            $window,
+            $limit,
+            count($documents) > $limit,
+        );
     }
 
-    /**
-     * @return list<array<string, mixed>>
-     */
-    public function findAuditLogsByContextId(string $contextId): array
+    public function findLogsByContext(GetLogsByContextRequest $request): McpLogsByContextResult
     {
-        $documents = $this->auditLogRepository->findLatestByContextId($contextId, $this->createByContextFrom(), self::LIMIT_MAX);
+        $contextId = $this->contextIdResolver->resolve($request->contextId);
+        $from = $this->createByContextFrom();
 
-        return array_map($this->mapAuditLog(...), $documents);
-    }
-
-    /**
-     * @return list<array<string, mixed>>
-     */
-    public function findAppLogsByContextId(string $contextId): array
-    {
-        $documents = $this->journalLogRepository->findLatestByContextId($contextId, $this->createByContextFrom(), self::LIMIT_MAX);
-
-        return array_map($this->mapAppLog(...), $documents);
-    }
-
-    /**
-     * @return list<array<string, mixed>>
-     */
-    public function findMcpLogsByContextId(string $contextId): array
-    {
-        $documents = $this->mcpLogRepository->findLatestByContextId($contextId, $this->createByContextFrom(), self::LIMIT_MAX);
-
-        return array_map($this->mapMcpLog(...), $documents);
+        return new McpLogsByContextResult(
+            array_map($this->mapAuditLog(...), $this->auditLogRepository->findLatestByContextId($contextId, $from, self::LIMIT_MAX)),
+            array_map($this->mapAppLog(...), $this->journalLogRepository->findLatestByContextId($contextId, $from, self::LIMIT_MAX)),
+            array_map($this->mapMcpLog(...), $this->mcpLogRepository->findLatestByContextId($contextId, $from, self::LIMIT_MAX)),
+        );
     }
 
     private function createByContextFrom(): DateTimeImmutable
