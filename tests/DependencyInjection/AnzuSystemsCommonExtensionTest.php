@@ -104,7 +104,7 @@ final class AnzuSystemsCommonExtensionTest extends TestCase
 
     private function createMcpExtension(): Extension
     {
-        return new class extends Extension {
+        return new class() extends Extension {
             public function load(array $configs, ContainerBuilder $container): void
             {
             }
