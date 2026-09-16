@@ -7,14 +7,18 @@ namespace AnzuSystems\CommonBundle\Tests\Controller;
 use AnzuSystems\CommonBundle\ApiFilter\ApiResponseList;
 use AnzuSystems\CommonBundle\Tests\AnzuWebTestCase;
 use AnzuSystems\CommonBundle\Tests\Data\Entity\User;
+use AnzuSystems\CommonBundle\Tests\Data\Repository\UserRepository;
+use AnzuSystems\CommonBundle\Tests\Data\Security\TestHeaderAuthenticator;
 use AnzuSystems\Contracts\AnzuApp;
 use AnzuSystems\SerializerBundle\Serializer;
-use Doctrine\ORM\EntityManagerInterface;
 use JsonException;
+use LogicException;
 use Symfony\Component\HttpFoundation\Request;
 
 abstract class AbstractControllerTest extends AnzuWebTestCase
 {
+    protected const int NON_EXISTENT_USER_ID = 999;
+
     protected User $user;
     private Serializer $serializer;
 
@@ -27,9 +31,6 @@ abstract class AbstractControllerTest extends AnzuWebTestCase
 
         $this->loginUser();
 
-        // CurrentUserProvider requires the user entity to be managed.
-        self::getContainer()->get(EntityManagerInterface::class)->persist($this->user);
-
         $this->serializer = self::getContainer()->get(Serializer::class);
     }
 
@@ -39,10 +40,28 @@ abstract class AbstractControllerTest extends AnzuWebTestCase
         parent::tearDown();
     }
 
-    protected function loginUser(array $roles = []): void
+    protected function loginUser(?int $userId = null): void
     {
-        $this->user = (new User())->setId(AnzuApp::getUserIdAnonymous())->setRoles($roles);
-        self::$client->loginUser($this->user);
+        $userId ??= AnzuApp::getUserIdAnonymous();
+        $user = self::getContainer()->get(UserRepository::class)->find($userId);
+        if (false === $user instanceof User) {
+            throw new LogicException(sprintf('User "%d" to log in does not exist, add it to the fixtures.', $userId));
+        }
+
+        $this->user = $user;
+        $this->sendUserIdHeader($userId);
+    }
+
+    /**
+     * Authenticate as a user that is not in the database.
+     */
+    protected function loginNonExistentUser(int $userId = self::NON_EXISTENT_USER_ID): void
+    {
+        if (self::getContainer()->get(UserRepository::class)->find($userId) instanceof User) {
+            throw new LogicException(sprintf('User "%d" exists, pick an id that no fixture creates.', $userId));
+        }
+
+        $this->sendUserIdHeader($userId);
     }
 
     /**
@@ -127,6 +146,14 @@ abstract class AbstractControllerTest extends AnzuWebTestCase
         return $this->serializer->deserialize(
             self::$client->getResponse()->getContent(),
             $deserializationClass
+        );
+    }
+
+    private function sendUserIdHeader(int $userId): void
+    {
+        self::$client->setServerParameter(
+            'HTTP_' . str_replace('-', '_', strtoupper(TestHeaderAuthenticator::USER_ID_HEADER)),
+            (string) $userId
         );
     }
 }

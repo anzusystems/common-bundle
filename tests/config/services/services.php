@@ -13,12 +13,12 @@ use AnzuSystems\CommonBundle\Tests\Data\Domain\Job\Processor\JobUserDataDeletePr
 use AnzuSystems\CommonBundle\Tests\Data\Fixtures\ExampleFixtures;
 use AnzuSystems\CommonBundle\Tests\Data\Fixtures\UserFixtures;
 use AnzuSystems\CommonBundle\Tests\Data\Repository\UserRepository;
+use AnzuSystems\CommonBundle\Tests\Data\Security\TestHeaderAuthenticator;
 use AnzuSystems\CommonBundle\Util\ResourceLocker;
 use AnzuSystems\SerializerBundle\Serializer;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\Persistence\ManagerRegistry;
 use Redis;
-use Symfony\Component\Security\Core\Authorization\AuthorizationChecker;
 
 return static function (ContainerConfigurator $configurator): void {
     $services = $configurator->services();
@@ -45,7 +45,10 @@ return static function (ContainerConfigurator $configurator): void {
         ->call('setResourceLocker', [service(ResourceLocker::class)])
     ;
 
-    $services->alias('security.token_storage.test', 'security.untracked_token_storage');
+    $services->set(TestHeaderAuthenticator::class)
+        ->autowire(true)
+        ->autoconfigure(true)
+    ;
 
     $services->set(UserFixtures::class)
         ->call('setEntityManager', [service(EntityManagerInterface::class)])
@@ -67,11 +70,6 @@ return static function (ContainerConfigurator $configurator): void {
     ;
 
     $services->alias(FixturesLoader::class . '.test', FixturesLoader::class)
-        ->public()
-    ;
-
-    $services->set('security.authorization_checker', AuthorizationChecker::class)
-        ->args([service('security.token_storage'), service('security.access.decision_manager')])
         ->public()
     ;
 

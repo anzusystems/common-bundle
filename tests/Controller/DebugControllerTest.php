@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace AnzuSystems\CommonBundle\Tests\Controller;
 
-use AnzuSystems\Contracts\Entity\AnzuUser;
+use AnzuSystems\Contracts\AnzuApp;
 use Symfony\Component\HttpFoundation\Response;
 
 final class DebugControllerTest extends AbstractControllerTest
@@ -18,7 +18,7 @@ final class DebugControllerTest extends AbstractControllerTest
 
     public function testOpCacheStatus(): void
     {
-        $this->loginUser([AnzuUser::ROLE_ADMIN]);
+        $this->loginUser(AnzuApp::getUserIdAdmin());
         $result = $this->get(uri: '/debug/opcache');
         self::assertResponseIsSuccessful();
         self::assertArrayHasKey('opcache', $result);
@@ -26,7 +26,7 @@ final class DebugControllerTest extends AbstractControllerTest
 
     public function testIpCheck(): void
     {
-        $this->loginUser([AnzuUser::ROLE_ADMIN]);
+        $this->loginUser(AnzuApp::getUserIdAdmin());
         $result = $this->get(uri: '/debug/ip');
         self::assertResponseIsSuccessful();
         self::assertArrayHasKey('App', $result);
@@ -36,7 +36,7 @@ final class DebugControllerTest extends AbstractControllerTest
 
     public function testError(): void
     {
-        $this->loginUser([AnzuUser::ROLE_ADMIN]);
+        $this->loginUser(AnzuApp::getUserIdAdmin());
         $result = $this->get(uri: '/debug/error');
         self::assertResponseStatusCodeSame(Response::HTTP_INTERNAL_SERVER_ERROR);
         self::assertSame('test', $result['detail']);

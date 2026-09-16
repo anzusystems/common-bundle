@@ -3,3 +3,8 @@ security:
         dev:
             pattern: ^/(_(profiler|wdt)|css|images|js)/
             security: false
+        main:
+            pattern: ^/
+            stateless: true
+            custom_authenticators:
+                - AnzuSystems\CommonBundle\Tests\Data\Security\TestHeaderAuthenticator

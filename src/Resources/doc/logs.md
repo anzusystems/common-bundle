@@ -132,3 +132,15 @@ anzu_systems_common.logs.create:
   controller: AnzuSystems\CommonBundle\Controller\LogController::create
 
 ```
+
+### Restrict who can read logs
+
+The read endpoints (`getJournalLogs`, `getOneJournalLog`, `getAuditLogs`, `getOneAuditLog`) require `read_role`, `ROLE_SUPER_ADMIN` by default. Keep it as narrow as your operations allow. The value is passed to `isGranted()`, so a permission handled by your voters works too. The `create` endpoint is not restricted.
+
+```yaml
+anzu_systems_common:
+    logs:
+        read_role: ROLE_SUPER_ADMIN
+```
+
+If the MCP server is enabled, map the log tools (`search_audit_logs`, `search_app_logs`, `get_logs_by_context`) in `mcp.tool_permissions` to the same role, otherwise the logs stay readable through MCP.
