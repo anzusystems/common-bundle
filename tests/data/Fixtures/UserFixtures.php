@@ -15,6 +15,8 @@ use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
 #[AutoconfigureTag(name: AnzuSystemsCommonBundle::TAG_DATA_FIXTURE)]
 final class UserFixtures extends AbstractFixtures
 {
+    public const int SUPER_ADMIN_ID = 4;
+
     public static function getIndexKey(): string
     {
         return User::class;
@@ -65,6 +67,16 @@ final class UserFixtures extends AbstractFixtures
             ->setId(AnzuApp::getUserIdAdmin())
             ->setEmail('admin@anzusystems.sk')
             ->setRoles([User::ROLE_ADMIN])
+            ->setLocale('sk')
+            ->setCreatedAt(AnzuApp::getAppDate())
+            ->setModifiedAt(AnzuApp::getAppDate())
+            ->setCreatedBy($consoleUser)
+            ->setModifiedBy($consoleUser)
+        ;
+        yield (new User())
+            ->setId(self::SUPER_ADMIN_ID)
+            ->setEmail('super.admin@anzusystems.sk')
+            ->setRoles([User::ROLE_SUPER_ADMIN])
             ->setLocale('sk')
             ->setCreatedAt(AnzuApp::getAppDate())
             ->setModifiedAt(AnzuApp::getAppDate())

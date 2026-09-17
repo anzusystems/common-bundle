@@ -8,6 +8,8 @@ use AnzuSystems\CommonBundle\ApiFilter\ApiResponseList;
 use AnzuSystems\CommonBundle\Document\Log;
 use AnzuSystems\CommonBundle\Log\Factory\LogContextFactory;
 use AnzuSystems\CommonBundle\Log\Model\LogDto;
+use AnzuSystems\CommonBundle\Tests\Data\Fixtures\UserFixtures;
+use AnzuSystems\Contracts\AnzuApp;
 use AnzuSystems\Contracts\Model\Enum\LogLevel;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -16,6 +18,8 @@ final class LogControllerTest extends AbstractControllerTest
 {
     public function testJournalLogs(): void
     {
+        $this->loginUser(UserFixtures::SUPER_ADMIN_ID);
+
         // create journal log record
         $logContextFactory = self::getContainer()->get(LogContextFactory::class);
         self::getContainer()->get('monolog.logger.journal')->error('Foo bar baz', $logContextFactory->buildFromRequestToArray(new Request()));
@@ -34,6 +38,8 @@ final class LogControllerTest extends AbstractControllerTest
 
     public function testAuditLogs(): void
     {
+        $this->loginUser(UserFixtures::SUPER_ADMIN_ID);
+
         // create audit log by making post request
         $this->post(uri: '/dummy/audit');
 
@@ -53,6 +59,8 @@ final class LogControllerTest extends AbstractControllerTest
 
     public function testCustomLog(): void
     {
+        $this->loginUser(UserFixtures::SUPER_ADMIN_ID);
+
         $logDto = (new LogDto())
             ->setMessage('Custom error message.')
             ->setAppSystem('admin')
@@ -82,5 +90,54 @@ final class LogControllerTest extends AbstractControllerTest
         self::assertEquals($logDto->getContent(), $foundLog->getContext()->getContent());
         self::assertEquals($logDto->getPath(), $foundLog->getContext()->getPath());
         self::assertEquals($logDto->getContextId(), $foundLog->getContext()->getContextId());
+    }
+
+    public function testCreatingLogDoesNotRequireReadRole(): void
+    {
+        $this->loginUser(AnzuApp::getUserIdAdmin());
+
+        $logDto = (new LogDto())
+            ->setMessage('Log of a user without the read role.')
+            ->setAppSystem('admin')
+            ->setLevel(LogLevel::Critical)
+            ->setContent('Frontend error description.')
+            ->setPath('/some/fe/page#showList')
+            ->setContextId(uuid_create())
+        ;
+        $this->post('/log', $logDto, Log::class);
+
+        self::assertResponseStatusCodeSame(Response::HTTP_CREATED);
+    }
+
+    /**
+     * @dataProvider readUriProvider
+     */
+    public function testUserWithoutReadRoleIsForbidden(string $uri): void
+    {
+        $this->loginUser(AnzuApp::getUserIdAdmin());
+
+        self::$client->request(method: Request::METHOD_GET, uri: $uri);
+
+        self::assertResponseStatusCodeSame(Response::HTTP_FORBIDDEN);
+    }
+
+    /**
+     * @dataProvider readUriProvider
+     */
+    public function testUnknownUserIsUnauthorized(string $uri): void
+    {
+        $this->loginNonExistentUser();
+
+        self::$client->request(method: Request::METHOD_GET, uri: $uri);
+
+        self::assertResponseStatusCodeSame(Response::HTTP_UNAUTHORIZED);
+    }
+
+    public static function readUriProvider(): iterable
+    {
+        yield 'journal list' => ['/log/journal'];
+        yield 'journal detail' => ['/log/journal/65f1c0de0000000000000000'];
+        yield 'audit list' => ['/log/audit'];
+        yield 'audit detail' => ['/log/audit/65f1c0de0000000000000000'];
     }
 }

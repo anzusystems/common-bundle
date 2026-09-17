@@ -140,6 +140,8 @@ anzu_common:
             - AnzuSystems\CommonBundle\Exception\Handler\HttpExceptionHandler
     logs:
         enabled: true
+        # Role (or permission) required to read journal and audit logs through the log API.
+        read_role: ROLE_SUPER_ADMIN
         # Logs are sent through Symfony Messenger.
         messenger_transport:
             # Name of your messenger transport.

@@ -14,6 +14,7 @@ use AnzuSystems\CommonBundle\Model\OpenApi\Parameter\OAParameterPath;
 use AnzuSystems\CommonBundle\Model\OpenApi\Request\OARequest;
 use AnzuSystems\CommonBundle\Model\OpenApi\Response\OAResponse;
 use AnzuSystems\CommonBundle\Model\OpenApi\Response\OAResponseCreated;
+use AnzuSystems\CommonBundle\Model\OpenApi\Response\OAResponseForbidden;
 use AnzuSystems\CommonBundle\Model\OpenApi\Response\OAResponseList;
 use AnzuSystems\SerializerBundle\Attributes\SerializeParam;
 use AnzuSystems\SerializerBundle\Exception\SerializerException;
@@ -29,6 +30,7 @@ final class LogController extends AbstractAnzuApiController
         private readonly AuditLogRepository $auditLogRepo,
         private readonly JournalLogRepository $journalLogRepo,
         private readonly LogFacade $logFacade,
+        private readonly string $readRole,
     ) {
     }
 
@@ -37,9 +39,11 @@ final class LogController extends AbstractAnzuApiController
      *
      * @throws SerializerException
      */
-    #[OAResponseList(Log::class)]
+    #[OAResponseList(Log::class), OAResponseForbidden]
     public function getAuditLogs(ApiParams $apiParams): JsonResponse
     {
+        $this->denyAccessUnlessGranted($this->readRole);
+
         return $this->okResponse(
             $this->auditLogRepo->findByApiParams($apiParams)
         );
@@ -50,9 +54,11 @@ final class LogController extends AbstractAnzuApiController
      *
      * @throws SerializerException
      */
-    #[OAResponseList(Log::class)]
+    #[OAResponseList(Log::class), OAResponseForbidden]
     public function getJournalLogs(ApiParams $apiParams): JsonResponse
     {
+        $this->denyAccessUnlessGranted($this->readRole);
+
         return $this->okResponse(
             $this->journalLogRepo->findByApiParams($apiParams)
         );
@@ -61,9 +67,11 @@ final class LogController extends AbstractAnzuApiController
     /**
      * Get one app log.
      */
-    #[OAParameterPath('id'), OAResponse(Log::class)]
+    #[OAParameterPath('id'), OAResponse(Log::class), OAResponseForbidden]
     public function getOneJournalLog(string $id): JsonResponse
     {
+        $this->denyAccessUnlessGranted($this->readRole);
+
         $log = $this->journalLogRepo->find($id);
         if ($log instanceof Log) {
             return $this->okResponse($log);
@@ -75,9 +83,11 @@ final class LogController extends AbstractAnzuApiController
     /**
      * @throws SerializerException
      */
-    #[OAParameterPath('id'), OAResponse(Log::class)]
+    #[OAParameterPath('id'), OAResponse(Log::class), OAResponseForbidden]
     public function getOneAuditLog(string $id): JsonResponse
     {
+        $this->denyAccessUnlessGranted($this->readRole);
+
         $log = $this->auditLogRepo->find($id);
         if ($log instanceof Log) {
             return $this->okResponse($log);

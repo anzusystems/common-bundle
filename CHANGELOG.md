@@ -1,3 +1,8 @@
+## [11.6.0](https://github.com/anzusystems/common-bundle/compare/11.5.0...11.6.0) (2026-09-16)
+
+### Changes
+* BC change (security): reading journal and audit logs through the log API (`getJournalLogs`, `getOneJournalLog`, `getAuditLogs`, `getOneAuditLog`) requires the new `logs.read_role`, `ROLE_SUPER_ADMIN` by default. Access was until now decided by host routing and firewall alone, so set `read_role` to a role or permission your current log consumers already hold to keep them working. Creating custom logs stays unrestricted. With MCP enabled, map `search_audit_logs`, `search_app_logs` and `get_logs_by_context` in `mcp.tool_permissions` to the same role.
+
 ## [11.5.0](https://github.com/anzusystems/common-bundle/compare/11.4.2...11.5.0) (2026-09-09)
 
 ### Requirements

@@ -296,6 +296,7 @@ final class Configuration implements ConfigurationInterface
             ->addDefaultsIfNotSet()
             ->canBeDisabled()
             ->children()
+                ->scalarNode('read_role')->defaultValue(AnzuUser::ROLE_SUPER_ADMIN)->cannotBeEmpty()->end()
                 ->arrayNode('messenger_transport')
                     ->children()
                         ->scalarNode('name')->isRequired()->end()

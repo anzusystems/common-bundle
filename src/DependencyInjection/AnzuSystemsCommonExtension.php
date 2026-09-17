@@ -102,6 +102,7 @@ use Doctrine\ORM\EntityManagerInterface;
 use Exception;
 use LogicException;
 use MongoDB;
+use Psr\Container\ContainerInterface as PsrContainerInterface;
 use Sensio\Bundle\FrameworkExtraBundle\Request\ParamConverter\ParamConverterInterface;
 use Symfony\AI\McpBundle\McpBundle;
 use Symfony\Component\Cache\Psr16Cache;
@@ -559,6 +560,7 @@ final class AnzuSystemsCommonExtension extends Extension implements PrependExten
             '$auditLogRepo' => new Reference(AuditLogRepository::class),
             '$journalLogRepo' => new Reference(JournalLogRepository::class),
             '$logFacade' => new Reference(LogFacade::class),
+            '$readRole' => $logs['read_role'],
         ]);
         $container->setDefinition(LogController::class, $definition);
     }
@@ -939,7 +941,7 @@ final class AnzuSystemsCommonExtension extends Extension implements PrependExten
         foreach ($arguments as $name => $argument) {
             $definition->setArgument($name, $argument);
         }
-        $definition->addMethodCall('setContainer', [new Reference('service_container')]);
+        $definition->addMethodCall('setContainer', [new Reference(PsrContainerInterface::class)]);
         $definition->addMethodCall('setSerializer', [new Reference(Serializer::class)]);
         $definition->addMethodCall('setResourceLocker', [new Reference(ResourceLocker::class)]);
         $definition->addTag('controller.service_arguments');
