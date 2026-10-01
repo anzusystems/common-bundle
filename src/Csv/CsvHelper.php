@@ -20,11 +20,16 @@ final class CsvHelper
         return $count - 1;
     }
 
-    public static function getCsv(string $filename, string $mode = 'r'): SplFileObject
-    {
+    public static function getCsv(
+        string $filename,
+        string $mode = 'r',
+        string $separator = ',',
+        string $enclosure = '"',
+        string $escape = '\\',
+    ): SplFileObject {
         $userCsv = new SplFileObject($filename, $mode);
         $userCsv->setFlags(SplFileObject::READ_CSV);
-        $userCsv->setCsvControl();
+        $userCsv->setCsvControl(separator: $separator, enclosure: $enclosure, escape: $escape);
 
         return $userCsv;
     }
