@@ -11,6 +11,8 @@ abstract class AbstractCsvRowAccessor implements CsvRowAccessorInterface
     protected const string ID = 'id';
     protected const array HEADERS = [self::ID];
 
+    private const string UTF8_BOM = "\u{FEFF}";
+
     protected array $row = [];
     protected array $indexMap = [];
     protected int $lastIndex = 0;
@@ -27,9 +29,8 @@ abstract class AbstractCsvRowAccessor implements CsvRowAccessorInterface
 
     public function setHeader(SplFileObject $csv): static
     {
-        $csv->seek(0);
         $index = 0;
-        foreach ((array) $csv->fgetcsv() as $header) {
+        foreach ($this->readHeaders($csv) as $header) {
             if (in_array($header, static::HEADERS, true)) {
                 $this->indexMap[(string) $header] = $index;
                 $this->lastIndex = $index;
@@ -40,11 +41,27 @@ abstract class AbstractCsvRowAccessor implements CsvRowAccessorInterface
         return $this;
     }
 
+    /**
+     * @return list<string>
+     */
+    public function getMissingHeaders(): array
+    {
+        return array_values(array_diff(static::HEADERS, array_keys($this->indexMap)));
+    }
+
     public function setRow(array $row): self
     {
         $this->row = $row;
 
         return $this;
+    }
+
+    /**
+     * SplFileObject reads a blank line, including the one after the last line break, as [null].
+     */
+    public function isEmpty(): bool
+    {
+        return [] === $this->row || [null] === $this->row;
     }
 
     public function isInvalid(): bool
@@ -66,5 +83,18 @@ abstract class AbstractCsvRowAccessor implements CsvRowAccessorInterface
         return $this->row[
             $this->indexMap[$header]
         ];
+    }
+
+    /**
+     * The BOM is skipped before parsing: in front of an enclosure it keeps fgetcsv() from seeing a quoted first header.
+     */
+    private function readHeaders(SplFileObject $csv): array
+    {
+        $csv->rewind();
+        if (self::UTF8_BOM !== $csv->fread(strlen(self::UTF8_BOM))) {
+            $csv->rewind();
+        }
+
+        return (array) $csv->fgetcsv();
     }
 }

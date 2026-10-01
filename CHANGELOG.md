@@ -1,3 +1,13 @@
+## [11.7.0](https://github.com/anzusystems/common-bundle/compare/11.6.0...11.7.0) (2026-10-01)
+
+### Features
+* `CsvHelper::getCsv()` takes `separator`, `enclosure` and `escape` (defaults `,`, `"` and `\`, the parsing so far) and passes them to `SplFileObject::setCsvControl()`, so a `;`-separated file can be read through the helper. Pass `escape: ''` for files that only double their quotes (RFC 4180, Excel, Python `csv`).
+* `AbstractCsvRowAccessor::getMissingHeaders()` lists the `HEADERS` the file does not have, so a caller can reject a file instead of failing on the first `get()`, and `isEmpty()` tells a blank line (read by `SplFileObject` as `[null]`, including the one after the last line break) from an invalid row.
+
+### Changes
+* `CsvHelper::getCsv()` (and `writeCsv()` / `appendCsv()` through it) no longer triggers the PHP 8.4 deprecation `SplFileObject::setCsvControl(): the $escape parameter must be provided` on every call.
+* `AbstractCsvRowAccessor::setHeader()` skips a UTF-8 BOM before it parses the header, so the first column of a file exported with a BOM is matched, quoted or not; it used to stay unmapped and `get()` failed on an undefined index.
+
 ## [11.6.0](https://github.com/anzusystems/common-bundle/compare/11.5.0...11.6.0) (2026-09-16)
 
 ### Changes
