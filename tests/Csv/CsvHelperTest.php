@@ -45,10 +45,11 @@ final class CsvHelperTest extends TestCase
 
     public function testGetCsvReadsWithTheGivenControl(): void
     {
-        file_put_contents($this->filename, "id;name\r\n1;\"Banská Bystrica; Zvolen\"\r\n");
+        file_put_contents($this->filename, "id;name\r\n1;'Banská Bystrica; Zvolen'\r\n");
 
-        $csv = CsvHelper::getCsv(filename: $this->filename, separator: ';', escape: '');
+        $csv = CsvHelper::getCsv(filename: $this->filename, separator: ';', enclosure: "'", escape: '');
 
+        $this->assertSame([';', "'", ''], $csv->getCsvControl());
         $this->assertSame(['id', 'name'], $csv->fgetcsv());
         $this->assertSame(['1', 'Banská Bystrica; Zvolen'], $csv->fgetcsv());
     }

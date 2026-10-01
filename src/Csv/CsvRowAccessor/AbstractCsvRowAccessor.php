@@ -29,7 +29,6 @@ abstract class AbstractCsvRowAccessor implements CsvRowAccessorInterface
 
     public function setHeader(SplFileObject $csv): static
     {
-        $csv->seek(0);
         $index = 0;
         foreach ($this->readHeaders($csv) as $header) {
             if (in_array($header, static::HEADERS, true)) {
@@ -86,13 +85,16 @@ abstract class AbstractCsvRowAccessor implements CsvRowAccessorInterface
         ];
     }
 
+    /**
+     * The BOM is skipped before parsing: in front of an enclosure it keeps fgetcsv() from seeing a quoted first header.
+     */
     private function readHeaders(SplFileObject $csv): array
     {
-        $headers = (array) $csv->fgetcsv();
-        if (isset($headers[0]) && is_string($headers[0]) && str_starts_with($headers[0], self::UTF8_BOM)) {
-            $headers[0] = substr($headers[0], strlen(self::UTF8_BOM));
+        $csv->rewind();
+        if (self::UTF8_BOM !== $csv->fread(strlen(self::UTF8_BOM))) {
+            $csv->rewind();
         }
 
-        return $headers;
+        return (array) $csv->fgetcsv();
     }
 }

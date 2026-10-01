@@ -6,7 +6,7 @@
 
 ### Changes
 * `CsvHelper::getCsv()` (and `writeCsv()` / `appendCsv()` through it) no longer triggers the PHP 8.4 deprecation `SplFileObject::setCsvControl(): the $escape parameter must be provided` on every call.
-* `AbstractCsvRowAccessor::setHeader()` strips a UTF-8 BOM from the first header cell, so the first column of a file exported with a BOM is matched; it used to stay unmapped and `get()` failed on an undefined index.
+* `AbstractCsvRowAccessor::setHeader()` skips a UTF-8 BOM before it parses the header, so the first column of a file exported with a BOM is matched, quoted or not; it used to stay unmapped and `get()` failed on an undefined index.
 
 ## [11.6.0](https://github.com/anzusystems/common-bundle/compare/11.5.0...11.6.0) (2026-09-16)
 

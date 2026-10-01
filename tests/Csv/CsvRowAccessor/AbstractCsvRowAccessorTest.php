@@ -41,13 +41,17 @@ final class AbstractCsvRowAccessorTest extends TestCase
         return [
             'all headers' => ['id;name', []],
             'all headers behind a UTF-8 BOM' => ["\u{FEFF}id;name", []],
+            'quoted headers behind a UTF-8 BOM' => ["\u{FEFF}\"id\";\"name\"", []],
             'header without a column' => ['id;title', ['name']],
         ];
     }
 
-    public function testFirstColumnIsReadBehindAUtf8Bom(): void
+    /**
+     * @dataProvider bomHeaderProvider
+     */
+    public function testFirstColumnIsReadBehindAUtf8Bom(string $header): void
     {
-        file_put_contents($this->filename, "\u{FEFF}id;name\r\n5;Bratislava\r\n");
+        file_put_contents($this->filename, $header . "\r\n5;Bratislava\r\n");
         $csv = $this->getCsv();
         $accessor = $this->createAccessor()
             ->setHeader($csv);
@@ -56,6 +60,14 @@ final class AbstractCsvRowAccessorTest extends TestCase
 
         $this->assertFalse($accessor->isInvalid());
         $this->assertSame(5, $accessor->getId());
+    }
+
+    public function bomHeaderProvider(): array
+    {
+        return [
+            'plain header' => ["\u{FEFF}id;name"],
+            'quoted header' => ["\u{FEFF}\"id\";\"name\""],
+        ];
     }
 
     /**
