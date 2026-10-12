@@ -8,6 +8,7 @@ use AnzuSystems\CommonBundle\Mcp\Log\McpLogFinder;
 use AnzuSystems\CommonBundle\Mcp\McpToolExecutor;
 use AnzuSystems\CommonBundle\Mcp\Model\Request\SearchAuditLogsRequest;
 use AnzuSystems\CommonBundle\Mcp\Model\Response\McpAuditLogSearchResponse;
+use AnzuSystems\CommonBundle\Mcp\Resolver\McpDateWindowResolver;
 use Mcp\Capability\Attribute\McpTool;
 use Mcp\Capability\Attribute\Schema;
 use Mcp\Schema\Result\CallToolResult;
@@ -48,9 +49,9 @@ final readonly class SearchAuditLogsTool
         ?string $resourceName = null,
         #[Schema(description: 'Exact contextId (UUID) of one request, as found in other log records.')]
         ?string $contextId = null,
-        #[Schema(description: 'Only records at or after this ISO 8601 date-time, e.g. "2026-07-20T06:00:00+02:00". Defaults to 1 day before until.')]
+        #[Schema(description: 'Only records at or after this ISO 8601 date-time, e.g. "2026-07-20T06:00:00+02:00". Defaults to 1 day before until. ' . McpDateWindowResolver::DATE_TIME_OFFSET_DESCRIPTION)]
         ?string $from = null,
-        #[Schema(description: 'Only records at or before this ISO 8601 date-time. Defaults to now; the from..until window is capped at 31 days.')]
+        #[Schema(description: 'Only records at or before this ISO 8601 date-time. Defaults to now; the from..until window is capped at 31 days. ' . McpDateWindowResolver::DATE_TIME_OFFSET_DESCRIPTION)]
         ?string $until = null,
         #[Schema(description: 'Maximum number of records, capped at 50.')]
         int $limit = McpLogFinder::LIMIT_DEFAULT,
