@@ -125,6 +125,7 @@ final class Configuration implements ConfigurationInterface
                 ->append($this->addHealthCheckSection())
                 ->append($this->addPermissionsSection())
                 ->append($this->addJobsSection())
+                ->append($this->addFixturesSection())
                 ->append($this->addEditorSection())
             ->end()
         ;
@@ -429,6 +430,16 @@ final class Configuration implements ConfigurationInterface
                 ->scalarNode('max_exec_time')->defaultValue(50)->end()
                 ->scalarNode('max_memory')->defaultValue(100_000_000)->end()
                 ->scalarNode('no_job_idle_time')->defaultValue(10)->end()
+            ->end()
+        ;
+    }
+
+    private function addFixturesSection(): NodeDefinition
+    {
+        return (new TreeBuilder('fixtures'))->getRootNode()
+            ->addDefaultsIfNotSet()
+            ->children()
+                ->booleanNode('read_only_after_load')->defaultFalse()->end()
             ->end()
         ;
     }

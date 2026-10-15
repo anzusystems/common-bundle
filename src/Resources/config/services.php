@@ -78,6 +78,8 @@ return static function (ContainerConfigurator $configurator): void {
             defaultPriorityMethod: 'getPriority',
         ))
         ->arg('$env', param('kernel.environment'))
+        ->arg('$entityManager', service(EntityManagerInterface::class))
+        ->arg('$readOnlyAfterLoad', false)
     ;
 
     $services->set(GenerateFixturesCommand::class)

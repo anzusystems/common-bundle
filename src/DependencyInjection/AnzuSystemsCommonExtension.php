@@ -34,6 +34,7 @@ use AnzuSystems\CommonBundle\Controller\DebugController;
 use AnzuSystems\CommonBundle\Controller\HealthCheckController;
 use AnzuSystems\CommonBundle\Controller\LogController;
 use AnzuSystems\CommonBundle\Controller\PermissionController;
+use AnzuSystems\CommonBundle\DataFixtures\FixturesLoader;
 use AnzuSystems\CommonBundle\DataFixtures\Interfaces\FixturesInterface;
 use AnzuSystems\CommonBundle\DependencyInjection\CompilerPass\McpCompilerPass;
 use AnzuSystems\CommonBundle\Doctrine\Query\AST\DateTime\Year;
@@ -238,6 +239,7 @@ final class AnzuSystemsCommonExtension extends Extension implements PrependExten
         $this->loadPermissions($container);
         $this->loadValueResolvers($container);
         $this->loadJobs($container);
+        $this->loadFixtures($container);
         $this->loadEditors($container);
     }
 
@@ -813,6 +815,13 @@ final class AnzuSystemsCommonExtension extends Extension implements PrependExten
                 ->addTag('request.param_converter', ['priority' => false, 'converter' => EnumParamConverter::class])
             ;
         }
+    }
+
+    private function loadFixtures(ContainerBuilder $container): void
+    {
+        $container->getDefinition(FixturesLoader::class)
+            ->setArgument('$readOnlyAfterLoad', $this->processedConfig['fixtures']['read_only_after_load'])
+        ;
     }
 
     private function loadJobs(ContainerBuilder $container): void

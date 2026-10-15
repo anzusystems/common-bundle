@@ -113,6 +113,11 @@ abstract class AbstractFixtures implements FixturesInterface
         return false;
     }
 
+    public function getUpdatedEntityClasses(): array
+    {
+        return [];
+    }
+
     public function configureAssignedGenerator(): void
     {
         foreach ($this->getAssignedGeneratorClasses() as $assignedGeneratorClass) {
