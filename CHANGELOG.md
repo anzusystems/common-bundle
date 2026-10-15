@@ -1,11 +1,15 @@
-## Unreleased
+## [11.9.0](https://github.com/anzusystems/common-bundle/compare/11.8.0...11.9.0) (2026-10-15)
 
 ### Features
-* `ResourceLocker::lock()` takes an optional `ttl` in seconds (default `ResourceLocker::DEFAULT_TTL`, the 60 seconds used so far), so a lock can cover work that runs longer than a minute.
-* New `fixtures.read_only_after_load` option (default `false`): `FixturesLoader` flushes after each fixture and marks every managed entity read-only, so later flushes no longer compute change sets for the entities of earlier fixtures. The core-cms test fixtures load in 6.7 s instead of 16.6 s with identical data. Doctrine silently drops a change to a read-only entity, so a fixture that has to change entities of earlier fixtures returns their classes from the new `FixturesInterface::getUpdatedEntityClasses()` (`[]` in `AbstractFixtures`), and the loader keeps entities of those classes writable. See the "Read-only after load" section of `src/Resources/doc/fixtures.md`.
+* New `fixtures.read_only_after_load` option (default `false`): `FixturesLoader` flushes after each fixture and marks every managed entity read-only, so later flushes no longer compute change sets for the entities of earlier fixtures. In core-cms the fixtures of a cold test bootstrap load in 10.3 s instead of 20.5 s, and in 7 s instead of 16.6 s when only the database is rebuilt, with identical data. Doctrine silently drops a change to a read-only entity, so a fixture that has to change entities of earlier fixtures returns their classes from the new `FixturesInterface::getUpdatedEntityClasses()` (`[]` in `AbstractFixtures`), and the loader keeps entities of those classes writable. See the "Read-only after load" section of `src/Resources/doc/fixtures.md`.
 
 ### Changes
 * `FixturesLoader` takes the entity manager as a new constructor argument, and `FixturesInterface` has the new `getUpdatedEntityClasses()` method; a fixture that implements the interface without extending `AbstractFixtures` has to add it.
+
+## [11.8.0](https://github.com/anzusystems/common-bundle/compare/11.7.0...11.8.0) (2026-10-13)
+
+### Features
+* `ResourceLocker::lock()` takes an optional `ttl` in seconds (default `ResourceLocker::DEFAULT_TTL`, the 60 seconds used so far), so a lock can cover work that runs longer than a minute.
 
 ## [11.7.0](https://github.com/anzusystems/common-bundle/compare/11.6.0...11.7.0) (2026-10-01)
 
