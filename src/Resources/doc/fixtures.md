@@ -122,3 +122,22 @@ public function configureAssignedGenerator(): void;
 ```
 
 If you need to assign your own ids, just override the `useCustomId` method and return true. Method `configureAssignedGenerator` already implements configuration of Doctrine's `AssignedGenerator`.
+
+#### Read-only after load
+
+Every Doctrine flush computes a change set for every managed entity. Fixtures that flush per entity therefore re-check all entities of the fixtures loaded before them, and a large set of fixtures spends most of its time doing so. With this option the loader flushes after each fixture and marks every managed entity read-only, so later flushes skip them:
+
+```yaml
+anzu_systems_common:
+    fixtures:
+        read_only_after_load: true
+```
+
+Doctrine does not save a change to a read-only entity, and it does not report it either. Set values in the fixture that creates the entity. When a fixture has to change an entity that an earlier fixture loaded — a domain service updates it as a side effect, or two entities point at each other — return the entity class from `getUpdatedEntityClasses()` of the changing fixture, and the loader keeps all entities of that class writable:
+
+```php
+public function getUpdatedEntityClasses(): array
+{
+    return [Site::class];
+}
+```

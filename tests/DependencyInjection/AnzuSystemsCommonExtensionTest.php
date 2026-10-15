@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace AnzuSystems\CommonBundle\Tests\DependencyInjection;
 
+use AnzuSystems\CommonBundle\DataFixtures\FixturesLoader;
 use AnzuSystems\CommonBundle\DependencyInjection\AnzuSystemsCommonExtension;
 use AnzuSystems\CommonBundle\Mcp\McpRateLimiter;
 use PHPUnit\Framework\TestCase;
@@ -51,12 +52,28 @@ final class AnzuSystemsCommonExtensionTest extends TestCase
         self::assertFalse($container->hasDefinition(self::LOCK_STORE_ID));
     }
 
-    private function buildContainer(array $rateLimiter = []): ContainerBuilder
+    /**
+     * @dataProvider fixturesReadOnlyAfterLoadDataProvider
+     */
+    public function testFixturesLoaderReadOnlyAfterLoadFollowsTheConfig(array $fixtures, bool $expected): void
+    {
+        $container = $this->buildContainer(fixtures: $fixtures);
+
+        self::assertSame($expected, $container->getDefinition(FixturesLoader::class)->getArgument('$readOnlyAfterLoad'));
+    }
+
+    public static function fixturesReadOnlyAfterLoadDataProvider(): iterable
+    {
+        yield 'default' => [[], false];
+        yield 'enabled' => [['read_only_after_load' => true], true];
+    }
+
+    private function buildContainer(array $rateLimiter = [], array $fixtures = []): ContainerBuilder
     {
         $container = new ContainerBuilder();
         $container->setParameter('kernel.environment', 'test');
         $container->registerExtension($this->createMcpExtension());
-        $container->prependExtensionConfig(self::EXTENSION_ALIAS, $this->createConfig($rateLimiter));
+        $container->prependExtensionConfig(self::EXTENSION_ALIAS, $this->createConfig($rateLimiter) + ['fixtures' => $fixtures]);
 
         $extension = new AnzuSystemsCommonExtension();
         $extension->prepend($container);

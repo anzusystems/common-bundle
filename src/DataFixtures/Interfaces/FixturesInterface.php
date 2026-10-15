@@ -42,6 +42,14 @@ interface FixturesInterface
 
     public function useCustomId(): bool;
 
+    /**
+     * Entity classes whose entities, loaded by earlier fixtures, this fixture changes. With
+     * `fixtures.read_only_after_load` the loader keeps entities of these classes writable.
+     *
+     * @return list<class-string>
+     */
+    public function getUpdatedEntityClasses(): array;
+
     public function configureAssignedGenerator(): void;
 
     public function disableAssignedGenerator(): void;
