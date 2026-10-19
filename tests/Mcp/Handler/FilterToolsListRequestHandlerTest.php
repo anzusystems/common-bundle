@@ -60,8 +60,12 @@ final class FilterToolsListRequestHandlerTest extends TestCase
         $security->method('isGranted')
             ->willReturnCallback(static fn (mixed $attribute): bool => self::GRANTED_PERMISSION === $attribute);
         $toolAccessChecker = new McpToolAccessChecker(
-            [self::GRANTED_TOOL_NAME => self::GRANTED_PERMISSION, self::DENIED_TOOL_NAME => self::DENIED_PERMISSION],
-            $security,
+            toolPermissions: [
+                self::GRANTED_TOOL_NAME => self::GRANTED_PERMISSION,
+                self::DENIED_TOOL_NAME => self::DENIED_PERMISSION,
+            ],
+            security: $security,
+            readOnlyToolNames: [self::GRANTED_TOOL_NAME, self::DENIED_TOOL_NAME],
         );
 
         return new FilterToolsListRequestHandler($registry, $toolAccessChecker, self::PAGE_SIZE);

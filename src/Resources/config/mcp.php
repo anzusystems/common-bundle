@@ -50,6 +50,7 @@ return static function (ContainerConfigurator $configurator): void {
     $services->set(McpToolAccessChecker::class)
         ->arg('$toolPermissions', null)
         ->arg('$security', service('security.helper'))
+        ->arg('$readOnlyToolNames', [])
     ;
 
     $services->set(FilterToolsListRequestHandler::class)
@@ -83,6 +84,7 @@ return static function (ContainerConfigurator $configurator): void {
         ->arg('$toolAccessChecker', service(McpToolAccessChecker::class))
         ->arg('$validator', service('validator'))
         ->arg('$serializer', service(Serializer::class))
+        ->arg('$requestStack', service('request_stack'))
         ->arg('$toolErrorExceptions', null)
         ->tag('monolog.logger', ['channel' => 'mcp'])
     ;

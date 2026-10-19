@@ -30,9 +30,32 @@ final class AuditLogResourceHelper
         $request->attributes->set(self::RESOURCE_ID_ATTR_NAME, (array) $entity->getId());
     }
 
+    public static function addResourceByEntity(
+        Request $request,
+        BaseIdentifiableInterface $entity,
+    ): void {
+        $request->attributes->set(self::RESOURCE_NAME_ATTR_NAME, $entity::getResourceName());
+        $request->attributes->set(self::RESOURCE_ID_ATTR_NAME, [
+            ...(array) $request->attributes->get(self::RESOURCE_ID_ATTR_NAME, []),
+            $entity->getId(),
+        ]);
+    }
+
+    public static function hasResourceId(
+        Request $request
+    ): bool {
+        return false === empty($request->attributes->get(self::RESOURCE_ID_ATTR_NAME));
+    }
+
     public static function excludeFromAuditLogs(
         Request $request
     ): void {
         $request->attributes->set(self::RESOURCE_EXCLUDE_ATTR_NAME, true);
+    }
+
+    public static function includeInAuditLogs(
+        Request $request
+    ): void {
+        $request->attributes->remove(self::RESOURCE_EXCLUDE_ATTR_NAME);
     }
 }

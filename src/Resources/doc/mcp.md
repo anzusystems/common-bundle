@@ -72,11 +72,12 @@ infrastructure after a bundle upgrade.
   (`allowed_hosts`, applied through the McpBundle `MiddlewareFactory` so the SDK's other default middleware stays in
   place) and a sliding-window rate limit per user, charged one token per JSON-RPC message of the request (members of
   `rate_limiter.elevated_role` get `rate_limiter.elevated_limit` — see below).
-* `McpToolExecutor` — wraps tool callbacks: checks the tool permission, validates the request object with the Symfony
-  validator, serializes an object result with the anzu serializer, converts `McpToolInputException`,
-  `AccessDeniedException` and configured `tool_error_exceptions` into `CallToolResult`s with `isError: true`, logs
-  every call (with the serialized request as `params`) to the monolog `mcp` channel and to the `mcpLogs` capped
-  collection (see below).
+* `McpToolExecutor` — wraps tool callbacks: checks the tool permission and the write grant, validates the request
+  object with the Symfony validator, serializes an object result with the anzu serializer, converts
+  `McpToolInputException`, `ValidationException`, `AccessDeniedException` and configured `tool_error_exceptions` into
+  `CallToolResult`s with `isError: true`, refuses write tools in read-only mode, includes a successful write tool call
+  in the audit log, logs every call (with the serialized request as `params`) to the monolog `mcp` channel and to the
+  `mcpLogs` capped collection (see below).
 * `StrictToolArgumentsRequestHandler` — rejects tool calls with unknown arguments.
 * `McpToolAccessChecker` + `FilterToolsListRequestHandler` — per-tool permissions mapped to host permissions (see
   below); the call-side check lives in `McpToolExecutor`.
@@ -103,12 +104,20 @@ tool calls would cost a single token. A request that is not a JSON array of mess
 Every tool routes through
 `McpToolExecutor::execute(string $toolName, ?object $request, Closure $callback): CallToolResult`:
 
-1. the tool permission is checked (see below);
+1. the tool permission and, for a write tool, the write grant are checked (see below);
 2. when `$request` is an object it is validated with the Symfony validator — any violation answers the call with a
    tool error `Invalid arguments: <propertyPath>: <message> …` before the callback runs, so constraint messages should
-   be plain English sentences ending with a period (e.g. `limit must be at least 1.`);
+   be plain English sentences ending with a period (e.g. `limit must be at least 1.`); a write tool is refused with a
+   tool error asking to retry later while `AnzuApp::isReadOnlyMode()` is on;
 3. the callback runs; an object result is turned into the tool result array with the anzu serializer
-   (`#[Serialize]` properties/getters), an array result is used as is;
+   (`#[Serialize]` properties/getters), an array result is used as is. A `ValidationException` thrown by the callback
+   answers the call with the same `Invalid arguments: <field>: <message> …` error listing every field error. Before
+   the callback of a write tool runs, the main request is included in the audit log again (`McpController` excludes
+   every MCP request) and it is excluded again when the call fails, unless a written resource is already recorded on
+   it — by an earlier call of the same JSON-RPC batch or by the failed call itself before it failed; the host tool only registers the entity it wrote through
+   `McpToolExecutor::addAuditLogResource()`, which appends its id to the ids recorded by the earlier calls of the
+   request (`AuditLogResourceHelper::addResourceByEntity()`); a tool whose call must not be audited (e.g.
+   one returning a secret) calls `AuditLogResourceHelper::excludeFromAuditLogs()` in its callback and stays excluded;
 4. the payload is returned as a `CallToolResult` carrying it as `structuredContent` — a tool error additionally sets
    `isError: true`, so the protocol client sees a failed call instead of a successful one with an `error` key;
 5. the call is logged with `params` = the serialized request (`[]` for a `null` request).
@@ -143,6 +152,34 @@ anzu_systems_common:
   bundle tools do).
 * `tools/list` returns only the tools the current user may call — the filter runs after registry pagination, so a
   page may come back with fewer tools (even none) while `nextCursor` is still set; clients follow the cursor as usual.
+
+### Write tools
+
+A tool is a read tool only when its `#[McpTool]` declares `annotations: new ToolAnnotations(readOnlyHint: true)`;
+every other tool (`readOnlyHint` false or missing) is a write tool. `McpCompilerPass` reads the attribute of every
+`mcp.tool` service at compile time (on the tagged method, or on the class for `__invoke`, as McpBundle does) and passes
+the read tool names to `McpToolAccessChecker`, so the classification needs no built MCP server and a tool name it does
+not know is a write tool. A tool without an explicit `name` is matched by the name the SDK derives
+(`ElementMetadataResolver::resolveName()`: the class short name for `__invoke`, the method name otherwise).
+
+A write tool additionally requires `McpToolAccessChecker::WRITE_PERMISSION` (`mcp_tool_write`) through
+`Security::isGranted()`, so it is hidden from `tools/list` and denied on `tools/call` unless a host voter grants that
+attribute — `anzusystems/auth-bundle` provides one based on the personal access token scope. A call denied only for
+the missing write grant answers `Access denied — this token is read-only; create a personal access token with write
+access to use the tool "<tool>".` Host voters built on the bundle's `AbstractVoter` let super admins through on the
+mapped tool permissions, but not on `mcp_tool_write`, which only a voter supporting that attribute grants — a super
+admin with a read-only token is denied a write tool too. "Without a voter the attribute is denied" holds only with
+Symfony's default access decision strategy (`affirmative`) and `allow_if_all_abstain: false`; a host that changes
+either needs a voter that denies `mcp_tool_write`. Annotate every read tool, or it disappears for clients without the
+write grant:
+
+```php
+#[McpTool(
+    name: ListSitesTool::NAME,
+    description: '…',
+    annotations: new ToolAnnotations(readOnlyHint: true, openWorldHint: false),
+)]
+```
 
 ## Date windows
 
