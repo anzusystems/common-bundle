@@ -42,7 +42,29 @@ final readonly class McpToolAccessChecker
             return true;
         }
 
-        return $this->security->isGranted(self::WRITE_PERMISSION);
+        return $this->security->isGranted(self::WRITE_PERMISSION, $toolName);
+    }
+
+    /**
+     * @return list<string>
+     */
+    public function getWriteToolNames(): array
+    {
+        return array_values(array_filter(
+            array_keys($this->toolPermissions),
+            $this->isWriteTool(...),
+        ));
+    }
+
+    /**
+     * @return list<string>
+     */
+    public function getPermittedWriteToolNames(): array
+    {
+        return array_values(array_filter(
+            $this->getWriteToolNames(),
+            $this->isToolPermissionGranted(...),
+        ));
     }
 
     public function isWriteTool(string $toolName): bool

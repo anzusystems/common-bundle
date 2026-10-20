@@ -31,9 +31,10 @@ final readonly class McpToolExecutor
     public const string WARNINGS_KEY = 'warnings';
 
     private const string TOOL_ACCESS_DENIED_MESSAGE = 'Access denied — the current MCP user is not allowed to use the tool "%s".';
-    private const string READ_ONLY_TOKEN_MESSAGE = 'Access denied — this token is read-only; create a personal access token with write access to use the tool "%s".';
+    private const string WRITE_TOOL_NOT_GRANTED_MESSAGE = 'Access denied — this token does not grant the write tool "%s"; create a personal access token that grants it.';
     private const string ACCESS_DENIED_MESSAGE = 'Access denied — the current MCP user is not allowed to access the requested resource.';
     private const string READ_ONLY_MODE_MESSAGE = 'The system is in read-only mode, changes are temporarily disabled — retry later.';
+    private const string WRITE_ALREADY_DONE_MESSAGE = 'A write tool already changed data in this request — send the call of "%s" in a separate request.';
     private const string INVALID_ARGUMENTS_PREFIX = 'Invalid arguments: ';
     private const string VIOLATION_FORMAT = '%s: %s';
     private const string VIOLATION_SEPARATOR = ' ';
@@ -79,7 +80,7 @@ final readonly class McpToolExecutor
                 return $this->createErrorResult($error);
             }
             if (false === $this->toolAccessChecker->isWriteGranted($toolName)) {
-                $error = sprintf(self::READ_ONLY_TOKEN_MESSAGE, $toolName);
+                $error = sprintf(self::WRITE_TOOL_NOT_GRANTED_MESSAGE, $toolName);
 
                 return $this->createErrorResult($error);
             }
@@ -92,6 +93,11 @@ final readonly class McpToolExecutor
             $isWriteTool = $this->toolAccessChecker->isWriteTool($toolName);
             if ($isWriteTool && AnzuApp::isReadOnlyMode()) {
                 $error = self::READ_ONLY_MODE_MESSAGE;
+
+                return $this->createErrorResult($error);
+            }
+            if ($isWriteTool && $this->isWriteAlreadyDone()) {
+                $error = sprintf(self::WRITE_ALREADY_DONE_MESSAGE, $toolName);
 
                 return $this->createErrorResult($error);
             }
@@ -203,6 +209,13 @@ final readonly class McpToolExecutor
     private function formatInvalidArguments(array $messages): string
     {
         return self::INVALID_ARGUMENTS_PREFIX . implode(self::VIOLATION_SEPARATOR, $messages);
+    }
+
+    private function isWriteAlreadyDone(): bool
+    {
+        $request = $this->requestStack->getMainRequest();
+
+        return $request instanceof Request && AuditLogResourceHelper::hasResourceId($request);
     }
 
     private function includeMainRequestInAuditLogs(): ?Request

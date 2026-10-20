@@ -133,11 +133,11 @@ final class McpToolExecutorTest extends TestCase
                 true,
                 sprintf('Access denied — the current MCP user is not allowed to use the tool "%s".', self::TOOL_NAME),
             ],
-            'missing write permission' => [
+            'write tool not granted by the token' => [
                 true,
                 false,
                 sprintf(
-                    'Access denied — this token is read-only; create a personal access token with write access to use the tool "%s".',
+                    'Access denied — this token does not grant the write tool "%s"; create a personal access token that grants it.',
                     self::TOOL_NAME,
                 ),
             ],
@@ -249,7 +249,7 @@ final class McpToolExecutorTest extends TestCase
         ];
     }
 
-    public function testFailedWriteCallKeepsAnEarlierWriteOfTheSameRequestInAuditLogs(): void
+    public function testSecondWriteCallOfARequestIsRejectedAndKeepsTheFirstWriteInAuditLogs(): void
     {
         $request = new Request();
         AuditLogResourceHelper::excludeFromAuditLogs($request);
@@ -270,10 +270,14 @@ final class McpToolExecutorTest extends TestCase
         $result = $executor->execute(
             toolName: self::TOOL_NAME,
             request: null,
-            callback: static fn (): array => throw new McpToolInputException('Invalid input.'),
+            callback: static fn (): array => throw new RuntimeException('must not run'),
         );
 
         self::assertTrue($result->isError);
+        self::assertSame(
+            sprintf('A write tool already changed data in this request — send the call of "%s" in a separate request.', self::TOOL_NAME),
+            $result->structuredContent[McpToolExecutor::ERROR_KEY],
+        );
         self::assertFalse($request->attributes->has(AuditLogResourceHelper::RESOURCE_EXCLUDE_ATTR_NAME));
         self::assertSame(User::getResourceName(), $request->attributes->get(AuditLogResourceHelper::RESOURCE_NAME_ATTR_NAME));
         self::assertSame([self::USER_ID], $request->attributes->get(AuditLogResourceHelper::RESOURCE_ID_ATTR_NAME));

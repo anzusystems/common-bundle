@@ -108,7 +108,9 @@ Every tool routes through
 2. when `$request` is an object it is validated with the Symfony validator — any violation answers the call with a
    tool error `Invalid arguments: <propertyPath>: <message> …` before the callback runs, so constraint messages should
    be plain English sentences ending with a period (e.g. `limit must be at least 1.`); a write tool is refused with a
-   tool error asking to retry later while `AnzuApp::isReadOnlyMode()` is on;
+   tool error asking to retry later while `AnzuApp::isReadOnlyMode()` is on, and with a tool error asking to send it in
+   a separate request when a write tool already succeeded in the same request (one JSON-RPC batch), because the audit
+   log records one resource type per request;
 3. the callback runs; an object result is turned into the tool result array with the anzu serializer
    (`#[Serialize]` properties/getters), an array result is used as is. A `ValidationException` thrown by the callback
    answers the call with the same `Invalid arguments: <field>: <message> …` error listing every field error. Before
@@ -163,12 +165,15 @@ not know is a write tool. A tool without an explicit `name` is matched by the na
 (`ElementMetadataResolver::resolveName()`: the class short name for `__invoke`, the method name otherwise).
 
 A write tool additionally requires `McpToolAccessChecker::WRITE_PERMISSION` (`mcp_tool_write`) through
-`Security::isGranted()`, so it is hidden from `tools/list` and denied on `tools/call` unless a host voter grants that
-attribute — `anzusystems/auth-bundle` provides one based on the personal access token scope. A call denied only for
-the missing write grant answers `Access denied — this token is read-only; create a personal access token with write
-access to use the tool "<tool>".` Host voters built on the bundle's `AbstractVoter` let super admins through on the
-mapped tool permissions, but not on `mcp_tool_write`, which only a voter supporting that attribute grants — a super
-admin with a read-only token is denied a write tool too. "Without a voter the attribute is denied" holds only with
+`Security::isGranted()` with the tool name as the subject, so it is hidden from `tools/list` and denied on
+`tools/call` unless a host voter grants that attribute for that tool — `anzusystems/auth-bundle` provides one granting
+the write tools listed on the personal access token. `McpToolAccessChecker::getWriteToolNames()` lists the tools
+mapped in `tool_permissions` that are write tools, in map order, and `getPermittedWriteToolNames()` narrows them to the
+tools whose permission the current user holds. A call denied only for the missing write grant
+answers `Access denied — this token does not grant the write tool "<tool>"; create a personal access token that grants
+it.` Host voters built on the bundle's `AbstractVoter` let super admins through on the mapped tool permissions, but not
+on `mcp_tool_write`, which only a voter supporting that attribute grants — a super admin whose token does not grant a
+write tool is denied it too. "Without a voter the attribute is denied" holds only with
 Symfony's default access decision strategy (`affirmative`) and `allow_if_all_abstain: false`; a host that changes
 either needs a voter that denies `mcp_tool_write`. Annotate every read tool, or it disappears for clients without the
 write grant:
