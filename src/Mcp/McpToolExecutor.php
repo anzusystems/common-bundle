@@ -31,10 +31,11 @@ final readonly class McpToolExecutor
     public const string WARNINGS_KEY = 'warnings';
 
     private const string TOOL_ACCESS_DENIED_MESSAGE = 'Access denied — the current MCP user is not allowed to use the tool "%s".';
-    private const string WRITE_TOOL_NOT_GRANTED_MESSAGE = 'Access denied — this token does not grant the write tool "%s"; create a personal access token that grants it.';
+    private const string WRITE_TOOL_NOT_GRANTED_MESSAGE = 'Access denied — the write tool "%s" is not granted to this request.';
     private const string ACCESS_DENIED_MESSAGE = 'Access denied — the current MCP user is not allowed to access the requested resource.';
     private const string READ_ONLY_MODE_MESSAGE = 'The system is in read-only mode, changes are temporarily disabled — retry later.';
-    private const string WRITE_ALREADY_DONE_MESSAGE = 'A write tool already changed data in this request — send the call of "%s" in a separate request.';
+    private const string WRITE_TOOL_DONE_MESSAGE = 'A write tool already ran in this request — send the call of "%s" in a separate request.';
+    private const string WRITE_TOOL_DONE_ATTR = '_mcp_write_tool_done';
     private const string INVALID_ARGUMENTS_PREFIX = 'Invalid arguments: ';
     private const string VIOLATION_FORMAT = '%s: %s';
     private const string VIOLATION_SEPARATOR = ' ';
@@ -90,22 +91,28 @@ final readonly class McpToolExecutor
 
                 return $this->createErrorResult($error);
             }
-            $isWriteTool = $this->toolAccessChecker->isWriteTool($toolName);
-            if ($isWriteTool && AnzuApp::isReadOnlyMode()) {
+            if (false === $this->toolAccessChecker->isWriteTool($toolName)) {
+                return $this->createSuccessResult($this->resolveResult($callback()));
+            }
+            if (AnzuApp::isReadOnlyMode()) {
                 $error = self::READ_ONLY_MODE_MESSAGE;
 
                 return $this->createErrorResult($error);
             }
-            if ($isWriteTool && $this->isWriteAlreadyDone()) {
-                $error = sprintf(self::WRITE_ALREADY_DONE_MESSAGE, $toolName);
+            $mainRequest = $this->requestStack->getMainRequest();
+            if (true === $mainRequest?->attributes->has(self::WRITE_TOOL_DONE_ATTR)) {
+                $error = sprintf(self::WRITE_TOOL_DONE_MESSAGE, $toolName);
 
                 return $this->createErrorResult($error);
             }
-            if ($isWriteTool) {
-                $auditedRequest = $this->includeMainRequestInAuditLogs();
+            if ($mainRequest instanceof Request) {
+                AuditLogResourceHelper::includeInAuditLogs($mainRequest);
+                $auditedRequest = $mainRequest;
             }
+            $result = $callback();
+            $mainRequest?->attributes->set(self::WRITE_TOOL_DONE_ATTR, true);
 
-            return $this->createSuccessResult($this->resolveResult($callback()));
+            return $this->createSuccessResult($this->resolveResult($result));
         } catch (McpToolInputException $exception) {
             $error = $exception->getMessage();
 
@@ -209,24 +216,6 @@ final readonly class McpToolExecutor
     private function formatInvalidArguments(array $messages): string
     {
         return self::INVALID_ARGUMENTS_PREFIX . implode(self::VIOLATION_SEPARATOR, $messages);
-    }
-
-    private function isWriteAlreadyDone(): bool
-    {
-        $request = $this->requestStack->getMainRequest();
-
-        return $request instanceof Request && AuditLogResourceHelper::hasResourceId($request);
-    }
-
-    private function includeMainRequestInAuditLogs(): ?Request
-    {
-        $request = $this->requestStack->getMainRequest();
-        if (null === $request) {
-            return null;
-        }
-        AuditLogResourceHelper::includeInAuditLogs($request);
-
-        return $request;
     }
 
     /**

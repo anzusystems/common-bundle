@@ -22,6 +22,9 @@ final class McpCompilerPass implements CompilerPassInterface
 
     private const string TOOL_TAG_METHOD = 'method';
     private const string INVOKE_METHOD = '__invoke';
+    private const string TOOL_METHOD_FORMAT = '%s::%s';
+    private const string TOOL_PERMISSIONS_ARGUMENT = '$toolPermissions';
+    private const string READ_ONLY_TOOL_NAMES_ARGUMENT = '$readOnlyToolNames';
 
     public function process(ContainerBuilder $container): void
     {
@@ -38,31 +41,56 @@ final class McpCompilerPass implements CompilerPassInterface
             ->setAlias(sprintf('mcp.server.%s.controller', $serverName), McpController::class)
             ->setPublic(true);
 
-        $container
-            ->getDefinition(McpToolAccessChecker::class)
-            ->replaceArgument('$readOnlyToolNames', $this->resolveReadOnlyToolNames($container));
+        $toolsByName = $this->resolveToolsByName($container);
+        $this->assertToolNamesAreUnique($toolsByName);
+        $accessCheckerDefinition = $container->getDefinition(McpToolAccessChecker::class);
+        $this->assertToolPermissionsMatchTools(
+            (array) $accessCheckerDefinition->getArgument(self::TOOL_PERMISSIONS_ARGUMENT),
+            $toolsByName,
+        );
+        $accessCheckerDefinition->replaceArgument(
+            self::READ_ONLY_TOOL_NAMES_ARGUMENT,
+            $this->resolveReadOnlyToolNames($toolsByName),
+        );
     }
 
     /**
-     * @return list<string>
+     * @return array<string, array<string, McpTool>>
      */
-    private function resolveReadOnlyToolNames(ContainerBuilder $container): array
+    private function resolveToolsByName(ContainerBuilder $container): array
     {
-        $readOnlyToolNames = [];
+        $toolsByName = [];
+        foreach ($this->resolveToolMethods($container) as $toolMethod => $reflection) {
+            $tool = $this->resolveToolAttribute($reflection);
+            if (null === $tool) {
+                continue;
+            }
+            $toolsByName[ElementMetadataResolver::resolveName($reflection, $tool->name)][$toolMethod] = $tool;
+        }
+
+        return $toolsByName;
+    }
+
+    /**
+     * @return array<string, ReflectionMethod>
+     */
+    private function resolveToolMethods(ContainerBuilder $container): array
+    {
+        $toolMethods = [];
         foreach ($container->findTaggedServiceIds(self::TOOL_TAG) as $serviceId => $tags) {
             $class = $this->resolveToolClass($container, $serviceId);
             if (null === $class) {
                 continue;
             }
             foreach ($tags as $tagAttributes) {
-                $toolName = $this->resolveReadOnlyToolName($class, $tagAttributes[self::TOOL_TAG_METHOD] ?? self::INVOKE_METHOD);
-                if (is_string($toolName)) {
-                    $readOnlyToolNames[] = $toolName;
+                $method = $tagAttributes[self::TOOL_TAG_METHOD] ?? self::INVOKE_METHOD;
+                if (method_exists($class, $method)) {
+                    $toolMethods[sprintf(self::TOOL_METHOD_FORMAT, $class, $method)] = new ReflectionMethod($class, $method);
                 }
             }
         }
 
-        return array_values(array_unique($readOnlyToolNames));
+        return $toolMethods;
     }
 
     /**
@@ -82,26 +110,6 @@ final class McpCompilerPass implements CompilerPassInterface
         return null;
     }
 
-    /**
-     * @param class-string $class
-     */
-    private function resolveReadOnlyToolName(string $class, string $method): ?string
-    {
-        if (false === method_exists($class, $method)) {
-            return null;
-        }
-        $reflection = new ReflectionMethod($class, $method);
-        $attribute = $this->resolveToolAttribute($reflection);
-        if (null === $attribute) {
-            return null;
-        }
-        if (true === $attribute->annotations?->readOnlyHint) {
-            return ElementMetadataResolver::resolveName($reflection, $attribute->name);
-        }
-
-        return null;
-    }
-
     private function resolveToolAttribute(ReflectionMethod $reflection): ?McpTool
     {
         $attributes = $reflection->getAttributes(McpTool::class, ReflectionAttribute::IS_INSTANCEOF);
@@ -113,5 +121,54 @@ final class McpCompilerPass implements CompilerPassInterface
         }
 
         return $attributes[0]->newInstance();
+    }
+
+    /**
+     * @param array<string, array<string, McpTool>> $toolsByName
+     */
+    private function assertToolNamesAreUnique(array $toolsByName): void
+    {
+        foreach ($toolsByName as $toolName => $tools) {
+            if (count($tools) > 1) {
+                throw new LogicException(sprintf(
+                    'The MCP tool name "%s" is registered by more than one tool (%s), every tool name must be unique.',
+                    $toolName,
+                    implode(', ', array_keys($tools)),
+                ));
+            }
+        }
+    }
+
+    /**
+     * @param array<string, string> $toolPermissions
+     * @param array<string, array<string, McpTool>> $toolsByName
+     */
+    private function assertToolPermissionsMatchTools(array $toolPermissions, array $toolsByName): void
+    {
+        $unknownToolNames = array_keys(array_diff_key($toolPermissions, $toolsByName));
+        if ([] === $unknownToolNames) {
+            return;
+        }
+
+        throw new LogicException(sprintf(
+            'The "mcp.tool_permissions" option maps unknown MCP tools: "%s". Every key must be the name of a registered MCP tool, so check for a typo or make sure the tool is registered as a service.',
+            implode('", "', $unknownToolNames),
+        ));
+    }
+
+    /**
+     * @param array<string, array<string, McpTool>> $toolsByName
+     *
+     * @return list<string>
+     */
+    private function resolveReadOnlyToolNames(array $toolsByName): array
+    {
+        return array_keys(array_filter(
+            $toolsByName,
+            static fn (array $tools): bool => array_any(
+                $tools,
+                static fn (McpTool $tool): bool => true === $tool->annotations?->readOnlyHint,
+            ),
+        ));
     }
 }

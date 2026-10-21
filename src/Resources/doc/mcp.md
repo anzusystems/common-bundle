@@ -108,18 +108,23 @@ Every tool routes through
 2. when `$request` is an object it is validated with the Symfony validator — any violation answers the call with a
    tool error `Invalid arguments: <propertyPath>: <message> …` before the callback runs, so constraint messages should
    be plain English sentences ending with a period (e.g. `limit must be at least 1.`); a write tool is refused with a
-   tool error asking to retry later while `AnzuApp::isReadOnlyMode()` is on, and with a tool error asking to send it in
-   a separate request when a write tool already succeeded in the same request (one JSON-RPC batch), because the audit
-   log records one resource type per request;
+   tool error asking to retry later while `AnzuApp::isReadOnlyMode()` is on, and with
+   `A write tool already ran in this request — send the call of "<tool>" in a separate request.` when the callback of
+   a write tool already returned without an exception in the same HTTP request (one JSON-RPC batch). The executor
+   marks the main request itself after such a callback, so the guard does not depend on audit resources: a write tool
+   that registers no resource blocks the next write call of the request just like one that does. Without a main
+   request (no HTTP request on the stack) there is no guard;
 3. the callback runs; an object result is turned into the tool result array with the anzu serializer
    (`#[Serialize]` properties/getters), an array result is used as is. A `ValidationException` thrown by the callback
    answers the call with the same `Invalid arguments: <field>: <message> …` error listing every field error. Before
    the callback of a write tool runs, the main request is included in the audit log again (`McpController` excludes
    every MCP request) and it is excluded again when the call fails, unless a written resource is already recorded on
-   it — by an earlier call of the same JSON-RPC batch or by the failed call itself before it failed; the host tool only registers the entity it wrote through
-   `McpToolExecutor::addAuditLogResource()`, which appends its id to the ids recorded by the earlier calls of the
-   request (`AuditLogResourceHelper::addResourceByEntity()`); a tool whose call must not be audited (e.g.
-   one returning a secret) calls `AuditLogResourceHelper::excludeFromAuditLogs()` in its callback and stays excluded;
+   it (`AuditLogResourceHelper::hasResourceId()`), e.g. by the failed call itself before it failed; the host tool
+   registers the entity it wrote through `McpToolExecutor::addAuditLogResource()`, which appends its id to the ids
+   already recorded on the main request (`AuditLogResourceHelper::addResourceByEntity()`); a tool whose call must not
+   be audited (e.g. one returning a secret) calls `AuditLogResourceHelper::excludeFromAuditLogs()` in its callback, and
+   its successful call stays excluded, because the guard refuses every later write call of the request before it
+   could include the request again;
 4. the payload is returned as a `CallToolResult` carrying it as `structuredContent` — a tool error additionally sets
    `isError: true`, so the protocol client sees a failed call instead of a successful one with an `error` key;
 5. the call is logged with `params` = the serialized request (`[]` for a `null` request).
@@ -155,6 +160,15 @@ anzu_systems_common:
 * `tools/list` returns only the tools the current user may call — the filter runs after registry pagination, so a
   page may come back with fewer tools (even none) while `nextCursor` is still set; clients follow the cursor as usual.
 
+`McpCompilerPass` resolves the name of every `mcp.tool` service method carrying `#[McpTool]` (see "Write tools" below)
+and fails the container compilation with a `LogicException` when
+* one tool name is registered by more than one tool (two classes or methods resolving to the same name) — the SDK
+  registry keeps only the last tool registered under a name, and the read/write classification would be ambiguous;
+* a `tool_permissions` key matches no registered tool (e.g. a typo) — such a mapping would grant nothing.
+
+A tool that is not declared by `#[McpTool]` on a tagged `mcp.tool` service (e.g. one registered by an McpBundle app)
+is unknown to these checks and cannot be mapped in `tool_permissions`.
+
 ### Write tools
 
 A tool is a read tool only when its `#[McpTool]` declares `annotations: new ToolAnnotations(readOnlyHint: true)`;
@@ -169,14 +183,13 @@ A write tool additionally requires `McpToolAccessChecker::WRITE_PERMISSION` (`mc
 `tools/call` unless a host voter grants that attribute for that tool — `anzusystems/auth-bundle` provides one granting
 the write tools listed on the personal access token. `McpToolAccessChecker::getWriteToolNames()` lists the tools
 mapped in `tool_permissions` that are write tools, in map order, and `getPermittedWriteToolNames()` narrows them to the
-tools whose permission the current user holds. A call denied only for the missing write grant
-answers `Access denied — this token does not grant the write tool "<tool>"; create a personal access token that grants
-it.` Host voters built on the bundle's `AbstractVoter` let super admins through on the mapped tool permissions, but not
-on `mcp_tool_write`, which only a voter supporting that attribute grants — a super admin whose token does not grant a
-write tool is denied it too. "Without a voter the attribute is denied" holds only with
-Symfony's default access decision strategy (`affirmative`) and `allow_if_all_abstain: false`; a host that changes
-either needs a voter that denies `mcp_tool_write`. Annotate every read tool, or it disappears for clients without the
-write grant:
+tools whose permission the current user holds. A call denied only for the missing write grant answers
+`Access denied — the write tool "<tool>" is not granted to this request.` Host voters built on the bundle's
+`AbstractVoter` let super admins through on the mapped tool permissions, but not on `mcp_tool_write`, which only a
+voter supporting that attribute grants — a super admin whose token does not grant a write tool is denied it too.
+"Without a voter the attribute is denied" holds only with Symfony's default access decision strategy (`affirmative`)
+and `allow_if_all_abstain: false`; a host that changes either needs a voter that denies `mcp_tool_write`. Annotate
+every read tool, or it disappears for clients without the write grant:
 
 ```php
 #[McpTool(

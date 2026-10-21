@@ -133,13 +133,10 @@ final class McpToolExecutorTest extends TestCase
                 true,
                 sprintf('Access denied — the current MCP user is not allowed to use the tool "%s".', self::TOOL_NAME),
             ],
-            'write tool not granted by the token' => [
+            'write tool not granted to the request' => [
                 true,
                 false,
-                sprintf(
-                    'Access denied — this token does not grant the write tool "%s"; create a personal access token that grants it.',
-                    self::TOOL_NAME,
-                ),
+                sprintf('Access denied — the write tool "%s" is not granted to this request.', self::TOOL_NAME),
             ],
         ];
     }
@@ -237,6 +234,15 @@ final class McpToolExecutorTest extends TestCase
                 static fn (Request $request): array => throw new AccessDeniedException(),
                 true,
             ],
+            'failed write call that recorded a written resource is included in the audit log' => [
+                false,
+                static function (Request $request): array {
+                    AuditLogResourceHelper::addResourceByEntity($request, new User()->setId(self::USER_ID));
+
+                    throw new AccessDeniedException();
+                },
+                false,
+            ],
             'write tool excluding itself stays excluded from the audit log' => [
                 false,
                 static function (Request $request): array {
@@ -249,20 +255,19 @@ final class McpToolExecutorTest extends TestCase
         ];
     }
 
-    public function testSecondWriteCallOfARequestIsRejectedAndKeepsTheFirstWriteInAuditLogs(): void
+    public function testSecondWriteCallOfARequestIsRejectedWithoutAuditResourceAndKeepsTheFirstExclusion(): void
     {
         $request = new Request();
         AuditLogResourceHelper::excludeFromAuditLogs($request);
         $requestStack = new RequestStack();
         $requestStack->push($request);
         $executor = $this->createExecutor(readOnlyTool: false, requestStack: $requestStack);
-        $writtenEntity = new User()->setId(self::USER_ID);
 
         $executor->execute(
             toolName: self::TOOL_NAME,
             request: null,
-            callback: static function () use ($executor, $writtenEntity): array {
-                $executor->addAuditLogResource($writtenEntity);
+            callback: static function () use ($request): array {
+                AuditLogResourceHelper::excludeFromAuditLogs($request);
 
                 return [];
             },
@@ -275,12 +280,10 @@ final class McpToolExecutorTest extends TestCase
 
         self::assertTrue($result->isError);
         self::assertSame(
-            sprintf('A write tool already changed data in this request — send the call of "%s" in a separate request.', self::TOOL_NAME),
+            sprintf('A write tool already ran in this request — send the call of "%s" in a separate request.', self::TOOL_NAME),
             $result->structuredContent[McpToolExecutor::ERROR_KEY],
         );
-        self::assertFalse($request->attributes->has(AuditLogResourceHelper::RESOURCE_EXCLUDE_ATTR_NAME));
-        self::assertSame(User::getResourceName(), $request->attributes->get(AuditLogResourceHelper::RESOURCE_NAME_ATTR_NAME));
-        self::assertSame([self::USER_ID], $request->attributes->get(AuditLogResourceHelper::RESOURCE_ID_ATTR_NAME));
+        self::assertTrue($request->attributes->has(AuditLogResourceHelper::RESOURCE_EXCLUDE_ATTR_NAME));
     }
 
     public function testConfiguredToolErrorExceptionIsMappedToMessage(): void
