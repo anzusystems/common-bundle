@@ -15,6 +15,7 @@ use Symfony\Component\Lock\Store\RedisStore;
 final class ResourceLocker
 {
     public const string REDIS_LOCK_PREFIX = 'res_lock_';
+    public const float DEFAULT_TTL = 60.0;
 
     /**
      * @var array<string, LockInterface>
@@ -29,9 +30,9 @@ final class ResourceLocker
     ) {
     }
 
-    public function lock(BaseIdentifiableInterface|string $resource, bool $blocking = true): bool
+    public function lock(BaseIdentifiableInterface|string $resource, bool $blocking = true, float $ttl = self::DEFAULT_TTL): bool
     {
-        $lock = $this->createLock($resource);
+        $lock = $this->createLock($resource, $ttl);
         $acquired = $lock->acquire();
         $resourceDirty = false;
         if (false === $acquired) {
@@ -75,10 +76,10 @@ final class ResourceLocker
         return self::REDIS_LOCK_PREFIX . $resource;
     }
 
-    private function createLock(BaseIdentifiableInterface|string $resource): LockInterface
+    private function createLock(BaseIdentifiableInterface|string $resource, float $ttl): LockInterface
     {
         return $this->getLockFactory()
-            ->createLock($this->getLockName($resource), 60);
+            ->createLock($this->getLockName($resource), $ttl);
     }
 
     private function getRedisStore(): RedisStore

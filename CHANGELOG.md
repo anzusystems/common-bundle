@@ -1,7 +1,12 @@
-## [11.7.1](https://github.com/anzusystems/common-bundle/compare/11.7.0...11.7.1) (2026-10-12)
+## Unreleased
 
 ### Changes
 * `McpDateWindowResolver::parseDateTime()` converts the parsed date-time to UTC. A host that binds the article window to a Doctrine datetime column (e.g. core-cms `list_published_articles` and `get_content_coverage`) used to get the input's UTC offset dropped — Doctrine binds a `DateTimeImmutable` as its wall-clock time, so `2026-10-07T00:00:00+02:00` was compared as `2026-10-07 00:00:00` UTC and the window shifted by two hours. The log tools were not affected, their MongoDB queries bind `UTCDateTime` instants; for them only the echoed `from`/`until` change to UTC. Input without an offset is read as UTC whatever `date.timezone` is set to, and every echoed window is now in UTC. New `McpDateWindowResolver::DATE_TIME_OFFSET_DESCRIPTION` states that rule for tool parameter descriptions; `search_app_logs` and `search_audit_logs` append it to `from`/`until`.
+
+## [11.8.0](https://github.com/anzusystems/common-bundle/compare/11.7.0...11.8.0) (2026-10-13)
+
+### Features
+* `ResourceLocker::lock()` takes an optional `ttl` in seconds (default `ResourceLocker::DEFAULT_TTL`, the 60 seconds used so far), so a lock can cover work that runs longer than a minute.
 
 ## [11.7.0](https://github.com/anzusystems/common-bundle/compare/11.6.0...11.7.0) (2026-10-01)
 
