@@ -1,4 +1,12 @@
-## Unreleased
+## [11.9.0](https://github.com/anzusystems/common-bundle/compare/11.8.0...11.9.0) (2026-10-15)
+
+### Features
+* New `fixtures.read_only_after_load` option (default `false`): `FixturesLoader` flushes after each fixture and marks every managed entity read-only, so later flushes no longer compute change sets for the entities of earlier fixtures. In our measurement it cuts the fixture load time by about 50 %, with identical data. Doctrine silently drops a change to a read-only entity, so a fixture that has to change entities of earlier fixtures returns their classes from the new `FixturesInterface::getUpdatedEntityClasses()` (`[]` in `AbstractFixtures`), and the loader keeps entities of those classes writable. See the "Read-only after load" section of `src/Resources/doc/fixtures.md`.
+
+### Changes
+* `FixturesLoader` takes the entity manager as a new constructor argument, and `FixturesInterface` has the new `getUpdatedEntityClasses()` method; a fixture that implements the interface without extending `AbstractFixtures` has to add it.
+
+## [11.8.0](https://github.com/anzusystems/common-bundle/compare/11.7.0...11.8.0) (2026-10-13)
 
 ### Changes
 * `McpDateWindowResolver::parseDateTime()` converts the parsed date-time to UTC. A host that binds the article window to a Doctrine datetime column (e.g. core-cms `list_published_articles` and `get_content_coverage`) used to get the input's UTC offset dropped — Doctrine binds a `DateTimeImmutable` as its wall-clock time, so `2026-10-07T00:00:00+02:00` was compared as `2026-10-07 00:00:00` UTC and the window shifted by two hours. The log tools were not affected, their MongoDB queries bind `UTCDateTime` instants; for them only the echoed `from`/`until` change to UTC. Input without an offset is read as UTC whatever `date.timezone` is set to, and every echoed window is now in UTC. New `McpDateWindowResolver::DATE_TIME_OFFSET_DESCRIPTION` states that rule for tool parameter descriptions; `search_app_logs` and `search_audit_logs` append it to `from`/`until`.
