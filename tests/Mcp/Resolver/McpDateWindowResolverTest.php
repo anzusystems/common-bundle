@@ -10,6 +10,8 @@ use PHPUnit\Framework\TestCase;
 
 final class McpDateWindowResolverTest extends TestCase
 {
+    private const string NON_UTC_TIMEZONE = 'Europe/Bratislava';
+
     private McpDateWindowResolver $resolver;
 
     protected function setUp(): void
@@ -80,6 +82,28 @@ final class McpDateWindowResolverTest extends TestCase
 
         self::assertSame('2020-02-01T00:00:00+00:00', $window->until->format(DATE_ATOM));
         self::assertTrue($window->truncated);
+    }
+
+    public function testArticleWindowNormalizesOffsetToUtc(): void
+    {
+        $window = $this->resolver->resolveArticleWindow('2026-10-07T00:00:00+02:00', '2026-10-07T23:59:59+02:00');
+
+        self::assertSame('2026-10-06T22:00:00+00:00', $window->from->format(DATE_ATOM));
+        self::assertSame('2026-10-07T21:59:59+00:00', $window->until->format(DATE_ATOM));
+        self::assertFalse($window->truncated);
+    }
+
+    public function testDateWithoutOffsetIsReadAsUtcWhateverTheDefaultTimezone(): void
+    {
+        $defaultTimezone = date_default_timezone_get();
+        date_default_timezone_set(self::NON_UTC_TIMEZONE);
+        try {
+            $date = $this->resolver->parseDateTime('publishedFrom', '2026-10-07T00:00:00');
+        } finally {
+            date_default_timezone_set($defaultTimezone);
+        }
+
+        self::assertSame('2026-10-07T00:00:00+00:00', $date?->format(DATE_ATOM));
     }
 
     public function testArticleWindowInvertedThrows(): void
