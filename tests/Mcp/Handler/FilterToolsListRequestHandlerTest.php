@@ -21,6 +21,8 @@ final class FilterToolsListRequestHandlerTest extends TestCase
 {
     private const string GRANTED_TOOL_NAME = 'list_sites';
     private const string DENIED_TOOL_NAME = 'search_app_logs';
+    private const string GRANTED_WRITE_TOOL_NAME = 'create_quiz';
+    private const string NOT_GRANTED_WRITE_TOOL_NAME = 'update_robots_txt';
     private const string GRANTED_PERMISSION = 'cms_site_read';
     private const string DENIED_PERMISSION = 'cms_log_read';
     private const int PAGE_SIZE = 20;
@@ -34,21 +36,23 @@ final class FilterToolsListRequestHandlerTest extends TestCase
         self::assertFalse($handler->supports(new CallToolRequest(self::GRANTED_TOOL_NAME, [])->withId(self::REQUEST_ID)));
     }
 
-    public function testHandleReturnsOnlyGrantedTools(): void
+    public function testHandleReturnsOnlyToolsWithGrantedPermissionAndGrantedWriteTools(): void
     {
         $response = $this->createHandler()
             ->handle(new ListToolsRequest()->withId(self::REQUEST_ID), $this->createStub(SessionInterface::class));
 
         self::assertInstanceOf(Response::class, $response);
         self::assertInstanceOf(ListToolsResult::class, $response->result);
-        self::assertCount(1, $response->result->tools);
-        self::assertSame(self::GRANTED_TOOL_NAME, $response->result->tools[0]->name);
+        self::assertSame(
+            [self::GRANTED_TOOL_NAME, self::GRANTED_WRITE_TOOL_NAME],
+            array_map(static fn (Tool $tool): string => $tool->name, $response->result->tools),
+        );
     }
 
     private function createHandler(): FilterToolsListRequestHandler
     {
         $tools = [];
-        foreach ([self::GRANTED_TOOL_NAME, self::DENIED_TOOL_NAME] as $toolName) {
+        foreach ([self::GRANTED_TOOL_NAME, self::DENIED_TOOL_NAME, self::GRANTED_WRITE_TOOL_NAME, self::NOT_GRANTED_WRITE_TOOL_NAME] as $toolName) {
             $tools[$toolName] = new Tool($toolName, null, ['type' => 'object'], null, null);
         }
         $registry = $this->createMock(RegistryInterface::class);
@@ -58,10 +62,19 @@ final class FilterToolsListRequestHandlerTest extends TestCase
 
         $security = $this->createMock(Security::class);
         $security->method('isGranted')
-            ->willReturnCallback(static fn (mixed $attribute): bool => self::GRANTED_PERMISSION === $attribute);
+            ->willReturnCallback(static fn (mixed $attribute, mixed $subject = null): bool => match ($attribute) {
+                McpToolAccessChecker::WRITE_PERMISSION => self::GRANTED_WRITE_TOOL_NAME === $subject,
+                default => self::GRANTED_PERMISSION === $attribute,
+            });
         $toolAccessChecker = new McpToolAccessChecker(
-            [self::GRANTED_TOOL_NAME => self::GRANTED_PERMISSION, self::DENIED_TOOL_NAME => self::DENIED_PERMISSION],
-            $security,
+            toolPermissions: [
+                self::GRANTED_TOOL_NAME => self::GRANTED_PERMISSION,
+                self::DENIED_TOOL_NAME => self::DENIED_PERMISSION,
+                self::GRANTED_WRITE_TOOL_NAME => self::GRANTED_PERMISSION,
+                self::NOT_GRANTED_WRITE_TOOL_NAME => self::GRANTED_PERMISSION,
+            ],
+            security: $security,
+            readOnlyToolNames: [self::GRANTED_TOOL_NAME, self::DENIED_TOOL_NAME],
         );
 
         return new FilterToolsListRequestHandler($registry, $toolAccessChecker, self::PAGE_SIZE);

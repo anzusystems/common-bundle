@@ -5,15 +5,21 @@ declare(strict_types=1);
 namespace AnzuSystems\CommonBundle\Mcp;
 
 use AnzuSystems\CommonBundle\Domain\User\CurrentAnzuUserProvider;
+use AnzuSystems\CommonBundle\Exception\ValidationException;
+use AnzuSystems\CommonBundle\Log\Helper\AuditLogResourceHelper;
 use AnzuSystems\CommonBundle\Mcp\Exception\McpToolInputException;
 use AnzuSystems\CommonBundle\Mcp\Log\McpLogger;
 use AnzuSystems\CommonBundle\Mcp\Security\McpToolAccessChecker;
+use AnzuSystems\Contracts\AnzuApp;
+use AnzuSystems\Contracts\Entity\Interfaces\BaseIdentifiableInterface;
 use AnzuSystems\SerializerBundle\Serializer;
 use Closure;
 use Mcp\Capability\Formatter\ToolResultFormatter;
 use Mcp\Schema\Result\CallToolResult;
 use Monolog\Attribute\WithMonologChannel;
 use Psr\Log\LoggerInterface;
+use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\HttpFoundation\RequestStack;
 use Symfony\Component\Security\Core\Exception\AccessDeniedException;
 use Symfony\Component\Validator\Validator\ValidatorInterface;
 use Throwable;
@@ -25,6 +31,11 @@ final readonly class McpToolExecutor
     public const string WARNINGS_KEY = 'warnings';
 
     private const string TOOL_ACCESS_DENIED_MESSAGE = 'Access denied — the current MCP user is not allowed to use the tool "%s".';
+    private const string WRITE_TOOL_NOT_GRANTED_MESSAGE = 'Access denied — the write tool "%s" is not granted to this request.';
+    private const string ACCESS_DENIED_MESSAGE = 'Access denied — the current MCP user is not allowed to access the requested resource.';
+    private const string READ_ONLY_MODE_MESSAGE = 'The system is in read-only mode, changes are temporarily disabled — retry later.';
+    private const string WRITE_TOOL_DONE_MESSAGE = 'A write tool already ran in this request — send the call of "%s" in a separate request.';
+    private const string WRITE_TOOL_DONE_ATTR = '_mcp_write_tool_done';
     private const string INVALID_ARGUMENTS_PREFIX = 'Invalid arguments: ';
     private const string VIOLATION_FORMAT = '%s: %s';
     private const string VIOLATION_SEPARATOR = ' ';
@@ -39,8 +50,18 @@ final readonly class McpToolExecutor
         private McpToolAccessChecker $toolAccessChecker,
         private ValidatorInterface $validator,
         private Serializer $serializer,
+        private RequestStack $requestStack,
         private array $toolErrorExceptions = [],
     ) {
+    }
+
+    public function addAuditLogResource(BaseIdentifiableInterface $entity): void
+    {
+        $request = $this->requestStack->getMainRequest();
+        if (null === $request) {
+            return;
+        }
+        AuditLogResourceHelper::addResourceByEntity($request, $entity);
     }
 
     /**
@@ -51,10 +72,16 @@ final readonly class McpToolExecutor
         $startedAt = hrtime(true);
         $params = null === $request ? [] : $this->toArray($request);
         $error = null;
+        $auditedRequest = null;
 
         try {
-            if (false === $this->toolAccessChecker->isToolGranted($toolName)) {
+            if (false === $this->toolAccessChecker->isToolPermissionGranted($toolName)) {
                 $error = sprintf(self::TOOL_ACCESS_DENIED_MESSAGE, $toolName);
+
+                return $this->createErrorResult($error);
+            }
+            if (false === $this->toolAccessChecker->isWriteGranted($toolName)) {
+                $error = sprintf(self::WRITE_TOOL_NOT_GRANTED_MESSAGE, $toolName);
 
                 return $this->createErrorResult($error);
             }
@@ -64,14 +91,38 @@ final readonly class McpToolExecutor
 
                 return $this->createErrorResult($error);
             }
+            if (false === $this->toolAccessChecker->isWriteTool($toolName)) {
+                return $this->createSuccessResult($this->resolveResult($callback()));
+            }
+            if (AnzuApp::isReadOnlyMode()) {
+                $error = self::READ_ONLY_MODE_MESSAGE;
 
-            return $this->createSuccessResult($this->resolveResult($callback()));
+                return $this->createErrorResult($error);
+            }
+            $mainRequest = $this->requestStack->getMainRequest();
+            if (true === $mainRequest?->attributes->has(self::WRITE_TOOL_DONE_ATTR)) {
+                $error = sprintf(self::WRITE_TOOL_DONE_MESSAGE, $toolName);
+
+                return $this->createErrorResult($error);
+            }
+            if ($mainRequest instanceof Request) {
+                AuditLogResourceHelper::includeInAuditLogs($mainRequest);
+                $auditedRequest = $mainRequest;
+            }
+            $result = $callback();
+            $mainRequest?->attributes->set(self::WRITE_TOOL_DONE_ATTR, true);
+
+            return $this->createSuccessResult($this->resolveResult($result));
         } catch (McpToolInputException $exception) {
             $error = $exception->getMessage();
 
             return $this->createErrorResult($error);
+        } catch (ValidationException $exception) {
+            $error = $this->resolveValidationExceptionError($exception);
+
+            return $this->createErrorResult($error);
         } catch (AccessDeniedException) {
-            $error = 'Access denied — the current MCP user is not allowed to use the requested filters.';
+            $error = self::ACCESS_DENIED_MESSAGE;
 
             return $this->createErrorResult($error);
         } catch (Throwable $exception) {
@@ -89,6 +140,9 @@ final readonly class McpToolExecutor
 
             return $this->createErrorResult($error);
         } finally {
+            if (is_string($error) && $auditedRequest instanceof Request && false === AuditLogResourceHelper::hasResourceId($auditedRequest)) {
+                AuditLogResourceHelper::excludeFromAuditLogs($auditedRequest);
+            }
             $userId = $this->resolveCurrentUserId();
             $durationMs = (int) round((hrtime(true) - $startedAt) / 1_000_000);
 
@@ -141,6 +195,26 @@ final readonly class McpToolExecutor
             $messages[] = sprintf(self::VIOLATION_FORMAT, $violation->getPropertyPath(), $violation->getMessage());
         }
 
+        return $this->formatInvalidArguments($messages);
+    }
+
+    private function resolveValidationExceptionError(ValidationException $exception): string
+    {
+        $messages = [];
+        foreach ($exception->getFormattedErrors() as $field => $fieldMessages) {
+            foreach ($fieldMessages as $fieldMessage) {
+                $messages[] = sprintf(self::VIOLATION_FORMAT, $field, $fieldMessage);
+            }
+        }
+
+        return $this->formatInvalidArguments($messages);
+    }
+
+    /**
+     * @param list<string> $messages
+     */
+    private function formatInvalidArguments(array $messages): string
+    {
         return self::INVALID_ARGUMENTS_PREFIX . implode(self::VIOLATION_SEPARATOR, $messages);
     }
 

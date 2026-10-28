@@ -11,6 +11,7 @@ use AnzuSystems\CommonBundle\Mcp\Model\Response\McpLogsByContextResponse;
 use Mcp\Capability\Attribute\McpTool;
 use Mcp\Capability\Attribute\Schema;
 use Mcp\Schema\Result\CallToolResult;
+use Mcp\Schema\ToolAnnotations;
 
 #[McpTool(
     name: GetLogsByContextTool::NAME,
@@ -21,6 +22,7 @@ use Mcp\Schema\Result\CallToolResult;
         . 'see the application errors behind the failure. The same contextId correlates logs across the services of '
         . 'this platform, so it can also be looked up in the logs of the other services involved in the request. Long '
         . 'fields are truncated; only logs from the last 31 days are searched.',
+    annotations: new ToolAnnotations(readOnlyHint: true, openWorldHint: false),
 )]
 final readonly class GetLogsByContextTool
 {

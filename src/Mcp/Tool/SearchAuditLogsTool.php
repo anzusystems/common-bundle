@@ -12,6 +12,7 @@ use AnzuSystems\CommonBundle\Mcp\Resolver\McpDateWindowResolver;
 use Mcp\Capability\Attribute\McpTool;
 use Mcp\Capability\Attribute\Schema;
 use Mcp\Schema\Result\CallToolResult;
+use Mcp\Schema\ToolAnnotations;
 
 #[McpTool(
     name: SearchAuditLogsTool::NAME,
@@ -26,6 +27,7 @@ use Mcp\Schema\Result\CallToolResult;
         . 'response echoes the effective from and until, and a longer requested window is shortened and reported in '
         . 'warnings — repeat the search on the remaining days. Results are newest first and long fields are '
         . 'truncated.',
+    annotations: new ToolAnnotations(readOnlyHint: true, openWorldHint: false),
 )]
 final readonly class SearchAuditLogsTool
 {

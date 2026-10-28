@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace AnzuSystems\CommonBundle\Tests\Mcp;
 
 use AnzuSystems\CommonBundle\Domain\User\CurrentAnzuUserProvider;
+use AnzuSystems\CommonBundle\Exception\ValidationException;
+use AnzuSystems\CommonBundle\Log\Helper\AuditLogResourceHelper;
 use AnzuSystems\CommonBundle\Mcp\Exception\McpToolInputException;
 use AnzuSystems\CommonBundle\Mcp\Log\McpLogger;
 use AnzuSystems\CommonBundle\Mcp\McpToolExecutor;
@@ -12,15 +14,21 @@ use AnzuSystems\CommonBundle\Mcp\Model\McpLogsByContextResult;
 use AnzuSystems\CommonBundle\Mcp\Model\Request\SearchAppLogsRequest;
 use AnzuSystems\CommonBundle\Mcp\Model\Response\McpLogsByContextResponse;
 use AnzuSystems\CommonBundle\Mcp\Security\McpToolAccessChecker;
+use AnzuSystems\CommonBundle\Tests\Data\Entity\User;
+use AnzuSystems\Contracts\AnzuApp;
 use AnzuSystems\Contracts\Entity\AnzuUser;
+use Closure;
 use MongoDB\Collection;
 use MongoDB\InsertOneResult;
 use PHPUnit\Framework\TestCase;
 use Psr\Log\NullLogger;
 use RuntimeException;
 use Symfony\Bundle\SecurityBundle\Security;
+use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\HttpFoundation\RequestStack;
 use Symfony\Component\Security\Core\Exception\AccessDeniedException;
 use Symfony\Component\Validator\Validation;
+use Throwable;
 
 final class McpToolExecutorTest extends TestCase
 {
@@ -31,6 +39,8 @@ final class McpToolExecutorTest extends TestCase
     private const string TOOL_PERMISSION = 'cms_test_read';
     private const string BACKEND_ERROR_MESSAGE = 'Backend is temporarily unavailable, retry the call.';
     private const string LEVEL = 'ERROR';
+    private const string TITLE_FIELD = 'title';
+    private const string QUESTIONS_FIELD = 'questions';
 
     private array $insertedDocuments = [];
 
@@ -96,28 +106,184 @@ final class McpToolExecutorTest extends TestCase
         self::assertSame([], $this->insertedDocuments[0]['params']);
     }
 
-    public function testMissingToolPermissionIsReturnedAsToolErrorWithoutRunningCallback(): void
-    {
-        $result = $this->createExecutor(toolGranted: false)
+    /**
+     * @dataProvider deniedToolProvider
+     */
+    public function testDeniedToolIsReturnedAsToolErrorWithoutRunningCallback(
+        bool $toolGranted,
+        bool $writeGranted,
+        string $expectedError,
+    ): void {
+        $result = $this->createExecutor(toolGranted: $toolGranted, readOnlyTool: false, writeGranted: $writeGranted)
             ->execute(self::TOOL_NAME, null, static fn (): array => throw new RuntimeException('must not run'));
 
         self::assertTrue($result->isError);
-        self::assertStringContainsString('Access denied', $result->structuredContent[McpToolExecutor::ERROR_KEY]);
-        self::assertStringContainsString(self::TOOL_NAME, $result->structuredContent[McpToolExecutor::ERROR_KEY]);
+        self::assertSame($expectedError, $result->structuredContent[McpToolExecutor::ERROR_KEY]);
         self::assertSame(McpLogger::LEVEL_NAME_ERROR, $this->insertedDocuments[0]['levelName']);
     }
 
-    public function testAccessDeniedIsReturnedAsToolError(): void
+    /**
+     * @return array<string, array{bool, bool, string}>
+     */
+    public static function deniedToolProvider(): array
+    {
+        return [
+            'missing tool permission' => [
+                false,
+                true,
+                sprintf('Access denied — the current MCP user is not allowed to use the tool "%s".', self::TOOL_NAME),
+            ],
+            'write tool not granted to the request' => [
+                true,
+                false,
+                sprintf('Access denied — the write tool "%s" is not granted to this request.', self::TOOL_NAME),
+            ],
+        ];
+    }
+
+    /**
+     * @dataProvider handledExceptionProvider
+     */
+    public function testHandledExceptionIsReturnedAsToolError(Throwable $exception, string $expectedError): void
     {
         $result = $this->createExecutor()
             ->execute(
-                self::TOOL_NAME,
-                null,
-                static fn (): array => throw new AccessDeniedException(),
+                toolName: self::TOOL_NAME,
+                request: null,
+                callback: static fn (): array => throw $exception,
             );
 
         self::assertTrue($result->isError);
-        self::assertStringContainsString('Access denied', $result->structuredContent[McpToolExecutor::ERROR_KEY]);
+        self::assertSame($expectedError, $result->structuredContent[McpToolExecutor::ERROR_KEY]);
+        self::assertSame(McpLogger::LEVEL_NAME_ERROR, $this->insertedDocuments[0]['levelName']);
+        self::assertSame($expectedError, $this->insertedDocuments[0]['error']);
+    }
+
+    /**
+     * @return array<string, array{Throwable, string}>
+     */
+    public static function handledExceptionProvider(): array
+    {
+        return [
+            'validation exception lists every field error' => [
+                new ValidationException()
+                    ->addFormattedError(self::TITLE_FIELD, ValidationException::ERROR_FIELD_EMPTY)
+                    ->addFormattedError(self::QUESTIONS_FIELD, ValidationException::ERROR_FIELD_LENGTH_MIN)
+                    ->addFormattedError(self::QUESTIONS_FIELD, ValidationException::ERROR_FIELD_INVALID),
+                'Invalid arguments: title: error_field_empty questions: error_field_length_min questions: error_field_invalid',
+            ],
+            'access denied' => [
+                new AccessDeniedException(),
+                'Access denied — the current MCP user is not allowed to access the requested resource.',
+            ],
+        ];
+    }
+
+    public function testWriteCallInReadOnlyModeIsRejectedWithoutRunningCallback(): void
+    {
+        $this->initAppReadOnlyMode(true);
+        try {
+            $result = $this->createExecutor(readOnlyTool: false)
+                ->execute(
+                    toolName: self::TOOL_NAME,
+                    request: null,
+                    callback: static fn (): array => throw new RuntimeException('must not run'),
+                );
+        } finally {
+            $this->initAppReadOnlyMode(false);
+        }
+
+        self::assertTrue($result->isError);
+        self::assertSame(
+            'The system is in read-only mode, changes are temporarily disabled — retry later.',
+            $result->structuredContent[McpToolExecutor::ERROR_KEY],
+        );
+    }
+
+    /**
+     * @dataProvider auditLogProvider
+     *
+     * @param Closure(Request): array<string, mixed> $callback
+     */
+    public function testOnlySuccessfulWriteCallIsIncludedInAuditLogs(
+        bool $readOnlyTool,
+        Closure $callback,
+        bool $expectedExcluded,
+    ): void {
+        $request = new Request();
+        AuditLogResourceHelper::excludeFromAuditLogs($request);
+        $requestStack = new RequestStack();
+        $requestStack->push($request);
+
+        $this->createExecutor(readOnlyTool: $readOnlyTool, requestStack: $requestStack)
+            ->execute(toolName: self::TOOL_NAME, request: null, callback: static fn (): array => $callback($request));
+
+        self::assertSame($expectedExcluded, $request->attributes->has(AuditLogResourceHelper::RESOURCE_EXCLUDE_ATTR_NAME));
+    }
+
+    /**
+     * @return array<string, array{bool, Closure(Request): array<string, mixed>, bool}>
+     */
+    public static function auditLogProvider(): array
+    {
+        return [
+            'write call is included in the audit log' => [false, static fn (Request $request): array => [], false],
+            'read call stays excluded from the audit log' => [true, static fn (Request $request): array => [], true],
+            'failed write call stays excluded from the audit log' => [
+                false,
+                static fn (Request $request): array => throw new AccessDeniedException(),
+                true,
+            ],
+            'failed write call that recorded a written resource is included in the audit log' => [
+                false,
+                static function (Request $request): array {
+                    AuditLogResourceHelper::addResourceByEntity($request, new User()->setId(self::USER_ID));
+
+                    throw new AccessDeniedException();
+                },
+                false,
+            ],
+            'write tool excluding itself stays excluded from the audit log' => [
+                false,
+                static function (Request $request): array {
+                    AuditLogResourceHelper::excludeFromAuditLogs($request);
+
+                    return [];
+                },
+                true,
+            ],
+        ];
+    }
+
+    public function testSecondWriteCallOfARequestIsRejectedWithoutAuditResourceAndKeepsTheFirstExclusion(): void
+    {
+        $request = new Request();
+        AuditLogResourceHelper::excludeFromAuditLogs($request);
+        $requestStack = new RequestStack();
+        $requestStack->push($request);
+        $executor = $this->createExecutor(readOnlyTool: false, requestStack: $requestStack);
+
+        $executor->execute(
+            toolName: self::TOOL_NAME,
+            request: null,
+            callback: static function () use ($request): array {
+                AuditLogResourceHelper::excludeFromAuditLogs($request);
+
+                return [];
+            },
+        );
+        $result = $executor->execute(
+            toolName: self::TOOL_NAME,
+            request: null,
+            callback: static fn (): array => throw new RuntimeException('must not run'),
+        );
+
+        self::assertTrue($result->isError);
+        self::assertSame(
+            sprintf('A write tool already ran in this request — send the call of "%s" in a separate request.', self::TOOL_NAME),
+            $result->structuredContent[McpToolExecutor::ERROR_KEY],
+        );
+        self::assertTrue($request->attributes->has(AuditLogResourceHelper::RESOURCE_EXCLUDE_ATTR_NAME));
     }
 
     public function testConfiguredToolErrorExceptionIsMappedToMessage(): void
@@ -151,6 +317,18 @@ final class McpToolExecutorTest extends TestCase
         self::assertSame(sprintf('Unhandled %s', RuntimeException::class), $this->insertedDocuments[0]['error']);
     }
 
+    private function initAppReadOnlyMode(bool $readOnlyMode): void
+    {
+        AnzuApp::init(
+            appNamespace: AnzuApp::getAppNamespace(),
+            appSystem: AnzuApp::getAppSystem(),
+            appVersion: AnzuApp::getAppVersion(),
+            appReadOnlyMode: $readOnlyMode,
+            projectDir: AnzuApp::getProjectDir(),
+            appEnv: AnzuApp::getAppEnv(),
+        );
+    }
+
     private function createRequest(int $limit): SearchAppLogsRequest
     {
         return new SearchAppLogsRequest(
@@ -166,8 +344,13 @@ final class McpToolExecutorTest extends TestCase
     /**
      * @param array<class-string, string> $toolErrorExceptions
      */
-    private function createExecutor(array $toolErrorExceptions = [], bool $toolGranted = true): McpToolExecutor
-    {
+    private function createExecutor(
+        array $toolErrorExceptions = [],
+        bool $toolGranted = true,
+        bool $readOnlyTool = true,
+        bool $writeGranted = true,
+        RequestStack $requestStack = new RequestStack(),
+    ): McpToolExecutor {
         $this->insertedDocuments = [];
 
         $collection = $this->createMock(Collection::class);
@@ -186,18 +369,26 @@ final class McpToolExecutorTest extends TestCase
 
         $security = $this->createMock(Security::class);
         $security->method('isGranted')
-            ->willReturn($toolGranted);
+            ->willReturnCallback(static fn (mixed $attribute): bool => match ($attribute) {
+                McpToolAccessChecker::WRITE_PERMISSION => $writeGranted,
+                default => $toolGranted,
+            });
 
         return new McpToolExecutor(
-            $currentUserProvider,
-            new NullLogger(),
-            new McpLogger($collection),
-            new McpToolAccessChecker([self::TOOL_NAME => self::TOOL_PERMISSION], $security),
-            Validation::createValidatorBuilder()
+            currentUserProvider: $currentUserProvider,
+            logger: new NullLogger(),
+            mcpLogger: new McpLogger($collection),
+            toolAccessChecker: new McpToolAccessChecker(
+                toolPermissions: [self::TOOL_NAME => self::TOOL_PERMISSION],
+                security: $security,
+                readOnlyToolNames: $readOnlyTool ? [self::TOOL_NAME] : [],
+            ),
+            validator: Validation::createValidatorBuilder()
                 ->enableAttributeMapping()
                 ->getValidator(),
-            McpSerializerFactory::create(),
-            $toolErrorExceptions,
+            serializer: McpSerializerFactory::create(),
+            requestStack: $requestStack,
+            toolErrorExceptions: $toolErrorExceptions,
         );
     }
 }

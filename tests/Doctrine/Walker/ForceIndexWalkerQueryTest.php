@@ -50,6 +50,12 @@ final class ForceIndexWalkerQueryTest extends AbstractDoctrineQueryTestCase
                 ['example_joined_entity' => ExampleJoinedEntity::IDX_NAME],
                 'SELECT e0_.name AS name_0 FROM example e0_ INNER JOIN example_joined_entity e1_ FORCE INDEX (IDX_name)',
             ],
+            [
+                'SELECT e.name FROM ' . Example::class . ' e JOIN ' . ExampleJoinedEntity::class . ' j',
+                ForceIndexWalker::HINT_FORCE_INDEX_FOR_JOIN,
+                ['example' => ExampleJoinedEntity::IDX_NAME],
+                'SELECT e0_.name AS name_0 FROM example e0_ INNER JOIN example_joined_entity e1_',
+            ],
         ];
     }
 }
