@@ -11,12 +11,16 @@ use Mcp\Capability\Attribute\McpTool;
 use Mcp\Capability\Discovery\ElementMetadataResolver;
 use ReflectionAttribute;
 use ReflectionMethod;
+use Symfony\Component\Config\Resource\FileResource;
 use Symfony\Component\DependencyInjection\Compiler\CompilerPassInterface;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
+use Symfony\Component\Filesystem\Filesystem;
 
 final class McpCompilerPass implements CompilerPassInterface
 {
     public const string SERVER_NAME_PARAM = 'anzu_systems_common.mcp.server_name';
+    public const string INSTRUCTIONS_FILE_PARAM = 'anzu_systems_common.mcp.instructions_file';
+    public const string BUILDER_ID_FORMAT = 'mcp.server.%s.builder';
     public const string SESSION_CACHE_ID = 'anzu_systems_common.mcp.session_cache';
     public const string TOOL_TAG = 'mcp.tool';
 
@@ -25,6 +29,7 @@ final class McpCompilerPass implements CompilerPassInterface
     private const string TOOL_METHOD_FORMAT = '%s::%s';
     private const string TOOL_PERMISSIONS_ARGUMENT = '$toolPermissions';
     private const string READ_ONLY_TOOL_NAMES_ARGUMENT = '$readOnlyToolNames';
+    private const string SET_INSTRUCTIONS_METHOD = 'setInstructions';
 
     public function process(ContainerBuilder $container): void
     {
@@ -40,6 +45,7 @@ final class McpCompilerPass implements CompilerPassInterface
         $container
             ->setAlias(sprintf('mcp.server.%s.controller', $serverName), McpController::class)
             ->setPublic(true);
+        $this->setInstructionsFromFile($container, $serverName);
 
         $toolsByName = $this->resolveToolsByName($container);
         $this->assertToolNamesAreUnique($toolsByName);
@@ -52,6 +58,29 @@ final class McpCompilerPass implements CompilerPassInterface
             self::READ_ONLY_TOOL_NAMES_ARGUMENT,
             $this->resolveReadOnlyToolNames($toolsByName),
         );
+    }
+
+    private function setInstructionsFromFile(ContainerBuilder $container, string $serverName): void
+    {
+        if (false === $container->hasParameter(self::INSTRUCTIONS_FILE_PARAM)) {
+            return;
+        }
+        $path = $container->getParameterBag()
+            ->resolveValue($container->getParameter(self::INSTRUCTIONS_FILE_PARAM));
+        if (false === is_string($path)) {
+            return;
+        }
+        $builderId = sprintf(self::BUILDER_ID_FORMAT, $serverName);
+        if (false === $container->hasDefinition($builderId)) {
+            throw new LogicException(sprintf('The mcp server "%s" set in "%s" is not configured in mcp.servers.', $serverName, self::SERVER_NAME_PARAM));
+        }
+        $instructions = new Filesystem()
+            ->readFile($path);
+        $container->addResource(new FileResource($path));
+        $container
+            ->getDefinition($builderId)
+            ->removeMethodCall(self::SET_INSTRUCTIONS_METHOD)
+            ->addMethodCall(self::SET_INSTRUCTIONS_METHOD, [$instructions]);
     }
 
     /**
@@ -102,7 +131,8 @@ final class McpCompilerPass implements CompilerPassInterface
         if ($definition->isAbstract()) {
             return null;
         }
-        $class = $container->getParameterBag()->resolveValue($definition->getClass() ?? $serviceId);
+        $class = $container->getParameterBag()
+            ->resolveValue($definition->getClass() ?? $serviceId);
         if (is_string($class) && class_exists($class)) {
             return $class;
         }
@@ -114,7 +144,8 @@ final class McpCompilerPass implements CompilerPassInterface
     {
         $attributes = $reflection->getAttributes(McpTool::class, ReflectionAttribute::IS_INSTANCEOF);
         if ([] === $attributes && self::INVOKE_METHOD === $reflection->getName()) {
-            $attributes = $reflection->getDeclaringClass()->getAttributes(McpTool::class, ReflectionAttribute::IS_INSTANCEOF);
+            $attributes = $reflection->getDeclaringClass()
+                ->getAttributes(McpTool::class, ReflectionAttribute::IS_INSTANCEOF);
         }
         if ([] === $attributes) {
             return null;

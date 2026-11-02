@@ -18,6 +18,10 @@ use AnzuSystems\CommonBundle\Tests\Data\Entity\User;
 use AnzuSystems\Contracts\AnzuApp;
 use AnzuSystems\Contracts\Entity\AnzuUser;
 use Closure;
+use Mcp\Schema\Request\CallToolRequest;
+use Mcp\Server\RequestContext;
+use Mcp\Server\Session\InMemorySessionStore;
+use Mcp\Server\Session\Session;
 use MongoDB\Collection;
 use MongoDB\InsertOneResult;
 use PHPUnit\Framework\TestCase;
@@ -85,7 +89,7 @@ final class McpToolExecutorTest extends TestCase
             );
 
         self::assertTrue($result->isError);
-        self::assertSame('Invalid arguments: limit: limit must be at least 1.', $result->structuredContent[McpToolExecutor::ERROR_KEY]);
+        self::assertSame('Invalid arguments: limit: This value should be greater than or equal to 1.', $result->structuredContent[McpToolExecutor::ERROR_KEY]);
         self::assertSame(McpLogger::LEVEL_NAME_ERROR, $this->insertedDocuments[0]['levelName']);
         self::assertSame($result->structuredContent[McpToolExecutor::ERROR_KEY], $this->insertedDocuments[0]['error']);
     }
@@ -149,7 +153,7 @@ final class McpToolExecutorTest extends TestCase
         $result = $this->createExecutor()
             ->execute(
                 toolName: self::TOOL_NAME,
-                request: null,
+                context: null,
                 callback: static fn (): array => throw $exception,
             );
 
@@ -186,7 +190,7 @@ final class McpToolExecutorTest extends TestCase
             $result = $this->createExecutor(readOnlyTool: false)
                 ->execute(
                     toolName: self::TOOL_NAME,
-                    request: null,
+                    context: null,
                     callback: static fn (): array => throw new RuntimeException('must not run'),
                 );
         } finally {
@@ -216,7 +220,7 @@ final class McpToolExecutorTest extends TestCase
         $requestStack->push($request);
 
         $this->createExecutor(readOnlyTool: $readOnlyTool, requestStack: $requestStack)
-            ->execute(toolName: self::TOOL_NAME, request: null, callback: static fn (): array => $callback($request));
+            ->execute(toolName: self::TOOL_NAME, context: null, callback: static fn (): array => $callback($request));
 
         self::assertSame($expectedExcluded, $request->attributes->has(AuditLogResourceHelper::RESOURCE_EXCLUDE_ATTR_NAME));
     }
@@ -265,7 +269,7 @@ final class McpToolExecutorTest extends TestCase
 
         $executor->execute(
             toolName: self::TOOL_NAME,
-            request: null,
+            context: null,
             callback: static function () use ($request): array {
                 AuditLogResourceHelper::excludeFromAuditLogs($request);
 
@@ -274,7 +278,7 @@ final class McpToolExecutorTest extends TestCase
         );
         $result = $executor->execute(
             toolName: self::TOOL_NAME,
-            request: null,
+            context: null,
             callback: static fn (): array => throw new RuntimeException('must not run'),
         );
 
@@ -329,15 +333,11 @@ final class McpToolExecutorTest extends TestCase
         );
     }
 
-    private function createRequest(int $limit): SearchAppLogsRequest
+    private function createRequest(int $limit): RequestContext
     {
-        return new SearchAppLogsRequest(
-            level: self::LEVEL,
-            messageContains: null,
-            contextId: null,
-            from: null,
-            until: null,
-            limit: $limit,
+        return new RequestContext(
+            new Session(new InMemorySessionStore()),
+            new CallToolRequest(self::TOOL_NAME, ['level' => self::LEVEL, 'limit' => $limit]),
         );
     }
 
@@ -389,6 +389,7 @@ final class McpToolExecutorTest extends TestCase
             serializer: McpSerializerFactory::create(),
             requestStack: $requestStack,
             toolErrorExceptions: $toolErrorExceptions,
+            toolInputClasses: [self::TOOL_NAME => SearchAppLogsRequest::class],
         );
     }
 }

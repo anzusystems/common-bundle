@@ -8,6 +8,7 @@ use AnzuSystems\CommonBundle\DependencyInjection\AnzuSystemsCommonExtension;
 use AnzuSystems\CommonBundle\DependencyInjection\CompilerPass\ExceptionHandlerCompilerPass;
 use AnzuSystems\CommonBundle\DependencyInjection\CompilerPass\HealthCheckModuleCompilerPass;
 use AnzuSystems\CommonBundle\DependencyInjection\CompilerPass\McpCompilerPass;
+use AnzuSystems\CommonBundle\DependencyInjection\CompilerPass\McpToolSchemaCompilerPass;
 use AnzuSystems\SerializerBundle\AnzuSystemsSerializerBundle;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\HttpKernel\Bundle\Bundle;
@@ -26,5 +27,6 @@ final class AnzuSystemsCommonBundle extends Bundle
         $container->addCompilerPass(new ExceptionHandlerCompilerPass());
         $container->addCompilerPass(new HealthCheckModuleCompilerPass());
         $container->addCompilerPass(new McpCompilerPass());
+        $container->addCompilerPass(new McpToolSchemaCompilerPass(), priority: McpToolSchemaCompilerPass::PRIORITY);
     }
 }

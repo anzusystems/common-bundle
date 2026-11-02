@@ -86,6 +86,7 @@ return static function (ContainerConfigurator $configurator): void {
         ->arg('$serializer', service(Serializer::class))
         ->arg('$requestStack', service('request_stack'))
         ->arg('$toolErrorExceptions', null)
+        ->arg('$toolInputClasses', [])
         ->tag('monolog.logger', ['channel' => 'mcp'])
     ;
 

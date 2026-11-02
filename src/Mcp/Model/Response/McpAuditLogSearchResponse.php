@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace AnzuSystems\CommonBundle\Mcp\Model\Response;
 
+use AnzuSystems\CommonBundle\Mcp\Attribute\McpField;
 use AnzuSystems\CommonBundle\Mcp\Model\McpLogSearchResult;
 use AnzuSystems\CommonBundle\Serializer\Handler\Handlers\RawArrayHandler;
 use AnzuSystems\SerializerBundle\Attributes\Serialize;
@@ -25,6 +26,7 @@ final readonly class McpAuditLogSearchResponse
     /**
      * @return list<array<string, mixed>>
      */
+    #[McpField(description: 'Newest first: one record per request with method, path, acting userId, resource name and ids, http status, request body (content), response, error and exception details and a contextId. Long fields are truncated.')]
     #[Serialize(handler: RawArrayHandler::class)]
     public function getAuditLogs(): array
     {

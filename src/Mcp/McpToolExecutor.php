@@ -14,8 +14,11 @@ use AnzuSystems\Contracts\AnzuApp;
 use AnzuSystems\Contracts\Entity\Interfaces\BaseIdentifiableInterface;
 use AnzuSystems\SerializerBundle\Serializer;
 use Closure;
+use LogicException;
 use Mcp\Capability\Formatter\ToolResultFormatter;
+use Mcp\Schema\Request\CallToolRequest;
 use Mcp\Schema\Result\CallToolResult;
+use Mcp\Server\RequestContext;
 use Monolog\Attribute\WithMonologChannel;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\HttpFoundation\Request;
@@ -23,6 +26,7 @@ use Symfony\Component\HttpFoundation\RequestStack;
 use Symfony\Component\Security\Core\Exception\AccessDeniedException;
 use Symfony\Component\Validator\Validator\ValidatorInterface;
 use Throwable;
+use UnexpectedValueException;
 
 #[WithMonologChannel('mcp')]
 final readonly class McpToolExecutor
@@ -42,6 +46,7 @@ final readonly class McpToolExecutor
 
     /**
      * @param array<class-string<Throwable>, string> $toolErrorExceptions
+     * @param array<string, class-string> $toolInputClasses
      */
     public function __construct(
         private CurrentAnzuUserProvider $currentUserProvider,
@@ -52,6 +57,7 @@ final readonly class McpToolExecutor
         private Serializer $serializer,
         private RequestStack $requestStack,
         private array $toolErrorExceptions = [],
+        private array $toolInputClasses = [],
     ) {
     }
 
@@ -65,16 +71,19 @@ final readonly class McpToolExecutor
     }
 
     /**
-     * @param Closure(): (object|array<string, mixed>) $callback
+     * The callback gets the input DTO of the tool's #[McpToolInput] (or nothing for a tool without input) and returns
+     * the result object or array.
      */
-    public function execute(string $toolName, ?object $request, Closure $callback): CallToolResult
+    public function execute(string $toolName, ?RequestContext $context, Closure $callback): CallToolResult
     {
         $startedAt = hrtime(true);
-        $params = null === $request ? [] : $this->toArray($request);
+        $params = [];
         $error = null;
         $auditedRequest = null;
 
         try {
+            $input = $this->resolveInput($toolName, $context);
+            $params = null === $input ? [] : $this->toArray($input);
             if (false === $this->toolAccessChecker->isToolPermissionGranted($toolName)) {
                 $error = sprintf(self::TOOL_ACCESS_DENIED_MESSAGE, $toolName);
 
@@ -85,14 +94,14 @@ final readonly class McpToolExecutor
 
                 return $this->createErrorResult($error);
             }
-            $validationError = $this->resolveValidationError($request);
+            $validationError = $this->resolveValidationError($input);
             if (is_string($validationError)) {
                 $error = $validationError;
 
                 return $this->createErrorResult($error);
             }
             if (false === $this->toolAccessChecker->isWriteTool($toolName)) {
-                return $this->createSuccessResult($this->resolveResult($callback()));
+                return $this->createSuccessResult($this->resolveResult($callback($input)));
             }
             if (AnzuApp::isReadOnlyMode()) {
                 $error = self::READ_ONLY_MODE_MESSAGE;
@@ -109,7 +118,7 @@ final readonly class McpToolExecutor
                 AuditLogResourceHelper::includeInAuditLogs($mainRequest);
                 $auditedRequest = $mainRequest;
             }
-            $result = $callback();
+            $result = $callback($input);
             $mainRequest?->attributes->set(self::WRITE_TOOL_DONE_ATTR, true);
 
             return $this->createSuccessResult($this->resolveResult($result));
@@ -181,12 +190,33 @@ final readonly class McpToolExecutor
         );
     }
 
-    private function resolveValidationError(?object $request): ?string
+    private function resolveInput(string $toolName, ?RequestContext $context): ?object
     {
-        if (null === $request) {
+        if (null === $context) {
             return null;
         }
-        $violations = $this->validator->validate($request);
+        $inputClass = $this->toolInputClasses[$toolName] ?? throw new LogicException(sprintf(
+            'The MCP tool "%s" passes its RequestContext, but has no #[McpToolInput].',
+            $toolName,
+        ));
+        $callToolRequest = $context->getRequest();
+        if (false === $callToolRequest instanceof CallToolRequest) {
+            throw new UnexpectedValueException(sprintf('Unsupported MCP request "%s".', get_debug_type($callToolRequest)));
+        }
+        $input = $this->serializer->fromArray($callToolRequest->arguments, $inputClass);
+        if (false === is_object($input)) {
+            throw new UnexpectedValueException(sprintf('The MCP tool "%s" input is not an object.', $toolName));
+        }
+
+        return $input;
+    }
+
+    private function resolveValidationError(?object $input): ?string
+    {
+        if (null === $input) {
+            return null;
+        }
+        $violations = $this->validator->validate($input);
         if (0 === $violations->count()) {
             return null;
         }

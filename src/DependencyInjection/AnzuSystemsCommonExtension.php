@@ -657,6 +657,7 @@ final class AnzuSystemsCommonExtension extends Extension implements PrependExten
         $container->registerAliasForArgument('anzu_mongo_mcp_log_collection', MongoDB\Collection::class, '$mcpLogCollection');
 
         $container->setParameter(McpCompilerPass::SERVER_NAME_PARAM, $mcp['server_name']);
+        $container->setParameter(McpCompilerPass::INSTRUCTIONS_FILE_PARAM, $mcp['instructions_file']);
 
         $sessionCacheDefinition = new Definition(Psr16Cache::class);
         $sessionCacheDefinition->setArgument('$pool', new Reference($mcp['session']['cache_pool']));

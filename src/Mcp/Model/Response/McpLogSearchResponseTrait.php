@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace AnzuSystems\CommonBundle\Mcp\Model\Response;
 
+use AnzuSystems\CommonBundle\Mcp\Attribute\McpField;
 use AnzuSystems\CommonBundle\Mcp\Model\McpLogSearchResult;
 use AnzuSystems\CommonBundle\Mcp\Resolver\McpDateWindowResolver;
 use AnzuSystems\SerializerBundle\Attributes\Serialize;
@@ -20,12 +21,14 @@ trait McpLogSearchResponseTrait
     private readonly McpLogSearchResult $result;
     private readonly string $hint;
 
+    #[McpField(description: 'Start of the time window actually searched.')]
     #[Serialize]
     public function getFrom(): string
     {
         return $this->result->window->from->format(DateTimeInterface::ATOM);
     }
 
+    #[McpField(description: 'End of the time window actually searched; a longer requested window is shortened and reported in warnings, so repeat the search on the remaining days.')]
     #[Serialize]
     public function getUntil(): string
     {

@@ -14,8 +14,9 @@ infrastructure after a bundle upgrade.
    $ composer require symfony/mcp-bundle symfony/rate-limiter
    ```
 2. Register `Symfony\AI\McpBundle\McpBundle` in `config/bundles.php` and configure one server under `servers`
-   (`config/packages/mcp.php` — `name`, `version`, `instructions`, `transports: { http: true }`, `http.path`, and
-   `registry.tools` listing the project's own tool namespace). `transports.http` is mandatory — without it McpBundle
+   (`config/packages/mcp.php` — `name`, `version`, `transports: { http: true }`, `http.path`, and `registry.tools`
+   listing the project's own tool namespace; the instructions come from `instructions_file` below).
+   `transports.http` is mandatory — without it McpBundle
    registers neither the controller nor the route for that server. McpBundle 0.12 replaced file-based discovery:
    a tool is exposed when its service carries the `mcp.tool` tag (autoconfigured from `#[McpTool]`) **and** matches a
    `registry` pattern, so a namespace prefix must end with a trailing backslash. The bundle appends its own tools and
@@ -28,6 +29,7 @@ infrastructure after a bundle upgrade.
        mcp:
            enabled: true
            server_name: 'default'
+           instructions_file: '%kernel.project_dir%/config/mcp/instructions.md'
            allowed_hosts: '%env(csv:ANZU_MCP_ALLOWED_HOSTS)%'
            tool_error_exceptions:
                App\Exception\SomeBackendException: 'Backend is temporarily unavailable, retry the call.'
@@ -46,6 +48,8 @@ infrastructure after a bundle upgrade.
                    size_mb: 200
                add_to_health_check: false
    ```
+   `instructions_file` is a Markdown file that `McpCompilerPass` reads into the server instructions; it is a container
+   resource, so an edit rebuilds the container in dev.
    The `logs.mongo` connection options (`uri`, `username`, `password`, `database`, `ssl`) default to the
    `logs.journal.mongo` connection, so they only need to be set when the mcp log collection lives elsewhere.
    `session.cache_pool` is a PSR-6 pool; the bundle wraps it in a `Psr16Cache` and prepends it as the McpBundle
@@ -101,39 +105,86 @@ tool calls would cost a single token. A request that is not a JSON array of mess
 
 ## Tool requests and responses
 
-Every tool routes through
-`McpToolExecutor::execute(string $toolName, ?object $request, Closure $callback): CallToolResult`:
+A tool is declared with `#[AsMcpTool]`, which extends the SDK `#[McpTool]` with the request and response classes:
 
-1. the tool permission and, for a write tool, the write grant are checked (see below);
-2. when `$request` is an object it is validated with the Symfony validator — any violation answers the call with a
-   tool error `Invalid arguments: <propertyPath>: <message> …` before the callback runs, so constraint messages should
-   be plain English sentences ending with a period (e.g. `limit must be at least 1.`); a write tool is refused with a
-   tool error asking to retry later while `AnzuApp::isReadOnlyMode()` is on, and with
+```php
+#[AsMcpTool(
+    name: ListKeywordsTool::NAME,
+    description: <<<'TXT'
+        Searches active keywords (editorial topic tags) by name.
+        Filter {{ list_published_articles }} by the returned ids.
+        TXT,
+    values: ['list_published_articles' => ListPublishedArticlesTool::NAME],
+    input: ListKeywordsRequest::class,
+    output: McpKeywordListResponse::class,
+    readOnly: true,
+)]
+final readonly class ListKeywordsTool
+{
+    public function __invoke(RequestContext $context): CallToolResult
+    {
+        return $this->toolExecutor->execute(
+            toolName: self::NAME,
+            context: $context,
+            callback: fn (ListKeywordsRequest $request): McpKeywordListResponse => …,
+        );
+    }
+}
+```
+
+* `readOnly`, `destructive` and `idempotent` become the `ToolAnnotations` (`openWorldHint` is always `false`): a tool
+  is a write tool unless it says `readOnly: true`, so a forgotten flag hides it from tokens without the write grant;
+  `destructive` (default `true`, as in the MCP specification) and `idempotent` (default `false`) describe a write tool
+  only.
+* `values` replace the `{{ name }}` placeholders of the description, like the parameters of a validation message;
+  point to another tool through its `NAME` constant, so a renamed or removed tool breaks the build instead of the
+  text.
+* `input` is the request DTO: `McpToolSchemaCompilerPass` makes the tool's input schema from its `#[Serialize]`
+  properties (`McpSchemaFactory`) — type, default, `required` and the limits of its `Assert` constraints (`Regex` is
+  left out: PCRE is not the ECMA-262 dialect of `pattern`). A property is required when it has no default value or
+  carries `NotBlank`, `NotNull` or `Count(min ≥ 1)`. The handler then takes only the `RequestContext`; the pass fails
+  the build for any other parameter.
+* `output` is the response class: the pass appends a `Returns:` list of its `#[Serialize]` getters to the description,
+  because clients hand the model the description and the input schema, not necessarily an output schema.
+* `#[McpField(description: …, values: […])]` describes a DTO property, a response getter or a case of a backed enum;
+  the described cases of an enum field are listed after the field's own description, the default one marked.
+  Keep validation messages generic: the schema rejects most invalid calls before the validator runs, and the
+  executor prefixes every violation with its property path.
+
+`McpToolExecutor::execute(string $toolName, ?RequestContext $context, Closure $callback): CallToolResult`:
+
+1. the call arguments are deserialized into the tool's input class (none for a `null` context);
+2. the tool permission and, for a write tool, the write grant are checked (see below);
+3. the input is validated with the Symfony validator — any violation answers the call with a tool error
+   `Invalid arguments: <propertyPath>: <message> …` before the callback runs; a write tool is refused with a tool
+   error asking to retry later while `AnzuApp::isReadOnlyMode()` is on, and with
    `A write tool already ran in this request — send the call of "<tool>" in a separate request.` when the callback of
    a write tool already returned without an exception in the same HTTP request (one JSON-RPC batch). The executor
    marks the main request itself after such a callback, so the guard does not depend on audit resources: a write tool
    that registers no resource blocks the next write call of the request just like one that does. Without a main
    request (no HTTP request on the stack) there is no guard;
-3. the callback runs; an object result is turned into the tool result array with the anzu serializer
-   (`#[Serialize]` properties/getters), an array result is used as is. A `ValidationException` thrown by the callback
-   answers the call with the same `Invalid arguments: <field>: <message> …` error listing every field error. Before
-   the callback of a write tool runs, the main request is included in the audit log again (`McpController` excludes
-   every MCP request) and it is excluded again when the call fails, unless a written resource is already recorded on
-   it (`AuditLogResourceHelper::hasResourceId()`), e.g. by the failed call itself before it failed; the host tool
-   registers the entity it wrote through `McpToolExecutor::addAuditLogResource()`, which appends its id to the ids
-   already recorded on the main request (`AuditLogResourceHelper::addResourceByEntity()`); a tool whose call must not
-   be audited (e.g. one returning a secret) calls `AuditLogResourceHelper::excludeFromAuditLogs()` in its callback, and
-   its successful call stays excluded, because the guard refuses every later write call of the request before it
-   could include the request again;
-4. the payload is returned as a `CallToolResult` carrying it as `structuredContent` — a tool error additionally sets
+4. the callback gets the input and runs; an object result is turned into the tool result array with the anzu
+   serializer (`#[Serialize]` properties/getters), an array result is used as is. A `ValidationException` thrown by the
+   callback answers the call with the same `Invalid arguments: <field>: <message> …` error listing every field error.
+   Before the callback of a write tool runs, the main request is included in the audit log again (`McpController`
+   excludes every MCP request) and it is excluded again when the call fails, unless a written resource is already
+   recorded on it (`AuditLogResourceHelper::hasResourceId()`), e.g. by the failed call itself before it failed; the
+   host tool registers the entity it wrote through `McpToolExecutor::addAuditLogResource()`, which appends its id to
+   the ids already recorded on the main request (`AuditLogResourceHelper::addResourceByEntity()`); a tool whose call
+   must not be audited (e.g. one returning a secret) calls `AuditLogResourceHelper::excludeFromAuditLogs()` in its
+   callback, and its successful call stays excluded, because the guard refuses every later write call of the request
+   before it could include the request again;
+5. the payload is returned as a `CallToolResult` carrying it as `structuredContent` — a tool error additionally sets
    `isError: true`, so the protocol client sees a failed call instead of a successful one with an `error` key;
-5. the call is logged with `params` = the serialized request (`[]` for a `null` request).
+6. the call is logged with `params` = the serialized input (`[]` without one).
 
-The bundle tools follow this shape: `Mcp/Model/Request/*Request` (readonly, `#[Serialize]` + `#[Assert]`) built from
-the `#[Schema]` parameters, `McpLogFinder` returning a `McpLogSearchResult` / `McpLogsByContextResult` (facts only),
-and `Mcp/Model/Response/*Response` owning the JSON shape, the hint and the warning texts. Log rows that are already
-serialized arrays are exposed through `#[Serialize(handler: RawArrayHandler::class)]`, which passes them through the
-serializer untouched (the default array handling re-indexes nested maps).
+The serializer builds an input object without a constructor: a DTO with optional fields has private properties with
+defaults and setters, or public properties with defaults (it treats every promoted constructor parameter as required).
+The bundle tools follow this shape: `Mcp/Model/Request/*Request`, `McpLogFinder` returning a `McpLogSearchResult` /
+`McpLogsByContextResult` (facts only), and `Mcp/Model/Response/*Response` owning the JSON shape, the hint and the
+warning texts. Log rows that are already serialized arrays are exposed through
+`#[Serialize(handler: RawArrayHandler::class)]`, which passes them through the serializer untouched (the default
+array handling re-indexes nested maps).
 
 ## Tool permissions
 
@@ -171,7 +222,8 @@ is unknown to these checks and cannot be mapped in `tool_permissions`.
 
 ### Write tools
 
-A tool is a read tool only when its `#[McpTool]` declares `annotations: new ToolAnnotations(readOnlyHint: true)`;
+A tool is a read tool only when its `#[McpTool]` declares `annotations: new ToolAnnotations(readOnlyHint: true)`
+(`#[AsMcpTool(readOnly: true)]`);
 every other tool (`readOnlyHint` false or missing) is a write tool. `McpCompilerPass` reads the attribute of every
 `mcp.tool` service at compile time (on the tagged method, or on the class for `__invoke`, as McpBundle does) and passes
 the read tool names to `McpToolAccessChecker`, so the classification needs no built MCP server and a tool name it does
@@ -192,10 +244,10 @@ and `allow_if_all_abstain: false`; a host that changes either needs a voter that
 every read tool, or it disappears for clients without the write grant:
 
 ```php
-#[McpTool(
+#[AsMcpTool(
     name: ListSitesTool::NAME,
     description: '…',
-    annotations: new ToolAnnotations(readOnlyHint: true, openWorldHint: false),
+    readOnly: true,
 )]
 ```
 

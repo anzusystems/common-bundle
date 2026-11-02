@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace AnzuSystems\CommonBundle\Mcp\Model\Response;
 
+use AnzuSystems\CommonBundle\Mcp\Attribute\McpField;
 use AnzuSystems\CommonBundle\Mcp\Model\McpLogsByContextResult;
 use AnzuSystems\CommonBundle\Serializer\Handler\Handlers\RawArrayHandler;
 use AnzuSystems\SerializerBundle\Attributes\Serialize;
@@ -21,6 +22,7 @@ final readonly class McpLogsByContextResponse
     /**
      * @return list<array<string, mixed>>
      */
+    #[McpField(description: 'The API requests, newest first.')]
     #[Serialize(handler: RawArrayHandler::class)]
     public function getAuditLogs(): array
     {
@@ -30,6 +32,7 @@ final readonly class McpLogsByContextResponse
     /**
      * @return list<array<string, mixed>>
      */
+    #[McpField(description: 'Application records produced while handling them, newest first.')]
     #[Serialize(handler: RawArrayHandler::class)]
     public function getAppLogs(): array
     {
@@ -39,6 +42,7 @@ final readonly class McpLogsByContextResponse
     /**
      * @return list<array<string, mixed>>
      */
+    #[McpField(description: 'MCP tool calls with this contextId, newest first.')]
     #[Serialize(handler: RawArrayHandler::class)]
     public function getMcpToolCalls(): array
     {

@@ -1,0 +1,397 @@
+<?php
+
+declare(strict_types=1);
+
+namespace AnzuSystems\CommonBundle\Mcp\Factory;
+
+use AnzuSystems\CommonBundle\Mcp\Attribute\McpField;
+use AnzuSystems\SerializerBundle\Attributes\Serialize;
+use BackedEnum;
+use LogicException;
+use ReflectionAttribute;
+use ReflectionClass;
+use ReflectionEnumBackedCase;
+use ReflectionMethod;
+use ReflectionProperty;
+use Symfony\Component\TypeInfo\Type;
+use Symfony\Component\TypeInfo\Type\BackedEnumType;
+use Symfony\Component\TypeInfo\Type\BuiltinType;
+use Symfony\Component\TypeInfo\Type\CollectionType;
+use Symfony\Component\TypeInfo\Type\NullableType;
+use Symfony\Component\TypeInfo\Type\ObjectType;
+use Symfony\Component\TypeInfo\TypeIdentifier;
+use Symfony\Component\TypeInfo\TypeResolver\TypeResolver;
+use Symfony\Component\Validator\Constraint;
+use Symfony\Component\Validator\Constraints as Assert;
+
+/**
+ * The JSON Schema of an MCP tool input or output, made from the DTO the serializer reads: its #[Serialize] properties
+ * and getters with their types, defaults and validation constraints. Assert\Regex is left out on purpose: PCRE is not
+ * the ECMA-262 dialect of "pattern", and the validator answers the agent with a better message than a schema rejection.
+ */
+final class McpSchemaFactory
+{
+    public const string TYPE = 'type';
+    public const string PROPERTIES = 'properties';
+    public const string ITEMS = 'items';
+    public const string DESCRIPTION = 'description';
+    public const string TYPE_OBJECT = 'object';
+    public const string TYPE_ARRAY = 'array';
+
+    private const string REQUIRED = 'required';
+    private const string ADDITIONAL_PROPERTIES = 'additionalProperties';
+    private const string ENUM = 'enum';
+    private const string DEFAULT = 'default';
+    private const string MIN_LENGTH = 'minLength';
+    private const string MAX_LENGTH = 'maxLength';
+    private const string MIN_ITEMS = 'minItems';
+    private const string MAX_ITEMS = 'maxItems';
+    private const string MINIMUM = 'minimum';
+    private const string MAXIMUM = 'maximum';
+    private const string EXCLUSIVE_MINIMUM = 'exclusiveMinimum';
+    private const string EXCLUSIVE_MAXIMUM = 'exclusiveMaximum';
+    private const string TYPE_STRING = 'string';
+    private const string TYPE_NULL = 'null';
+    private const string TYPE_INTEGER = 'integer';
+    private const string VALUE_FORMAT = '"%s"%s = %s';
+    private const string VALUE_SEPARATOR = ', ';
+    private const string DEFAULT_MARK = ' (default)';
+    private const string GETTER_PREFIX_PATTERN = '~^(get|is)(?=\p{Lu})~';
+    private const array JSON_TYPES = [
+        TypeIdentifier::INT->value => self::TYPE_INTEGER,
+        TypeIdentifier::FLOAT->value => 'number',
+        TypeIdentifier::BOOL->value => 'boolean',
+        TypeIdentifier::STRING->value => self::TYPE_STRING,
+        TypeIdentifier::ARRAY->value => self::TYPE_ARRAY,
+    ];
+
+    private readonly TypeResolver $typeResolver;
+
+    public function __construct()
+    {
+        $this->typeResolver = TypeResolver::create();
+    }
+
+    /**
+     * @param class-string $class
+     *
+     * @return array<string, mixed>
+     */
+    public function createForClass(string $class): array
+    {
+        $properties = [];
+        $required = [];
+        $reflection = new ReflectionClass($class);
+        foreach ([...$reflection->getProperties(), ...$reflection->getMethods()] as $member) {
+            $serialize = $this->resolveAttribute($member, Serialize::class);
+            if (null === $serialize) {
+                continue;
+            }
+            $name = $serialize->serializedName ?? $this->resolveSerializedName($member);
+            $constraints = $this->resolveConstraints($member);
+            $schema = $this->applyConstraints($this->createForMember($member, $serialize), $constraints);
+            $default = $member instanceof ReflectionProperty && $member->hasDefaultValue() ? $member->getDefaultValue() : null;
+            $description = $this->createDescription($member, $default);
+            if (is_string($description)) {
+                $schema[self::DESCRIPTION] = $description;
+            }
+            $properties[$name] = $schema;
+            if ($member instanceof ReflectionMethod || $this->isRequired($member, $constraints)) {
+                $required[] = $name;
+
+                continue;
+            }
+            $properties[$name][self::DEFAULT] = $this->normalizeDefault($member->getDefaultValue());
+        }
+
+        $schema = [self::TYPE => self::TYPE_OBJECT, self::PROPERTIES => $properties];
+        if (false === empty($required)) {
+            $schema[self::REQUIRED] = $required;
+        }
+        $schema[self::ADDITIONAL_PROPERTIES] = false;
+
+        return $schema;
+    }
+
+    /**
+     * The field's own description followed by the described values of its backed enum, the default one marked.
+     */
+    private function createDescription(ReflectionProperty|ReflectionMethod $member, mixed $default): ?string
+    {
+        $parts = [];
+        $field = $this->resolveAttribute($member, McpField::class);
+        if ($field instanceof McpField) {
+            $parts[] = $field->description;
+        }
+        $enumClass = $this->resolveEnumClass($this->typeResolver->resolve($member));
+        $values = [];
+        foreach (is_string($enumClass) ? $enumClass::cases() : [] as $case) {
+            $caseField = $this->resolveAttribute(new ReflectionEnumBackedCase($case::class, $case->name), McpField::class);
+            if ($caseField instanceof McpField) {
+                $values[] = sprintf(self::VALUE_FORMAT, $case->value, $case === $default ? self::DEFAULT_MARK : '', $caseField->description);
+            }
+        }
+        if (false === empty($values)) {
+            $parts[] = implode(self::VALUE_SEPARATOR, $values) . '.';
+        }
+
+        return empty($parts) ? null : implode(' ', $parts);
+    }
+
+    /**
+     * @return class-string<BackedEnum>|null
+     */
+    private function resolveEnumClass(Type $type): ?string
+    {
+        if ($type instanceof NullableType) {
+            return $this->resolveEnumClass($type->getWrappedType());
+        }
+        if ($type instanceof BackedEnumType) {
+            return $type->getClassName();
+        }
+
+        return null;
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function createForMember(ReflectionProperty|ReflectionMethod $member, Serialize $serialize): array
+    {
+        $schema = $this->createForType($this->typeResolver->resolve($member));
+        $itemClass = $serialize->type;
+        if (false === self::isOfType($schema, self::TYPE_ARRAY) || isset($schema[self::ITEMS]) || false === is_string($itemClass)) {
+            return $schema;
+        }
+        if (enum_exists($itemClass) || class_exists($itemClass)) {
+            $schema[self::ITEMS] = $this->createForType(Type::object($itemClass));
+        }
+
+        return $schema;
+    }
+
+    /**
+     * @param array<array-key, mixed> $schema
+     */
+    public static function isOfType(array $schema, string $type): bool
+    {
+        $schemaType = $schema[self::TYPE] ?? null;
+
+        return $type === $schemaType || (is_array($schemaType) && in_array($type, $schemaType, true));
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function createForType(Type $type): array
+    {
+        if ($type instanceof NullableType) {
+            return $this->allowNull($this->createForType($type->getWrappedType()));
+        }
+        if ($type instanceof BackedEnumType) {
+            $enumClass = $type->getClassName();
+
+            return [
+                self::TYPE => $this->createForType($type->getBackingType())[self::TYPE],
+                self::ENUM => array_map(static fn (BackedEnum $case): int|string => $case->value, $enumClass::cases()),
+            ];
+        }
+        if ($type instanceof CollectionType && $type->getCollectionKeyType()->isIdentifiedBy(TypeIdentifier::STRING)) {
+            $valueSchema = $this->createForType($type->getCollectionValueType());
+
+            return [self::TYPE => self::TYPE_OBJECT, self::ADDITIONAL_PROPERTIES => empty($valueSchema) ? true : $valueSchema];
+        }
+        if ($type instanceof CollectionType) {
+            return [self::TYPE => self::TYPE_ARRAY, self::ITEMS => $this->createForType($type->getCollectionValueType())];
+        }
+        if ($type instanceof ObjectType) {
+            return $this->createForClass($type->getClassName());
+        }
+        if ($type instanceof BuiltinType && isset(self::JSON_TYPES[$type->getTypeIdentifier()->value])) {
+            return [self::TYPE => self::JSON_TYPES[$type->getTypeIdentifier()->value]];
+        }
+        if ($type instanceof BuiltinType && $type->isIdentifiedBy(TypeIdentifier::MIXED)) {
+            return [];
+        }
+
+        throw new LogicException(sprintf('The type "%s" cannot be described in an MCP tool schema, use a scalar, a backed enum, a list or a class.', $type));
+    }
+
+    /**
+     * @param array<string, mixed> $schema
+     * @param array<array-key, Constraint> $constraints
+     *
+     * @return array<string, mixed>
+     */
+    private function applyConstraints(array $schema, array $constraints): array
+    {
+        foreach ($constraints as $constraint) {
+            $schema = match (true) {
+                $constraint instanceof Assert\All => [
+                    ...$schema,
+                    self::ITEMS => $this->applyConstraints((array) ($schema[self::ITEMS] ?? []), (array) $constraint->constraints),
+                ],
+                $constraint instanceof Assert\NotBlank => $this->applyNotBlank($schema),
+                $constraint instanceof Assert\Length => $this->applyBounds($schema, self::MIN_LENGTH, $constraint->min, self::MAX_LENGTH, $constraint->max),
+                $constraint instanceof Assert\Count => $this->applyBounds($schema, self::MIN_ITEMS, $constraint->min, self::MAX_ITEMS, $constraint->max),
+                $constraint instanceof Assert\Range => $this->applyBounds($schema, self::MINIMUM, $constraint->min, self::MAXIMUM, $constraint->max),
+                $constraint instanceof Assert\GreaterThan => $this->applyExclusiveBound($schema, self::MINIMUM, self::EXCLUSIVE_MINIMUM, $constraint->value, 1),
+                $constraint instanceof Assert\GreaterThanOrEqual => $this->applyBounds($schema, self::MINIMUM, $constraint->value, self::MAXIMUM, null),
+                $constraint instanceof Assert\LessThan => $this->applyExclusiveBound($schema, self::MAXIMUM, self::EXCLUSIVE_MAXIMUM, $constraint->value, -1),
+                $constraint instanceof Assert\LessThanOrEqual => $this->applyBounds($schema, self::MINIMUM, null, self::MAXIMUM, $constraint->value),
+                $constraint instanceof Assert\Choice && is_array($constraint->choices) => [...$schema, self::ENUM => array_values($constraint->choices)],
+                default => $schema,
+            };
+        }
+
+        return $schema;
+    }
+
+    /**
+     * The same shape the SDK gives a nullable handler parameter: null joins the type and the enum.
+     *
+     * @param array<string, mixed> $schema
+     *
+     * @return array<string, mixed>
+     */
+    private function allowNull(array $schema): array
+    {
+        if (is_string($schema[self::TYPE] ?? null)) {
+            $schema[self::TYPE] = [self::TYPE_NULL, $schema[self::TYPE]];
+        }
+        if (isset($schema[self::ENUM]) && is_array($schema[self::ENUM])) {
+            $schema[self::ENUM][] = null;
+        }
+
+        return $schema;
+    }
+
+    /**
+     * @param array<string, mixed> $schema
+     *
+     * @return array<string, mixed>
+     */
+    private function applyNotBlank(array $schema): array
+    {
+        $minKey = match (true) {
+            self::isOfType($schema, self::TYPE_STRING) => self::MIN_LENGTH,
+            self::isOfType($schema, self::TYPE_ARRAY) => self::MIN_ITEMS,
+            default => null,
+        };
+        if (null === $minKey) {
+            return $schema;
+        }
+
+        return [...$schema, $minKey => max((int) ($schema[$minKey] ?? 0), 1)];
+    }
+
+    /**
+     * @param array<string, mixed> $schema
+     *
+     * @return array<string, mixed>
+     */
+    private function applyBounds(array $schema, string $minKey, mixed $min, string $maxKey, mixed $max): array
+    {
+        if (is_int($min) || is_float($min)) {
+            $schema[$minKey] = $min;
+        }
+        if (is_int($max) || is_float($max)) {
+            $schema[$maxKey] = $max;
+        }
+
+        return $schema;
+    }
+
+    /**
+     * An integer bound becomes the next inclusive one ("minimum": 1 for Positive), which reads more naturally to an
+     * agent than an exclusive bound.
+     *
+     * @param array<string, mixed> $schema
+     *
+     * @return array<string, mixed>
+     */
+    private function applyExclusiveBound(array $schema, string $inclusiveKey, string $exclusiveKey, mixed $value, int $step): array
+    {
+        if (is_int($value) && self::isOfType($schema, self::TYPE_INTEGER)) {
+            return [...$schema, $inclusiveKey => $value + $step];
+        }
+        if (is_int($value) || is_float($value)) {
+            return [...$schema, $exclusiveKey => $value];
+        }
+
+        return $schema;
+    }
+
+    /**
+     * A property without a default value or with a constraint that rejects an absent value must be sent.
+     *
+     * @param array<array-key, Constraint> $constraints
+     */
+    private function isRequired(ReflectionProperty $property, array $constraints): bool
+    {
+        if (false === $property->hasDefaultValue()) {
+            return true;
+        }
+        foreach ($constraints as $constraint) {
+            if ($constraint instanceof Assert\NotBlank && false === $constraint->allowNull) {
+                return true;
+            }
+            if ($constraint instanceof Assert\NotNull) {
+                return true;
+            }
+            if ($constraint instanceof Assert\Count && is_int($constraint->min) && $constraint->min > 0) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private function resolveSerializedName(ReflectionProperty|ReflectionMethod $member): string
+    {
+        if ($member instanceof ReflectionProperty) {
+            return $member->getName();
+        }
+
+        return lcfirst((string) preg_replace(self::GETTER_PREFIX_PATTERN, '', $member->getName()));
+    }
+
+    private function normalizeDefault(mixed $default): mixed
+    {
+        if ($default instanceof BackedEnum) {
+            return $default->value;
+        }
+
+        return $default;
+    }
+
+    /**
+     * @return array<array-key, Constraint>
+     */
+    private function resolveConstraints(ReflectionProperty|ReflectionMethod $member): array
+    {
+        $constraints = [];
+        foreach ($member->getAttributes(Constraint::class, ReflectionAttribute::IS_INSTANCEOF) as $attribute) {
+            $constraints[] = $attribute->newInstance();
+        }
+
+        return $constraints;
+    }
+
+    /**
+     * @template T of object
+     *
+     * @param class-string<T> $class
+     *
+     * @return T|null
+     */
+    private function resolveAttribute(ReflectionProperty|ReflectionMethod|ReflectionEnumBackedCase $member, string $class): ?object
+    {
+        $attributes = $member->getAttributes($class);
+        if (empty($attributes)) {
+            return null;
+        }
+
+        return $attributes[0]->newInstance();
+    }
+}

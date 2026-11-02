@@ -23,7 +23,6 @@ final readonly class McpLogFinder
     public const int LIMIT_DEFAULT = 20;
     public const int LIMIT_MAX = 50;
     public const int LIMIT_MIN = 1;
-    public const string LIMIT_MIN_MESSAGE = 'limit must be at least {{ compared_value }}.';
     public const int FIELD_TRUNCATE_LENGTH = 2_000;
     public const string TRUNCATED_SUFFIX = '…(truncated)';
 
