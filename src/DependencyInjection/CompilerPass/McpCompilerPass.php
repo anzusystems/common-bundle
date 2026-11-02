@@ -9,6 +9,7 @@ use AnzuSystems\CommonBundle\Mcp\Security\McpToolAccessChecker;
 use LogicException;
 use Mcp\Capability\Attribute\McpTool;
 use Mcp\Capability\Discovery\ElementMetadataResolver;
+use Mcp\Capability\Tool\NameValidator;
 use ReflectionAttribute;
 use ReflectionMethod;
 use Symfony\Component\Config\Resource\FileResource;
@@ -49,6 +50,7 @@ final class McpCompilerPass implements CompilerPassInterface
 
         $toolsByName = $this->resolveToolsByName($container);
         $this->assertToolNamesAreUnique($toolsByName);
+        $this->assertToolNamesAreValid($toolsByName);
         $accessCheckerDefinition = $container->getDefinition(McpToolAccessChecker::class);
         $this->assertToolPermissionsMatchTools(
             (array) $accessCheckerDefinition->getArgument(self::TOOL_PERMISSIONS_ARGUMENT),
@@ -163,6 +165,25 @@ final class McpCompilerPass implements CompilerPassInterface
             if (count($tools) > 1) {
                 throw new LogicException(sprintf(
                     'The MCP tool name "%s" is registered by more than one tool (%s), every tool name must be unique.',
+                    $toolName,
+                    implode(', ', array_keys($tools)),
+                ));
+            }
+        }
+    }
+
+    /**
+     * The SDK registers a tool with an invalid name and only logs a warning when the server starts.
+     *
+     * @param array<string, array<string, McpTool>> $toolsByName
+     */
+    private function assertToolNamesAreValid(array $toolsByName): void
+    {
+        $nameValidator = new NameValidator();
+        foreach ($toolsByName as $toolName => $tools) {
+            if (false === $nameValidator->isValid((string) $toolName)) {
+                throw new LogicException(sprintf(
+                    'The MCP tool name "%s" of %s is invalid: use 1 to 64 letters, digits, dots, underscores, hyphens or slashes.',
                     $toolName,
                     implode(', ', array_keys($tools)),
                 ));

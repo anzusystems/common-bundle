@@ -138,7 +138,7 @@ final readonly class ListKeywordsTool
   only.
 * `values` replace the `{{ name }}` placeholders of the description, like the parameters of a validation message;
   point to another tool through its `NAME` constant, so a renamed or removed tool breaks the build instead of the
-  text.
+  text. A placeholder without a value, or a value without a placeholder, fails the container compilation.
 * `input` is the request DTO: `McpToolSchemaCompilerPass` makes the tool's input schema from its `#[Serialize]`
   properties (`McpSchemaFactory`) — type, default, `required` and the limits of its `Assert` constraints (`Regex` is
   left out: PCRE is not the ECMA-262 dialect of `pattern`). A property is required when it has no default value or
@@ -215,6 +215,8 @@ anzu_systems_common:
 and fails the container compilation with a `LogicException` when
 * one tool name is registered by more than one tool (two classes or methods resolving to the same name) — the SDK
   registry keeps only the last tool registered under a name, and the read/write classification would be ambiguous;
+* a tool name is not 1 to 64 letters, digits, dots, underscores, hyphens or slashes (the SDK `NameValidator`) — the
+  SDK would register it and only log a warning;
 * a `tool_permissions` key matches no registered tool (e.g. a typo) — such a mapping would grant nothing.
 
 A tool that is not declared by `#[McpTool]` on a tagged `mcp.tool` service (e.g. one registered by an McpBundle app)
@@ -250,6 +252,17 @@ every read tool, or it disappears for clients without the write grant:
     readOnly: true,
 )]
 ```
+
+### Token scope
+
+A host can narrow the tools of a request, e.g. to the tools listed on a personal access token, by registering a
+service under the id `McpToolScopeProviderInterface` (`anzusystems/auth-bundle` provides one).
+`provideAllowedToolNames()` returns the tool names the request may use, or `null` for no narrowing; without such a
+service every permitted tool stays available. The scope only narrows: a tool in the scope still needs its mapped
+permission and, for a write tool, the write grant. A tool outside the scope is hidden from `tools/list` and denied on
+`tools/call` with the usual access error. `McpToolAccessChecker::getPermittedToolNames()` lists every tool mapped in
+`tool_permissions` whose permission the current user holds, in map order, without the scope, so a host can offer them
+for a new token.
 
 ## Date windows
 

@@ -20,6 +20,7 @@ use AnzuSystems\CommonBundle\Mcp\Resolver\McpContextIdResolver;
 use AnzuSystems\CommonBundle\Mcp\Resolver\McpDateWindowResolver;
 use AnzuSystems\CommonBundle\Mcp\Resolver\McpPageWindowResolver;
 use AnzuSystems\CommonBundle\Mcp\Security\McpToolAccessChecker;
+use AnzuSystems\CommonBundle\Mcp\Security\McpToolScopeProviderInterface;
 use AnzuSystems\CommonBundle\Mcp\Tool\GetLogsByContextTool;
 use AnzuSystems\CommonBundle\Mcp\Tool\SearchAppLogsTool;
 use AnzuSystems\CommonBundle\Mcp\Tool\SearchAuditLogsTool;
@@ -51,6 +52,7 @@ return static function (ContainerConfigurator $configurator): void {
         ->arg('$toolPermissions', null)
         ->arg('$security', service('security.helper'))
         ->arg('$readOnlyToolNames', [])
+        ->arg('$toolScopeProvider', service(McpToolScopeProviderInterface::class)->nullOnInvalid())
     ;
 
     $services->set(FilterToolsListRequestHandler::class)

@@ -18,6 +18,7 @@ final readonly class McpToolAccessChecker
         private array $toolPermissions,
         private Security $security,
         private array $readOnlyToolNames,
+        private ?McpToolScopeProviderInterface $toolScopeProvider = null,
     ) {
     }
 
@@ -28,12 +29,7 @@ final readonly class McpToolAccessChecker
 
     public function isToolPermissionGranted(string $toolName): bool
     {
-        $permission = $this->toolPermissions[$toolName] ?? null;
-        if (null === $permission) {
-            return false;
-        }
-
-        return $this->security->isGranted($permission);
+        return $this->isInToolScope($toolName) && $this->isPermissionGranted($toolName);
     }
 
     public function isWriteGranted(string $toolName): bool
@@ -43,6 +39,14 @@ final readonly class McpToolAccessChecker
         }
 
         return $this->security->isGranted(self::WRITE_PERMISSION, $toolName);
+    }
+
+    /**
+     * @return list<string>
+     */
+    public function getToolNames(): array
+    {
+        return array_keys($this->toolPermissions);
     }
 
     /**
@@ -59,16 +63,47 @@ final readonly class McpToolAccessChecker
     /**
      * @return list<string>
      */
+    public function getPermittedToolNames(): array
+    {
+        return array_values(array_filter(
+            array_keys($this->toolPermissions),
+            $this->isPermissionGranted(...),
+        ));
+    }
+
+    /**
+     * @return list<string>
+     */
     public function getPermittedWriteToolNames(): array
     {
         return array_values(array_filter(
             $this->getWriteToolNames(),
-            $this->isToolPermissionGranted(...),
+            $this->isPermissionGranted(...),
         ));
     }
 
     public function isWriteTool(string $toolName): bool
     {
         return false === in_array(needle: $toolName, haystack: $this->readOnlyToolNames, strict: true);
+    }
+
+    private function isInToolScope(string $toolName): bool
+    {
+        $allowedToolNames = $this->toolScopeProvider?->provideAllowedToolNames();
+        if (null === $allowedToolNames) {
+            return true;
+        }
+
+        return in_array(needle: $toolName, haystack: $allowedToolNames, strict: true);
+    }
+
+    private function isPermissionGranted(string $toolName): bool
+    {
+        $permission = $this->toolPermissions[$toolName] ?? null;
+        if (null === $permission) {
+            return false;
+        }
+
+        return $this->security->isGranted($permission);
     }
 }

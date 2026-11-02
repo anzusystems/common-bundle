@@ -10,6 +10,7 @@ use AnzuSystems\CommonBundle\Mcp\Security\McpToolAccessChecker;
 use AnzuSystems\CommonBundle\Mcp\Tool\SearchAppLogsTool;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Tool\ConflictingExampleTool;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Tool\ExampleTool;
+use AnzuSystems\CommonBundle\Tests\Data\Mcp\Tool\InvalidNameExampleTool;
 use LogicException;
 use PHPUnit\Framework\TestCase;
 use stdClass;
@@ -83,6 +84,19 @@ final class McpCompilerPassTest extends TestCase
 
         $this->expectException(LogicException::class);
         $this->expectExceptionMessage(sprintf('The MCP tool name "%s" is registered by more than one tool', self::READ_TOOL_METHOD));
+
+        new McpCompilerPass()
+            ->process($container);
+    }
+
+    public function testInvalidToolNameFailsAtCompileTime(): void
+    {
+        $container = $this->createMcpContainer();
+        $container->register(InvalidNameExampleTool::class)
+            ->addTag(McpCompilerPass::TOOL_TAG, [self::TOOL_TAG_METHOD => self::READ_TOOL_METHOD]);
+
+        $this->expectException(LogicException::class);
+        $this->expectExceptionMessage(sprintf('The MCP tool name "%s" of', InvalidNameExampleTool::NAME));
 
         new McpCompilerPass()
             ->process($container);
