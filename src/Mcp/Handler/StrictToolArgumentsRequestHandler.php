@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace AnzuSystems\CommonBundle\Mcp\Handler;
 
-use AnzuSystems\CommonBundle\Mcp\McpToolExecutor;
+use AnzuSystems\CommonBundle\Mcp\AbstractMcpTool;
 use Mcp\Capability\Formatter\ToolResultFormatter;
 use Mcp\Capability\Registry\ToolReference;
 use Mcp\Capability\RegistryInterface;
@@ -52,7 +52,7 @@ final readonly class StrictToolArgumentsRequestHandler implements RequestHandler
             'tool' => $request->name,
             'unknownArguments' => $unknownArguments,
         ]);
-        $payload = [McpToolExecutor::ERROR_KEY => $message];
+        $payload = [AbstractMcpTool::ERROR_KEY => $message];
 
         return new Response(
             $request->getId(),

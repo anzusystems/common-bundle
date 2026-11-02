@@ -4,14 +4,17 @@ declare(strict_types=1);
 
 namespace AnzuSystems\CommonBundle\Mcp\Tool;
 
+use AnzuSystems\CommonBundle\Mcp\AbstractMcpTool;
 use AnzuSystems\CommonBundle\Mcp\Attribute\AsMcpTool;
 use AnzuSystems\CommonBundle\Mcp\Log\McpLogFinder;
-use AnzuSystems\CommonBundle\Mcp\McpToolExecutor;
 use AnzuSystems\CommonBundle\Mcp\Model\Request\GetLogsByContextRequest;
 use AnzuSystems\CommonBundle\Mcp\Model\Response\McpLogsByContextResponse;
 use Mcp\Schema\Result\CallToolResult;
 use Mcp\Server\RequestContext;
 
+/**
+ * @extends AbstractMcpTool<GetLogsByContextRequest>
+ */
 #[AsMcpTool(
     name: GetLogsByContextTool::NAME,
     description: <<<'TXT'
@@ -23,22 +26,22 @@ use Mcp\Server\RequestContext;
     output: McpLogsByContextResponse::class,
     readOnly: true,
 )]
-final readonly class GetLogsByContextTool
+final readonly class GetLogsByContextTool extends AbstractMcpTool
 {
     public const string NAME = 'get_logs_by_context';
 
     public function __construct(
         private McpLogFinder $logFinder,
-        private McpToolExecutor $toolExecutor,
     ) {
     }
 
     public function __invoke(RequestContext $context): CallToolResult
     {
-        return $this->toolExecutor->execute(
-            toolName: self::NAME,
-            context: $context,
-            callback: fn (GetLogsByContextRequest $request): McpLogsByContextResponse => new McpLogsByContextResponse($this->logFinder->findLogsByContext($request)),
-        );
+        return $this->execute($context);
+    }
+
+    protected function handle(object $input): McpLogsByContextResponse
+    {
+        return new McpLogsByContextResponse($this->logFinder->findLogsByContext($input));
     }
 }

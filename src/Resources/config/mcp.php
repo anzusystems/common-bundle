@@ -14,17 +14,20 @@ use AnzuSystems\CommonBundle\Mcp\Handler\StrictToolArgumentsRequestHandler;
 use AnzuSystems\CommonBundle\Mcp\Log\McpLogFinder;
 use AnzuSystems\CommonBundle\Mcp\Log\McpLogger;
 use AnzuSystems\CommonBundle\Mcp\Log\McpLogRepository;
+use AnzuSystems\CommonBundle\Mcp\Log\McpToolCallLogger;
 use AnzuSystems\CommonBundle\Mcp\McpRateLimiter;
-use AnzuSystems\CommonBundle\Mcp\McpToolExecutor;
 use AnzuSystems\CommonBundle\Mcp\Resolver\McpContextIdResolver;
 use AnzuSystems\CommonBundle\Mcp\Resolver\McpDateWindowResolver;
 use AnzuSystems\CommonBundle\Mcp\Resolver\McpPageWindowResolver;
+use AnzuSystems\CommonBundle\Mcp\Resolver\McpToolErrorResolver;
 use AnzuSystems\CommonBundle\Mcp\Security\McpToolAccessChecker;
 use AnzuSystems\CommonBundle\Mcp\Security\McpToolScopeProviderInterface;
+use AnzuSystems\CommonBundle\Mcp\Security\McpWriteToolGuard;
 use AnzuSystems\CommonBundle\Mcp\Tool\GetLogsByContextTool;
 use AnzuSystems\CommonBundle\Mcp\Tool\SearchAppLogsTool;
 use AnzuSystems\CommonBundle\Mcp\Tool\SearchAuditLogsTool;
 use AnzuSystems\SerializerBundle\Serializer;
+use Symfony\Component\Validator\Validator\ValidatorInterface;
 
 return static function (ContainerConfigurator $configurator): void {
     $services = $configurator->services();
@@ -79,16 +82,19 @@ return static function (ContainerConfigurator $configurator): void {
         ->arg('$contextIdResolver', service(McpContextIdResolver::class))
     ;
 
-    $services->set(McpToolExecutor::class)
+    $services->set(McpWriteToolGuard::class)
+        ->arg('$toolAccessChecker', service(McpToolAccessChecker::class))
+        ->arg('$requestStack', service('request_stack'))
+    ;
+
+    $services->set(McpToolErrorResolver::class)
+        ->arg('$toolErrorExceptions', null)
+    ;
+
+    $services->set(McpToolCallLogger::class)
         ->arg('$currentUserProvider', service(CurrentAnzuUserProvider::class))
         ->arg('$logger', service('logger'))
         ->arg('$mcpLogger', service(McpLogger::class))
-        ->arg('$toolAccessChecker', service(McpToolAccessChecker::class))
-        ->arg('$validator', service('validator'))
-        ->arg('$serializer', service(Serializer::class))
-        ->arg('$requestStack', service('request_stack'))
-        ->arg('$toolErrorExceptions', null)
-        ->arg('$toolInputClasses', [])
         ->tag('monolog.logger', ['channel' => 'mcp'])
     ;
 
@@ -126,19 +132,34 @@ return static function (ContainerConfigurator $configurator): void {
 
     $services->set(SearchAppLogsTool::class)
         ->arg('$logFinder', service(McpLogFinder::class))
-        ->arg('$toolExecutor', service(McpToolExecutor::class))
+        ->call('setToolAccessChecker', [service(McpToolAccessChecker::class)])
+        ->call('setWriteToolGuard', [service(McpWriteToolGuard::class)])
+        ->call('setToolErrorResolver', [service(McpToolErrorResolver::class)])
+        ->call('setToolCallLogger', [service(McpToolCallLogger::class)])
+        ->call('setValidator', [service(ValidatorInterface::class)])
+        ->call('setSerializer', [service(Serializer::class)])
         ->tag('mcp.tool')
     ;
 
     $services->set(SearchAuditLogsTool::class)
         ->arg('$logFinder', service(McpLogFinder::class))
-        ->arg('$toolExecutor', service(McpToolExecutor::class))
+        ->call('setToolAccessChecker', [service(McpToolAccessChecker::class)])
+        ->call('setWriteToolGuard', [service(McpWriteToolGuard::class)])
+        ->call('setToolErrorResolver', [service(McpToolErrorResolver::class)])
+        ->call('setToolCallLogger', [service(McpToolCallLogger::class)])
+        ->call('setValidator', [service(ValidatorInterface::class)])
+        ->call('setSerializer', [service(Serializer::class)])
         ->tag('mcp.tool')
     ;
 
     $services->set(GetLogsByContextTool::class)
         ->arg('$logFinder', service(McpLogFinder::class))
-        ->arg('$toolExecutor', service(McpToolExecutor::class))
+        ->call('setToolAccessChecker', [service(McpToolAccessChecker::class)])
+        ->call('setWriteToolGuard', [service(McpWriteToolGuard::class)])
+        ->call('setToolErrorResolver', [service(McpToolErrorResolver::class)])
+        ->call('setToolCallLogger', [service(McpToolCallLogger::class)])
+        ->call('setValidator', [service(ValidatorInterface::class)])
+        ->call('setSerializer', [service(Serializer::class)])
         ->tag('mcp.tool')
     ;
 };

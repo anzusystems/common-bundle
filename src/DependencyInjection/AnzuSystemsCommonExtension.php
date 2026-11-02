@@ -75,7 +75,7 @@ use AnzuSystems\CommonBundle\Mcp\Controller\McpController;
 use AnzuSystems\CommonBundle\Mcp\Handler\FilterToolsListRequestHandler;
 use AnzuSystems\CommonBundle\Mcp\Handler\StrictToolArgumentsRequestHandler;
 use AnzuSystems\CommonBundle\Mcp\McpRateLimiter;
-use AnzuSystems\CommonBundle\Mcp\McpToolExecutor;
+use AnzuSystems\CommonBundle\Mcp\Resolver\McpToolErrorResolver;
 use AnzuSystems\CommonBundle\Mcp\Security\McpToolAccessChecker;
 use AnzuSystems\CommonBundle\Messenger\Message\AuditLogMessage;
 use AnzuSystems\CommonBundle\Messenger\Message\JournalLogMessage;
@@ -692,7 +692,7 @@ final class AnzuSystemsCommonExtension extends Extension implements PrependExten
             ->replaceArgument('$pageSize', $this->resolveMcpPaginationLimit($container, $serverName));
 
         $container
-            ->getDefinition(McpToolExecutor::class)
+            ->getDefinition(McpToolErrorResolver::class)
             ->replaceArgument('$toolErrorExceptions', $mcp['tool_error_exceptions']);
 
         $container

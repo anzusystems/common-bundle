@@ -5,12 +5,14 @@ declare(strict_types=1);
 namespace AnzuSystems\CommonBundle\Tests\DependencyInjection\CompilerPass;
 
 use AnzuSystems\CommonBundle\DependencyInjection\CompilerPass\McpCompilerPass;
+use AnzuSystems\CommonBundle\Mcp\AbstractMcpTool;
 use AnzuSystems\CommonBundle\Mcp\Controller\McpController;
 use AnzuSystems\CommonBundle\Mcp\Security\McpToolAccessChecker;
 use AnzuSystems\CommonBundle\Mcp\Tool\SearchAppLogsTool;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Tool\ConflictingExampleTool;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Tool\ExampleTool;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Tool\InvalidNameExampleTool;
+use AnzuSystems\CommonBundle\Tests\Data\Mcp\Tool\StandaloneExampleTool;
 use LogicException;
 use PHPUnit\Framework\TestCase;
 use stdClass;
@@ -97,6 +99,23 @@ final class McpCompilerPassTest extends TestCase
 
         $this->expectException(LogicException::class);
         $this->expectExceptionMessage(sprintf('The MCP tool name "%s" of', InvalidNameExampleTool::NAME));
+
+        new McpCompilerPass()
+            ->process($container);
+    }
+
+    public function testAsMcpToolThatDoesNotExtendTheBaseToolFailsAtCompileTime(): void
+    {
+        $container = $this->createMcpContainer();
+        $container->register(StandaloneExampleTool::class)
+            ->addTag(McpCompilerPass::TOOL_TAG);
+
+        $this->expectException(LogicException::class);
+        $this->expectExceptionMessage(sprintf(
+            'The MCP tool "%s" declares #[AsMcpTool], so it must extend %s.',
+            StandaloneExampleTool::class,
+            AbstractMcpTool::class,
+        ));
 
         new McpCompilerPass()
             ->process($container);

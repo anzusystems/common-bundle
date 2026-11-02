@@ -7,7 +7,6 @@ namespace AnzuSystems\CommonBundle\DependencyInjection\CompilerPass;
 use AnzuSystems\CommonBundle\Mcp\Attribute\AsMcpTool;
 use AnzuSystems\CommonBundle\Mcp\Factory\McpOutputDescriptionFactory;
 use AnzuSystems\CommonBundle\Mcp\Factory\McpSchemaFactory;
-use AnzuSystems\CommonBundle\Mcp\McpToolExecutor;
 use LogicException;
 use Mcp\Server\RequestContext;
 use ReflectionClass;
@@ -29,14 +28,11 @@ final class McpToolSchemaCompilerPass implements CompilerPassInterface
     private const int HANDLER_ARGUMENT = 0;
     private const int DESCRIPTION_ARGUMENT = 3;
     private const int INPUT_SCHEMA_ARGUMENT = 5;
-    private const string TOOL_INPUT_CLASSES_ARGUMENT = '$toolInputClasses';
     private const string DESCRIPTION_SEPARATOR = PHP_EOL . PHP_EOL;
 
     public function process(ContainerBuilder $container): void
     {
-        if (false === $container->hasParameter(McpCompilerPass::SERVER_NAME_PARAM)
-            || false === $container->hasDefinition(McpToolExecutor::class)
-        ) {
+        if (false === $container->hasParameter(McpCompilerPass::SERVER_NAME_PARAM)) {
             return;
         }
         $serverName = $container->getParameter(McpCompilerPass::SERVER_NAME_PARAM);
@@ -50,7 +46,6 @@ final class McpToolSchemaCompilerPass implements CompilerPassInterface
 
         $schemaFactory = new McpSchemaFactory();
         $outputDescriptionFactory = new McpOutputDescriptionFactory($schemaFactory);
-        $toolInputClasses = [];
         $builder = $container->getDefinition($builderId);
         $methodCalls = $builder->getMethodCalls();
         foreach ($methodCalls as $index => [$method, $arguments]) {
@@ -71,18 +66,14 @@ final class McpToolSchemaCompilerPass implements CompilerPassInterface
                     $outputDescriptionFactory->createForClass($tool->output),
                 ]));
             }
-            if (null === $tool->input || null === $tool->name) {
+            if (null === $tool->input) {
                 continue;
             }
             $this->assertInputComesFromRequestContext($class, $handlerMethod, $tool->input);
             $methodCalls[$index][1][self::INPUT_SCHEMA_ARGUMENT] = $schemaFactory->createForClass($tool->input);
-            $toolInputClasses[$tool->name] = $tool->input;
         }
 
         $builder->setMethodCalls($methodCalls);
-        $container
-            ->getDefinition(McpToolExecutor::class)
-            ->replaceArgument(self::TOOL_INPUT_CLASSES_ARGUMENT, $toolInputClasses);
     }
 
     /**
