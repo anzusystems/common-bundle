@@ -26,8 +26,6 @@ jobs:
     strategy:
       matrix:
         include:
-          - php-version: '8.4'
-            docker-image: 'anzusystems/php:5.2.0-php84-cli'
           - php-version: '8.5'
             docker-image: 'anzusystems/php:5.2.0-php85-cli'
 

@@ -89,6 +89,7 @@ use AnzuSystems\CommonBundle\Security\PermissionConfig;
 use AnzuSystems\CommonBundle\Serializer\Exception\SerializerExceptionHandler;
 use AnzuSystems\CommonBundle\Serializer\Handler\Handlers\GeolocationHandler;
 use AnzuSystems\CommonBundle\Serializer\Handler\Handlers\RawArrayHandler;
+use AnzuSystems\CommonBundle\Serializer\Handler\Handlers\UuidArrayHandler;
 use AnzuSystems\CommonBundle\Serializer\Handler\Handlers\ValueObjectHandler;
 use AnzuSystems\CommonBundle\Serializer\Service\BsonConverter;
 use AnzuSystems\CommonBundle\Util\ResourceLocker;
@@ -769,6 +770,11 @@ final class AnzuSystemsCommonExtension extends Extension implements PrependExten
         $container->setDefinition(
             RawArrayHandler::class,
             (new Definition(RawArrayHandler::class))
+                ->addTag(AnzuSystemsCommonBundle::TAG_SERIALIZER_HANDLER)
+        );
+        $container->setDefinition(
+            UuidArrayHandler::class,
+            (new Definition(UuidArrayHandler::class))
                 ->addTag(AnzuSystemsCommonBundle::TAG_SERIALIZER_HANDLER)
         );
 

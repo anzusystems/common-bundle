@@ -21,6 +21,7 @@ use Symfony\Component\TypeInfo\Type\NullableType;
 use Symfony\Component\TypeInfo\Type\ObjectType;
 use Symfony\Component\TypeInfo\TypeIdentifier;
 use Symfony\Component\TypeInfo\TypeResolver\TypeResolver;
+use Symfony\Component\Uid\Uuid;
 use Symfony\Component\Validator\Constraint;
 use Symfony\Component\Validator\Constraints as Assert;
 
@@ -53,6 +54,8 @@ final class McpSchemaFactory
     private const string TYPE_STRING = 'string';
     private const string TYPE_NULL = 'null';
     private const string TYPE_INTEGER = 'integer';
+    private const string FORMAT = 'format';
+    private const string FORMAT_UUID = 'uuid';
     private const string VALUE_FORMAT = '"%s"%s = %s';
     private const string VALUE_SEPARATOR = ', ';
     private const string DEFAULT_MARK = ' (default)';
@@ -203,6 +206,9 @@ final class McpSchemaFactory
         }
         if ($type instanceof CollectionType) {
             return [self::TYPE => self::TYPE_ARRAY, self::ITEMS => $this->createForType($type->getCollectionValueType())];
+        }
+        if ($type instanceof ObjectType && is_a($type->getClassName(), Uuid::class, true)) {
+            return [self::TYPE => self::TYPE_STRING, self::FORMAT => self::FORMAT_UUID];
         }
         if ($type instanceof ObjectType) {
             return $this->createForClass($type->getClassName());

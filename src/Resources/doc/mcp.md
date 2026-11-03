@@ -158,7 +158,8 @@ final readonly class ListKeywordsTool
 * The input class is the request DTO: `McpToolSchemaCompilerPass` makes the tool's input schema from its
   `#[Serialize]` properties (`McpSchemaFactory`) — type, default, `required` and the limits of its `Assert`
   constraints (`Regex` is left out: PCRE is not the ECMA-262 dialect of `pattern`). A property is required when it has
-  no default value or carries `NotBlank`, `NotNull` or `Count(min ≥ 1)`.
+  no default value or carries `NotBlank`, `NotNull` or `Count(min ≥ 1)`. A `Uuid` property (also nullable or in a list)
+  is a string of format `uuid`, so the SDK rejects an invalid UUID before the call reaches the handler.
 * The return class is the response: the pass appends a `Returns:` list of its `#[Serialize]` getters to the
   description, because clients hand the model the description and the input schema, not necessarily an output schema.
 * `#[McpField(description: …, values: […])]` describes a DTO property, a response getter or a case of a backed enum;
