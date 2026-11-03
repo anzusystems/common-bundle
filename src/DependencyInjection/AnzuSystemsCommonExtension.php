@@ -61,7 +61,6 @@ use AnzuSystems\CommonBundle\Exception\Handler\ValidationExceptionHandler;
 use AnzuSystems\CommonBundle\HealthCheck\HealthChecker;
 use AnzuSystems\CommonBundle\HealthCheck\Module\DataMountModule;
 use AnzuSystems\CommonBundle\HealthCheck\Module\ForwardIpModule;
-use AnzuSystems\CommonBundle\HealthCheck\Module\ModuleInterface;
 use AnzuSystems\CommonBundle\HealthCheck\Module\MongoModule;
 use AnzuSystems\CommonBundle\HealthCheck\Module\MysqlModule;
 use AnzuSystems\CommonBundle\HealthCheck\Module\OpCacheModule;
@@ -361,7 +360,6 @@ final class AnzuSystemsCommonExtension extends Extension implements PrependExten
 
         $handlers = $errors['exception_handlers'];
 
-        /** @psalm-var callable(class-string<ExceptionHandlerInterface>):bool $hasHandler */
         $hasHandler = static fn (string $handler): bool => in_array($handler, $handlers, true);
         $debug = 'prod' !== $container->getParameter('kernel.environment');
 
@@ -430,7 +428,6 @@ final class AnzuSystemsCommonExtension extends Extension implements PrependExten
             return;
         }
 
-        /** @psalm-var callable(class-string<ModuleInterface>):bool $hasModule */
         $hasModule = static fn (string $module): bool => in_array($module, $modules, true);
 
         if ($hasModule(RedisModule::class)) {
@@ -795,10 +792,6 @@ final class AnzuSystemsCommonExtension extends Extension implements PrependExten
         );
     }
 
-    /**
-     * @psalm-suppress UndefinedClass
-     * @psalm-suppress MissingDependency
-     */
     private function loadValueResolvers(ContainerBuilder $container): void
     {
         if (interface_exists(ValueResolverInterface::class)) {

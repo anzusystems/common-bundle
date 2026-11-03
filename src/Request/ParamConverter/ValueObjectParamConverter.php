@@ -15,9 +15,6 @@ use Symfony\Component\HttpFoundation\Request;
  */
 final class ValueObjectParamConverter implements ParamConverterInterface
 {
-    /**
-     * @psalm-suppress UnsafeInstantiation
-     */
     public function apply(Request $request, ParamConverter $configuration): bool
     {
         $name = $configuration->getName();

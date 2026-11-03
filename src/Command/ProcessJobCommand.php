@@ -25,9 +25,6 @@ final class ProcessJobCommand extends Command implements SignalableCommandInterf
         parent::__construct();
     }
 
-    /**
-     * @psalm-suppress UndefinedConstant - defined in pcntl extension.
-     */
     public function getSubscribedSignals(): array
     {
         return [SIGTERM, SIGINT];

@@ -51,14 +51,17 @@
   "require-dev": {
     "doctrine/doctrine-bundle": "^3.0",
     "jetbrains/phpstorm-attributes": "^1.0",
+    "phpstan/extension-installer": "^1.4",
+    "phpstan/phpstan": "^2.1",
+    "phpstan/phpstan-doctrine": "^2.0",
+    "phpstan/phpstan-symfony": "^2.0",
     "phpunit/phpunit": "^9.5",
     "psr/simple-cache": "^3.0",
     "slevomat/coding-standard": "8.20",
     "symfony/mcp-bundle": "^0.13",
     "symfony/rate-limiter": "^7.0|^8.0",
     "symfony/test-pack": "^1.0",
-    "symplify/easy-coding-standard": "^13.0",
-    "vimeo/psalm": "^6.10"
+    "symplify/easy-coding-standard": "^13.0"
   },
   "suggest": {
     "psr/simple-cache": "Required by the \"mcp\" config section (^3.0)",
@@ -88,7 +91,8 @@
     "allow-plugins": {
       "composer/package-versions-deprecated": true,
       "dealerdirect/phpcodesniffer-composer-installer": true,
-      "symfony/runtime": true
+      "symfony/runtime": true,
+      "phpstan/extension-installer": true
     }
   }
 }

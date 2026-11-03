@@ -1,0 +1,12 @@
+parameters:
+    tmpDir: var/cache/phpstan
+    level: 5
+    paths:
+        - src
+    excludePaths:
+        - src/CodingStandard
+        - src/DependencyInjection/Configuration.php
+        - src/Request/ParamConverter
+    ignoreErrors:
+        # The bundle ships these traits for host applications; nothing in src uses them.
+        - identifier: trait.unused

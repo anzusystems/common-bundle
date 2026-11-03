@@ -22,7 +22,7 @@ final class BsonConverter
     }
 
     /**
-     * @template T
+     * @template T of object
      *
      * @param class-string<T> $className
      *

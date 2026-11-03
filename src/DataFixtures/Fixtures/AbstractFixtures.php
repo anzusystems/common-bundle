@@ -22,14 +22,14 @@ abstract class AbstractFixtures implements FixturesInterface
     use EntityManagerAwareTrait;
 
     /**
-     * @var ArrayCollection<int|string, E>|null
+     * @var ArrayCollection<int|string, E>
      */
-    private ?ArrayCollection $registry;
+    private ArrayCollection $registry;
     private static int $defaultPriority = -1;
     private AbstractIdGenerator $idGenerator;
 
     /**
-     * @psalm-var ClassMetadata::GENERATOR_TYPE_*
+     * @var ClassMetadata::GENERATOR_TYPE_*
      */
     private int $generatorType;
 

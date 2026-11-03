@@ -14,7 +14,7 @@ use AnzuSystems\SerializerBundle\Attributes\Serialize;
 use Symfony\Component\Validator\Constraints as Assert;
 
 /**
- * @psalm-consistent-constructor
+ * @phpstan-consistent-constructor
  */
 #[UniqueEntityDto(entity: AnzuUser::class, fields: ['id'])]
 #[UniqueEntityDto(entity: AnzuUser::class, fields: ['email'])]
@@ -48,10 +48,6 @@ class BaseUserDto
         $this->setAvatar(new Avatar());
     }
 
-    /**
-     * @psalm-suppress LessSpecificReturnStatement
-     * @psalm-suppress MoreSpecificReturnType
-     */
     public static function createFromUser(AnzuUser $user): static
     {
         return (new static())

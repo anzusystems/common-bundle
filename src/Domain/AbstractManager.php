@@ -138,7 +138,9 @@ abstract class AbstractManager
         }
 
         // Add new.
-        $addElementFn ??= static fn (Collection $oldCollection, BaseIdentifiableInterface $add): mixed => $oldCollection->add($add);
+        $addElementFn ??= static function (Collection $oldCollection, BaseIdentifiableInterface $add): void {
+            $oldCollection->add($add);
+        };
         foreach (CollectionHelper::colDiff($newCollection, $oldCollection, $colDiffFn) as $add) {
             $addElementFn($oldCollection, $add);
         }

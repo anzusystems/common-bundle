@@ -20,7 +20,7 @@ final class ApiQueryMongo
     private ReflectionClass $classReflection;
 
     /**
-     * @psalm-param class-string $className
+     * @param class-string $className
      */
     public function __construct(
         private readonly ApiParams $params,
@@ -114,11 +114,7 @@ final class ApiQueryMongo
         $fieldAttributes = $this->getPropertyByField($field)
             ->getAttributes(PersistedName::class);
         if (array_key_exists(0, $fieldAttributes)) {
-            $persistedNameAttribute = $fieldAttributes[0]->newInstance();
-            /** @psalm-suppress RedundantConditionGivenDocblockType */
-            if ($persistedNameAttribute instanceof PersistedName) {
-                return $persistedNameAttribute->name;
-            }
+            return $fieldAttributes[0]->newInstance()->name;
         }
 
         return $field;
@@ -157,7 +153,7 @@ final class ApiQueryMongo
         $propertyName = array_pop($propertyPath);
         $class = $this->classReflection;
         foreach ($propertyPath as $curPropName) {
-            /** @psalm-var class-string $curClassType */
+            /** @var class-string $curClassType */
             $curClassType = (string) $class->getProperty($curPropName)
                 ->getType();
             $class = new ReflectionClass($curClassType);

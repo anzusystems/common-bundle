@@ -18,7 +18,6 @@ final class ValueObjectValueResolver implements ValueResolverInterface
             /** @var class-string<AbstractValueObject> $class */
             $class = $argument->getType();
 
-            /** @psalm-suppress UnsafeInstantiation */
             return [new $class($this->getValueFromRequest($request, $name) ?: $class::DEFAULT_VALUE)];
         }
 

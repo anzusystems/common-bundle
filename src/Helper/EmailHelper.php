@@ -8,8 +8,6 @@ final class EmailHelper
 {
     /**
      * This check validates email the same way as Remp Mailer does.
-     *
-     * @psalm-suppress RedundantCondition
      */
     public static function isValid(string $email): bool
     {

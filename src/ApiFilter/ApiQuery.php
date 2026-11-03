@@ -207,7 +207,6 @@ class ApiQuery
         }
 
         if (self::UUID_TYPE === $fieldDbType && class_exists(Uuid::class)) {
-            /** @psalm-suppress UndefinedClass */
             return Uuid::fromString($value)->toBinary();
         }
 

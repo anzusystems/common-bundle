@@ -157,6 +157,7 @@ abstract class AbstractAnzuTapNode implements AnzuTapNodeInterface
             return null;
         }
 
+        // @phpstan-ignore instanceof.alwaysTrue (setContent() takes any array, so an item may not be a node at runtime)
         if (array_key_exists($removeNodeKey, $this->content) && $this->content[$removeNodeKey] instanceof AnzuTapNodeInterface) {
             $removed = $this->content[$removeNodeKey];
             unset($this->content[$removeNodeKey]);
@@ -175,15 +176,10 @@ abstract class AbstractAnzuTapNode implements AnzuTapNodeInterface
      */
     public function findNode(Closure $filterFn): int|string|null
     {
-        $key = null;
-        foreach ($this->content as $currentKey => $value) {
-            if ($filterFn($value, $currentKey)) {
-                $key = $currentKey;
-                break;
+        foreach ($this->content as $key => $value) {
+            if ($filterFn($value, $key)) {
+                return $key;
             }
-        }
-        if (is_string($key) || is_int($key)) {
-            return $key;
         }
 
         return null;

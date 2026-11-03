@@ -18,8 +18,6 @@ final class Rand extends FunctionNode
 
     /**
      * @throws QueryException
-     *
-     * @psalm-suppress PossiblyInvalidPropertyAssignmentValue
      */
     public function parse(Parser $parser): void
     {

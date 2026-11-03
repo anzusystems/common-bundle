@@ -8,9 +8,6 @@ use AnzuSystems\CommonBundle\Kernel\AnzuKernel;
 
 trait AnzuKernelTrait
 {
-    /**
-     * @psalm-suppress UnsafeInstantiation
-     */
     protected static function createKernel(array $options = []): AnzuKernel
     {
         /** @var class-string<AnzuKernel> $kernelClass */

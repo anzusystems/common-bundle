@@ -72,7 +72,6 @@ class AnzuKernel extends Kernel
         $trustedProxies = Request::getTrustedProxies();
         if ($this->loadBalancerIp && $trustedProxies) {
             $trustedProxies[] = $this->loadBalancerIp;
-            /** @psalm-suppress ArgumentTypeCoercion */
             Request::setTrustedProxies($trustedProxies, Request::getTrustedHeaderSet());
         }
     }

@@ -17,7 +17,7 @@ final class AnzuTapHorizontalRuleNode extends AnzuTapNode
         );
     }
 
-    protected function getMarksAllowList(): ?array
+    protected function getMarksAllowList(): array
     {
         return [];
     }

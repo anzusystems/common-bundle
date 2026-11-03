@@ -45,7 +45,7 @@ final class ValueObjectHandler extends AbstractHandler
     {
         $description = parent::describe($property, $metadata);
 
-        /** @var AbstractValueObject $valueObjectClass */
+        /** @var class-string<AbstractValueObject> $valueObjectClass */
         $valueObjectClass = $metadata->type;
         $description['enum'] = $valueObjectClass::AVAILABLE_VALUES;
         $description['type'] = TypeIdentifier::STRING->value;
