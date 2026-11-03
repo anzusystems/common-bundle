@@ -161,12 +161,50 @@ final readonly class ListKeywordsTool
   constraints (`Regex` is left out: PCRE is not the ECMA-262 dialect of `pattern`). A property is required when it has
   no default value or carries `NotBlank`, `NotNull` or `Count(min ≥ 1)`. A `Uuid` property (also nullable or in a list)
   is a string of format `uuid`, so the SDK rejects an invalid UUID before the call reaches the handler.
-* The return class is the response: the pass appends a `Returns:` list of its `#[Serialize]` getters to the
+* The return class is the response: the pass appends a `Returns:` list of its `#[Serialize]` properties to the
   description, because clients hand the model the description and the input schema, not necessarily an output schema.
-* `#[McpField(description: …, values: […])]` describes a DTO property, a response getter or a case of a backed enum;
-  the described cases of an enum field are listed after the field's own description, the default one marked.
+* `#[McpField(description: …, values: […])]` describes a DTO property, a response property or a case of a backed
+  enum; the described cases of an enum field are listed after the field's own description, the default one marked.
   Keep validation messages generic: the schema rejects most invalid calls before the validator runs, and the
   handler prefixes every violation with its property path.
+
+Requests and responses use public properties and property hooks, no getters and setters. The serializer reads and
+writes a public or hooked property directly, so a property with a hook must be `public` (a `private` one fails) and a
+request property cannot be `private(set)` (it is not deserialized). A `set` hook normalizes the input, and a virtual
+`get` property exposes the result in the response; it has no default, so it is `required` in the output schema like
+the getter it replaces. The fields are listed in declaration order.
+
+```php
+final class ListKeywordsRequest
+{
+    private const int QUERY_LENGTH_MAX = 100;
+
+    #[Assert\NotBlank]
+    #[Assert\Length(max: self::QUERY_LENGTH_MAX)]
+    #[McpField(description: 'Keyword name to search for; ignores diacritics and lists the best matches first.')]
+    #[Serialize]
+    public string $query = App::EMPTY_STRING {
+        set => trim($value);
+    }
+}
+
+final class McpKeywordListResponse
+{
+    /**
+     * @var list<McpKeywordDecorator>
+     */
+    #[McpField(description: 'Best matches; narrow the query when the expected keyword is missing.')]
+    #[Serialize(type: McpKeywordDecorator::class)]
+    public array $keywords {
+        get => array_map(McpKeywordDecorator::getInstance(...), $this->result->keywords);
+    }
+
+    public function __construct(
+        private readonly KeywordListResult $result,
+    ) {
+    }
+}
+```
 
 `McpToolReferenceHandler` runs a call of an `#[AsMcpTool]` tool (its `ToolReference` handler is the class and
 `__invoke`) with the tool name of the reference and the read-only flag of its `#[AsMcpTool]`; every other element goes
@@ -206,8 +244,8 @@ and passes the map to the handler, so a call needs no reflection. It fails the c
 compilation when an `#[AsMcpTool]` tool also has an MCP App template (the template needs an array, the handler returns
 a `CallToolResult`) and when the server already has another reference handler.
 
-The serializer builds an input object without a constructor: a DTO with optional fields has private properties with
-defaults and setters, or public properties with defaults (it treats every promoted constructor parameter as required).
+The serializer builds an input object without a constructor: a DTO with optional fields has public properties with
+defaults (it treats every promoted constructor parameter as required).
 The bundle tools follow this shape: `Mcp/Model/Request/*Request`, `McpLogFinder` returning a `McpLogSearchResult` /
 `McpLogsByContextResult` (facts only), and `Mcp/Model/Response/*Response` owning the JSON shape, the hint and the
 warning texts. Log rows that are already serialized arrays are exposed through
