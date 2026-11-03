@@ -31,6 +31,7 @@ infrastructure after a bundle upgrade.
            server_name: 'default'
            instructions_file: '%kernel.project_dir%/config/mcp/instructions.md'
            allowed_hosts: '%env(csv:ANZU_MCP_ALLOWED_HOSTS)%'
+           pod: '%env(bool:ANZU_MCP_POD)%'
            tool_error_exceptions:
                App\Exception\SomeBackendException: 'Backend is temporarily unavailable, retry the call.'
            rate_limiter:
@@ -331,6 +332,62 @@ narrows the scan. Assumptions behind the bounds:
 * For selective filters (`contextId`, `onlyErrors`) over large windows the scan still fetches every document in the `_id`
   range until `limit` is filled, guarded only by `mongo_query_max_time_ms`; a compound `{ 'context.contextId': 1, _id: -1 }`
   index on `appLogs` / `auditLogs` is the real fix for by-context lookups on busy collections.
+
+## Existing ids
+
+`#[McpExistingId]` checks that an `int` or a `list<int>` property of a tool request holds ids of existing rows of an
+entity and tells the client which tool lists the valid ids, so an agent does not guess them:
+
+```php
+#[McpExistingId(entity: Site::class, resolverTool: ListSitesTool::NAME)]
+public ?int $siteId = null;
+```
+
+`McpExistingIdValidator` reads the ids with one query through the entity manager of the entity
+(`SELECT <identifier> FROM <entity> WHERE <identifier> IN (:ids)`); `null` and `[]` pass without a query. An unknown id
+fails with `Unknown id "5" — no such record exists. Resolve it via list_sites instead of guessing the id.`, unknown ids
+of a list with one violation naming each of them once. An entity with a composite identifier is a `LogicException`.
+The validator is registered also without the `mcp` section.
+
+## MCP host and pod
+
+With the section enabled, `McpHostRouteListener` answers 404 to every main request that comes to a host of
+`allowed_hosts` or to a pod with `pod: true`, unless its route has the `McpHostRouteListener::ALLOWED_ON_MCP_HOST`
+default. It runs on `kernel.request` with priority 24, after the router. core-cms runs the MCP endpoint on its own pods
+and hosts:
+
+```php
+'mcp' => [
+    'allowed_hosts' => env('CORE_CMS_MCP_ALLOWED_HOSTS')->csv(),
+    'pod' => env('CORE_CMS_MCP_POD')->bool(),
+],
+```
+
+```php
+$routes
+    ->import(resource: '.', type: 'mcp')
+    ->defaults([McpHostRouteListener::ALLOWED_ON_MCP_HOST => true])
+;
+```
+
+`McpHostResolver` is a routing condition service (alias `mcp_host`) for routes that must differ by host:
+`condition: "service('mcp_host').isMcpHost(request)"` or `isNotMcpHost(request)`.
+
+## Query time limit
+
+`McpQueryBuilder` is a Doctrine `QueryBuilder` whose query gets the MySQL optimizer hint
+`/*+ MAX_EXECUTION_TIME(<ms>) */` through `McpMaxExecutionTimeWalker`, so a tool query that runs too long fails instead
+of holding a connection. The host builds it in its MCP repositories:
+
+```php
+public function createQueryBuilder(string $alias, ?string $indexBy = null): QueryBuilder
+{
+    return new McpQueryBuilder(entityManager: $this->getEntityManager(), maxExecutionTimeMs: $this->queryMaxExecutionTimeMs)
+        ->select($alias)
+        ->from($this->getEntityName(), $alias, $indexBy)
+    ;
+}
+```
 
 ## Debugging
 

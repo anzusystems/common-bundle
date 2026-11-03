@@ -72,9 +72,11 @@ use AnzuSystems\CommonBundle\Log\LogFacade;
 use AnzuSystems\CommonBundle\Log\Repository\AuditLogRepository;
 use AnzuSystems\CommonBundle\Log\Repository\JournalLogRepository;
 use AnzuSystems\CommonBundle\Mcp\Controller\McpController;
+use AnzuSystems\CommonBundle\Mcp\Event\Listener\McpHostRouteListener;
 use AnzuSystems\CommonBundle\Mcp\Handler\FilterToolsListRequestHandler;
 use AnzuSystems\CommonBundle\Mcp\Handler\StrictToolArgumentsRequestHandler;
 use AnzuSystems\CommonBundle\Mcp\McpRateLimiter;
+use AnzuSystems\CommonBundle\Mcp\Resolver\McpHostResolver;
 use AnzuSystems\CommonBundle\Mcp\Resolver\McpToolErrorResolver;
 use AnzuSystems\CommonBundle\Mcp\Security\McpToolAccessChecker;
 use AnzuSystems\CommonBundle\Messenger\Message\AuditLogMessage;
@@ -681,6 +683,14 @@ final class AnzuSystemsCommonExtension extends Extension implements PrependExten
             ->getDefinition(McpController::class)
             ->replaceArgument('$server', new Reference(sprintf('mcp.server.%s', $serverName)))
             ->replaceArgument('$allowedHosts', $mcp['allowed_hosts']);
+
+        $container
+            ->getDefinition(McpHostResolver::class)
+            ->replaceArgument('$allowedHosts', $mcp['allowed_hosts']);
+
+        $container
+            ->getDefinition(McpHostRouteListener::class)
+            ->replaceArgument('$mcpPod', $mcp['pod']);
 
         $registryReference = new Reference(sprintf('mcp.server.%s.registry', $serverName));
         $container

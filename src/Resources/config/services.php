@@ -23,6 +23,7 @@ use AnzuSystems\CommonBundle\Repository\JobUserDataDeleteRepository;
 use AnzuSystems\CommonBundle\Router\AnzuDomainRouteLoader;
 use AnzuSystems\CommonBundle\Util\ResourceLocker;
 use AnzuSystems\CommonBundle\Validator\Constraints\EntityExistsValidator;
+use AnzuSystems\CommonBundle\Validator\Constraints\McpExistingIdValidator;
 use AnzuSystems\CommonBundle\Validator\Constraints\NotEmptyIdValidator;
 use AnzuSystems\CommonBundle\Validator\Constraints\UniqueEntityDtoValidator;
 use AnzuSystems\CommonBundle\Validator\Constraints\UniqueEntityValidator;
@@ -152,6 +153,11 @@ return static function (ContainerConfigurator $configurator): void {
     $services->set(EntityExistsValidator::class)
         ->arg('$entityManager', service(EntityManagerInterface::class))
         ->arg('$userEntityClass', null)
+        ->tag('validator.constraint_validator')
+    ;
+
+    $services->set(McpExistingIdValidator::class)
+        ->arg('$managerRegistry', service(ManagerRegistry::class))
         ->tag('validator.constraint_validator')
     ;
 

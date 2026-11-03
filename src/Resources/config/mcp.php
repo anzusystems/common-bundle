@@ -9,6 +9,7 @@ use AnzuSystems\CommonBundle\Domain\User\CurrentAnzuUserProvider;
 use AnzuSystems\CommonBundle\Log\Repository\AuditLogRepository;
 use AnzuSystems\CommonBundle\Log\Repository\JournalLogRepository;
 use AnzuSystems\CommonBundle\Mcp\Controller\McpController;
+use AnzuSystems\CommonBundle\Mcp\Event\Listener\McpHostRouteListener;
 use AnzuSystems\CommonBundle\Mcp\Handler\FilterToolsListRequestHandler;
 use AnzuSystems\CommonBundle\Mcp\Handler\McpToolReferenceHandler;
 use AnzuSystems\CommonBundle\Mcp\Handler\StrictToolArgumentsRequestHandler;
@@ -19,6 +20,7 @@ use AnzuSystems\CommonBundle\Mcp\Log\McpToolCallLogger;
 use AnzuSystems\CommonBundle\Mcp\McpRateLimiter;
 use AnzuSystems\CommonBundle\Mcp\Resolver\McpContextIdResolver;
 use AnzuSystems\CommonBundle\Mcp\Resolver\McpDateWindowResolver;
+use AnzuSystems\CommonBundle\Mcp\Resolver\McpHostResolver;
 use AnzuSystems\CommonBundle\Mcp\Resolver\McpPageWindowResolver;
 use AnzuSystems\CommonBundle\Mcp\Resolver\McpToolErrorResolver;
 use AnzuSystems\CommonBundle\Mcp\Security\McpToolAccessChecker;
@@ -28,6 +30,7 @@ use AnzuSystems\CommonBundle\Mcp\Tool\GetLogsByContextTool;
 use AnzuSystems\CommonBundle\Mcp\Tool\SearchAppLogsTool;
 use AnzuSystems\CommonBundle\Mcp\Tool\SearchAuditLogsTool;
 use AnzuSystems\SerializerBundle\Serializer;
+use Symfony\Component\HttpKernel\KernelEvents;
 use Symfony\Component\Validator\Validator\ValidatorInterface;
 
 return static function (ContainerConfigurator $configurator): void {
@@ -122,6 +125,17 @@ return static function (ContainerConfigurator $configurator): void {
         ->tag('controller.service_arguments')
         ->tag('monolog.logger', ['channel' => 'mcp'])
         ->public()
+    ;
+
+    $services->set(McpHostResolver::class)
+        ->arg('$allowedHosts', null)
+        ->tag('routing.condition_service', ['alias' => McpHostResolver::ROUTING_CONDITION_ALIAS])
+    ;
+
+    $services->set(McpHostRouteListener::class)
+        ->arg('$mcpHostResolver', service(McpHostResolver::class))
+        ->arg('$mcpPod', null)
+        ->tag('kernel.event_listener', ['event' => KernelEvents::REQUEST, 'priority' => McpHostRouteListener::PRIORITY])
     ;
 
     $services->set(CreateMcpLogCollectionCommand::class)
