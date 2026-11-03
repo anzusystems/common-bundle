@@ -1,0 +1,193 @@
+<?php
+
+declare(strict_types=1);
+
+namespace AnzuSystems\CommonBundle\PHPStan\Rules;
+
+use AnzuSystems\SerializerBundle\Attributes\Serialize;
+use Generator;
+use PhpParser\Node;
+use PhpParser\Node\AttributeGroup;
+use PhpParser\Node\Expr\Variable;
+use PhpParser\Node\Stmt\ClassLike;
+use PHPStan\Analyser\Scope;
+use PHPStan\Node\InClassNode;
+use PHPStan\Reflection\ClassReflection;
+use PHPStan\Reflection\ParametersAcceptorSelector;
+use PHPStan\Reflection\ReflectionProvider;
+use PHPStan\Rules\Rule;
+use PHPStan\Rules\RuleErrorBuilder;
+use PHPStan\Type\Type;
+use PHPStan\Type\TypeCombinator;
+use PHPStan\Type\VerbosityLevel;
+
+/**
+ * Serialized properties stay arrays: they are the MCP tool schema, and McpSchemaFactory describes a Collection as an
+ * object.
+ *
+ * @implements Rule<InClassNode>
+ */
+final readonly class McpObjectArrayRule implements Rule
+{
+    public const string MESSAGE = '%s is %s. Use Collection<int, %s> (Collection<string, …> for a keyed map) instead of an array of objects (anzu-php-style: objects go in a Collection, arrays hold only ids and scalars).';
+
+    private const string NAMESPACE_SEPARATOR = '\\';
+    private const string NAMESPACE_WILDCARD = '*';
+
+    /**
+     * @var list<string>
+     */
+    private array $classPatterns;
+    private string $objectNamespacePrefix;
+
+    /**
+     * @param list<string> $classNamespaces the namespaces whose classes are checked; `*` stands for one segment, e.g. `App\Domain\*\Mcp`
+     * @param string $objectNamespace arrays of objects from this namespace are reported, other objects (Uuid, DateTimeImmutable) are allowed
+     */
+    public function __construct(
+        private ReflectionProvider $reflectionProvider,
+        array $classNamespaces,
+        string $objectNamespace,
+    ) {
+        $this->classPatterns = array_map($this->createClassPattern(...), $classNamespaces);
+        $this->objectNamespacePrefix = trim($objectNamespace, self::NAMESPACE_SEPARATOR) . self::NAMESPACE_SEPARATOR;
+    }
+
+    public function getNodeType(): string
+    {
+        return InClassNode::class;
+    }
+
+    public function processNode(Node $node, Scope $scope): array
+    {
+        $classReflection = $node->getClassReflection();
+        if (false === $this->isCheckedClass($classReflection->getName())) {
+            return [];
+        }
+
+        $errors = [];
+        foreach ($this->getDeclaredTypes($node->getOriginalNode(), $classReflection) as [$subject, $type, $line]) {
+            $objectClassName = $this->findArrayObjectClassName($type);
+            if (null === $objectClassName) {
+                continue;
+            }
+            $errors[] = RuleErrorBuilder::message(sprintf(self::MESSAGE, $subject, $type->describe(VerbosityLevel::typeOnly()), $objectClassName))
+                ->identifier('anzu.mcp.objectArray')
+                ->line($line)
+                ->build();
+        }
+
+        return $errors;
+    }
+
+    /**
+     * @return Generator<int, array{string, Type, int}>
+     */
+    private function getDeclaredTypes(ClassLike $classLike, ClassReflection $classReflection): Generator
+    {
+        $className = $classReflection->getName();
+        foreach ($classLike->getProperties() as $property) {
+            if ($this->isSerialized($property->attrGroups)) {
+                continue;
+            }
+            foreach ($property->props as $propertyItem) {
+                $propertyName = $propertyItem->name->toString();
+
+                yield [
+                    sprintf('Property %s::$%s', $className, $propertyName),
+                    $classReflection->getNativeProperty($propertyName)
+                        ->getReadableType(),
+                    $property->getStartLine(),
+                ];
+            }
+        }
+        foreach ($classLike->getMethods() as $method) {
+            $methodName = $method->name->toString();
+            $variant = ParametersAcceptorSelector::combineAcceptors($classReflection->getNativeMethod($methodName)->getVariants());
+            foreach ($method->params as $position => $param) {
+                if (false === $param->var instanceof Variable || false === is_string($param->var->name)) {
+                    continue;
+                }
+                $paramName = $param->var->name;
+                if ($param->isPromoted()) {
+                    if ($this->isSerialized($param->attrGroups)) {
+                        continue;
+                    }
+
+                    yield [
+                        sprintf('Property %s::$%s', $className, $paramName),
+                        $classReflection->getNativeProperty($paramName)
+                            ->getReadableType(),
+                        $param->getStartLine(),
+                    ];
+
+                    continue;
+                }
+
+                yield [
+                    sprintf('Parameter $%s of method %s::%s()', $paramName, $className, $methodName),
+                    $variant->getParameters()[$position]->getType(),
+                    $param->getStartLine(),
+                ];
+            }
+
+            yield [
+                sprintf('Return type of method %s::%s()', $className, $methodName),
+                $variant->getReturnType(),
+                $method->getStartLine(),
+            ];
+        }
+    }
+
+    /**
+     * @param array<AttributeGroup> $attributeGroups
+     */
+    private function isSerialized(array $attributeGroups): bool
+    {
+        foreach ($attributeGroups as $attributeGroup) {
+            foreach ($attributeGroup->attrs as $attribute) {
+                if (Serialize::class === $attribute->name->toString()) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
+    private function findArrayObjectClassName(Type $type): ?string
+    {
+        foreach (TypeCombinator::removeNull($type)->getArrays() as $arrayType) {
+            $valueType = $arrayType->getIterableValueType();
+            $objectClassName = array_find($valueType->getObjectClassNames(), $this->isReportedObject(...))
+                ?? $this->findArrayObjectClassName($valueType);
+            if (is_string($objectClassName)) {
+                return $objectClassName;
+            }
+        }
+
+        return null;
+    }
+
+    private function isCheckedClass(string $className): bool
+    {
+        return array_any($this->classPatterns, static fn (string $pattern): bool => 1 === preg_match($pattern, $className));
+    }
+
+    private function isReportedObject(string $className): bool
+    {
+        if (false === str_starts_with($className, $this->objectNamespacePrefix) || false === $this->reflectionProvider->hasClass($className)) {
+            return false;
+        }
+
+        return false === $this->reflectionProvider->getClass($className)
+            ->isEnum();
+    }
+
+    private function createClassPattern(string $namespace): string
+    {
+        $quotedNamespace = preg_quote(trim($namespace, self::NAMESPACE_SEPARATOR), '/');
+
+        return sprintf('/^%s\\\\/', str_replace(preg_quote(self::NAMESPACE_WILDCARD, '/'), '\w+', $quotedNamespace));
+    }
+}

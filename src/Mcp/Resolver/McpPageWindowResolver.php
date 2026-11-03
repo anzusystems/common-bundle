@@ -32,7 +32,7 @@ final readonly class McpPageWindowResolver
 
     public function getClampWarning(McpPageWindow $window): string
     {
-        if ($window->isRaisedToMinimum()) {
+        if ($window->raisedToMinimum) {
             return sprintf(
                 self::WARNING_RAISED_TO_MINIMUM,
                 $window->requestedPage,
@@ -50,7 +50,7 @@ final readonly class McpPageWindowResolver
             $window->limit,
             $window->pageMax,
             $window->limitMax,
-            $window->getReachableRows(),
+            $window->reachableRows,
         );
     }
 }

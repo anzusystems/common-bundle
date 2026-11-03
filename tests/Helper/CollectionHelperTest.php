@@ -27,6 +27,18 @@ final class CollectionHelperTest extends TestCase
     }
 
     /**
+     * @dataProvider traversableToUniqueIdsProvider
+     */
+    public function testTraversableToUniqueIds(
+        Traversable $traversable,
+        ?Closure $getIdAction,
+        array $expectedResult,
+    ): void {
+        $ids = CollectionHelper::traversableToUniqueIds($traversable, $getIdAction);
+        self::assertSame($expectedResult, $ids);
+    }
+
+    /**
      * @dataProvider colDiffProvider
      */
     public function testColDiff(
@@ -76,6 +88,30 @@ final class CollectionHelperTest extends TestCase
     }
 
     /**
+     * @return list<array{ArrayCollection, null|callable, array<int|string|null>}>
+     */
+    public function traversableToUniqueIdsProvider(): array
+    {
+        return [
+            [
+                $this->createUsers(5, 3, 5, 1, 3),
+                null,
+                [5, 3, 1],
+            ],
+            [
+                $this->createUsers(1, 1),
+                static fn (User $identifiable): string => $identifiable->getUserIdentifier(),
+                ['1'],
+            ],
+            [
+                new ArrayCollection(),
+                null,
+                [],
+            ],
+        ];
+    }
+
+    /**
      * @return list<array{Collection, Collection, null|callable, Collection}>
      */
     public function colDiffProvider(): array
@@ -111,5 +147,17 @@ final class CollectionHelperTest extends TestCase
                 new ArrayCollection([$nine, $six]),
             ],
         ];
+    }
+
+    /**
+     * @return ArrayCollection<int, User>
+     */
+    private function createUsers(int ...$ids): ArrayCollection
+    {
+        return new ArrayCollection(array_map(
+            static fn (int $id): User => new User()
+                ->setId($id),
+            $ids,
+        ));
     }
 }

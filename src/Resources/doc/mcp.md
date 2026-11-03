@@ -341,7 +341,7 @@ for a new token.
 * `resolveLogWindow()` — `true` when `from` was moved forward to `until - 31 days`.
 
 `McpPageWindowResolver` does the same for pagination: `resolve($page, $limit, $limitMax)` clamps the page at
-`PAGE_MAX` (200) and the limit at the caller's maximum, and the returned `McpPageWindow` reports `isClamped()` plus
+`PAGE_MAX` (200) and the limit at the caller's maximum, and the returned `McpPageWindow` reports `$clamped` plus
 the offset and the number of rows still reachable through pagination.
 
 Tools must surface both. The single convention is `McpToolReferenceHandler::WARNINGS_KEY` (`warnings`): a `list<string>` of

@@ -24,8 +24,8 @@ final class McpPageWindowResolverTest extends TestCase
 
         self::assertSame(3, $window->page);
         self::assertSame(20, $window->limit);
-        self::assertSame(40, $window->getOffset());
-        self::assertFalse($window->isClamped());
+        self::assertSame(40, $window->offset);
+        self::assertFalse($window->clamped);
     }
 
     public function testPageAndLimitAboveMaxAreClampedAndReported(): void
@@ -34,8 +34,8 @@ final class McpPageWindowResolverTest extends TestCase
 
         self::assertSame(McpPageWindowResolver::PAGE_MAX, $window->page);
         self::assertSame(self::LIMIT_MAX, $window->limit);
-        self::assertTrue($window->isClamped());
-        self::assertSame(McpPageWindowResolver::PAGE_MAX * self::LIMIT_MAX, $window->getReachableRows());
+        self::assertTrue($window->clamped);
+        self::assertSame(McpPageWindowResolver::PAGE_MAX * self::LIMIT_MAX, $window->reachableRows);
         self::assertStringContainsString('999', $this->resolver->getClampWarning($window));
     }
 
@@ -45,7 +45,7 @@ final class McpPageWindowResolverTest extends TestCase
 
         self::assertSame(1, $window->page);
         self::assertSame(1, $window->limit);
-        self::assertTrue($window->isClamped());
+        self::assertTrue($window->clamped);
         self::assertStringContainsString('below the minimum', $this->resolver->getClampWarning($window));
     }
 }

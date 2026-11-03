@@ -15,6 +15,8 @@
 * MCP host guard: with the `mcp` section enabled, `McpHostRouteListener` answers 404 to a main request on a host of `mcp.allowed_hosts` or on a pod with the new `mcp.pod: true` (default `false`) unless its route has the `McpHostRouteListener::ALLOWED_ON_MCP_HOST` default. `McpHostResolver` is the routing condition service `mcp_host` with `isMcpHost(request)` and `isNotMcpHost(request)`.
 * `McpQueryBuilder` adds the MySQL optimizer hint `MAX_EXECUTION_TIME` to its queries through `McpMaxExecutionTimeWalker`, for host repositories that serve MCP tools.
 * ECS fixer `PromotedPropertyAttributeSpacingFixer` (`AnzuSystems/promoted_property_attribute_spacing`): in a multi-line constructor where a promoted parameter has an attribute, every parameter is separated from the next one by one blank line and no blank line follows `(` or precedes `)`, like class properties with attributes; register it in the host `ecs.php`.
+* PHPStan rule `McpObjectArrayRule` (`anzu.mcp.objectArray`): in the MCP classes of a host it reports method parameters, return types and properties that hold an array of the host's objects and asks for a `Collection` instead; `#[Serialize]` properties, enums and objects outside the host namespace (`Uuid`, `DateTimeImmutable`) are allowed. Include `vendor/anzusystems/common-bundle/src/PHPStan/rules.neon` in the host `phpstan.neon` and set `anzuMcpObjectArray.classNamespaces` (e.g. `App\Domain\*\Mcp`, `App\Mcp`; `*` is one namespace segment) and `anzuMcpObjectArray.objectNamespace` (e.g. `App`); without them the rule checks nothing.
+* `CollectionHelper::traversableToUniqueIds()` takes the same arguments as `traversableToIds()` and returns each id once, in the order of its first occurrence, as a list.
 
 ### Changes
 * BC change: the bundle requires PHP 8.5.
@@ -30,6 +32,7 @@
 * BC change: the MCP log responses (`McpAppLogSearchResponse`, `McpAuditLogSearchResponse`, `McpLogsByContextResponse`) expose their fields as virtual properties instead of getters; the requests already had public properties.
 * Static analysis runs on PHPStan level 5 (`phpstan.neon`, `bin/phpstan`, the CI step) instead of Psalm; `psalm.xml` and `bin/psalm` are removed.
 * `BaseUserDto` and `AbstractCsvRowAccessor` declare `@phpstan-consistent-constructor`, so PHPStan in a host checks that their subclasses keep a constructor `new static()` can call.
+* BC change: `McpPageWindow` exposes `$clamped`, `$raisedToMinimum`, `$offset` and `$reachableRows` as virtual properties instead of `isClamped()`, `isRaisedToMinimum()`, `getOffset()` and `getReachableRows()`; the class is no longer `readonly`, its constructor properties still are.
 
 ## [11.8.0](https://github.com/anzusystems/common-bundle/compare/11.7.0...11.8.0) (2026-10-13)
 
