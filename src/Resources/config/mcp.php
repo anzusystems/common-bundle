@@ -60,6 +60,8 @@ return static function (ContainerConfigurator $configurator): void {
         ->arg('$security', service('security.helper'))
         ->arg('$readOnlyToolNames', [])
         ->arg('$toolScopeProvider', service(McpToolScopeProviderInterface::class)->nullOnInvalid())
+        ->arg('$toolCategories', [])
+        ->arg('$writeToolNamesByPreview', [])
     ;
 
     $services->set(FilterToolsListRequestHandler::class)

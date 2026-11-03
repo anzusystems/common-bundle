@@ -16,6 +16,7 @@ use AnzuSystems\CommonBundle\Mcp\Model\Response\McpLogsByContextResponse;
         The same contextId correlates the logs of the other services of this platform, so it can also be looked up there.
         TXT
     ,
+    category: AsMcpTool::CATEGORY_DIAGNOSTICS,
     readOnly: true,
 )]
 final readonly class GetLogsByContextTool

@@ -6,6 +6,7 @@ namespace AnzuSystems\CommonBundle\Tests\Mcp\Security;
 
 use AnzuSystems\CommonBundle\Mcp\Security\McpToolAccessChecker;
 use AnzuSystems\CommonBundle\Mcp\Security\McpToolScopeProviderInterface;
+use LogicException;
 use PHPUnit\Framework\TestCase;
 use Symfony\Bundle\SecurityBundle\Security;
 
@@ -15,6 +16,8 @@ final class McpToolAccessCheckerTest extends TestCase
     private const string DENIED_TOOL = 'search_app_logs';
     private const string UNMAPPED_TOOL = 'list_authors';
     private const string SECOND_GRANTED_TOOL = 'list_site_groups';
+    private const string PREVIEW_TOOL = 'preview_site_update';
+    private const string TOOL_CATEGORY = 'sites';
     private const string GRANTED_PERMISSION = 'cms_site_read';
     private const string DENIED_PERMISSION = 'cms_log_read';
 
@@ -151,6 +154,86 @@ final class McpToolAccessCheckerTest extends TestCase
     }
 
     /**
+     * @dataProvider previewProvider
+     *
+     * @param list<string> $grantedWriteTools
+     */
+    public function testPreviewIsGrantedExactlyWithItsWriteTool(
+        string $writeToolName,
+        array $grantedWriteTools,
+        ?McpToolScopeProviderInterface $toolScopeProvider,
+        bool $expectedGranted,
+    ): void {
+        $checker = $this->createChecker(
+            readOnlyToolNames: [self::PREVIEW_TOOL],
+            grantedWriteTools: $grantedWriteTools,
+            toolScopeProvider: $toolScopeProvider,
+            writeToolNamesByPreview: [self::PREVIEW_TOOL => $writeToolName],
+        );
+
+        self::assertSame($expectedGranted, $checker->isToolGranted($writeToolName));
+        self::assertSame($expectedGranted, $checker->isToolGranted(self::PREVIEW_TOOL));
+        self::assertSame($expectedGranted, $checker->isToolPermissionGranted(self::PREVIEW_TOOL));
+        self::assertFalse($checker->isWriteTool(self::PREVIEW_TOOL));
+        self::assertTrue($checker->isWriteGranted(self::PREVIEW_TOOL));
+    }
+
+    /**
+     * @return array<string, array{string, list<string>, McpToolScopeProviderInterface|null, bool}>
+     */
+    public static function previewProvider(): array
+    {
+        return [
+            'granted write tool grants its preview' => [self::GRANTED_TOOL, [self::GRANTED_TOOL], null, true],
+            'missing write grant denies the preview' => [self::GRANTED_TOOL, [], null, false],
+            'write tool outside the token scope denies the preview' => [
+                self::GRANTED_TOOL,
+                [self::GRANTED_TOOL],
+                self::createToolScopeProvider([self::SECOND_GRANTED_TOOL]),
+                false,
+            ],
+            'preview in the token scope without its write tool is denied' => [
+                self::GRANTED_TOOL,
+                [self::GRANTED_TOOL],
+                self::createToolScopeProvider([self::PREVIEW_TOOL]),
+                false,
+            ],
+            'write tool without its permission denies the preview' => [self::DENIED_TOOL, [self::DENIED_TOOL], null, false],
+        ];
+    }
+
+    public function testPreviewIsNeverListed(): void
+    {
+        $checker = $this->createChecker(
+            readOnlyToolNames: [self::PREVIEW_TOOL],
+            grantedWriteTools: [self::GRANTED_TOOL],
+            writeToolNamesByPreview: [self::PREVIEW_TOOL => self::GRANTED_TOOL],
+        );
+
+        self::assertTrue($checker->isToolGranted(self::PREVIEW_TOOL));
+        self::assertNotContains(self::PREVIEW_TOOL, $checker->getToolNames());
+        self::assertNotContains(self::PREVIEW_TOOL, $checker->getWriteToolNames());
+        self::assertNotContains(self::PREVIEW_TOOL, $checker->getPermittedToolNames());
+        self::assertNotContains(self::PREVIEW_TOOL, $checker->getPermittedWriteToolNames());
+    }
+
+    public function testToolCategoryIsReturnedAndAToolWithoutCategoryFails(): void
+    {
+        $checker = $this->createChecker(
+            readOnlyToolNames: [self::PREVIEW_TOOL],
+            grantedWriteTools: [],
+            toolCategories: [self::GRANTED_TOOL => self::TOOL_CATEGORY, self::PREVIEW_TOOL => self::TOOL_CATEGORY],
+        );
+
+        self::assertSame(self::TOOL_CATEGORY, $checker->getToolCategory(self::GRANTED_TOOL));
+        self::assertSame(self::TOOL_CATEGORY, $checker->getToolCategory(self::PREVIEW_TOOL));
+
+        $this->expectException(LogicException::class);
+
+        $checker->getToolCategory(self::UNMAPPED_TOOL);
+    }
+
+    /**
      * @param list<string>|null $allowedToolNames
      */
     private static function createToolScopeProvider(?array $allowedToolNames): McpToolScopeProviderInterface
@@ -174,11 +257,15 @@ final class McpToolAccessCheckerTest extends TestCase
     /**
      * @param list<string> $readOnlyToolNames
      * @param list<string> $grantedWriteTools
+     * @param array<string, string> $toolCategories
+     * @param array<string, string> $writeToolNamesByPreview
      */
     private function createChecker(
         array $readOnlyToolNames,
         array $grantedWriteTools,
         ?McpToolScopeProviderInterface $toolScopeProvider = null,
+        array $toolCategories = [],
+        array $writeToolNamesByPreview = [],
     ): McpToolAccessChecker {
         $security = $this->createMock(Security::class);
         $security->method('isGranted')
@@ -197,6 +284,8 @@ final class McpToolAccessCheckerTest extends TestCase
             security: $security,
             readOnlyToolNames: $readOnlyToolNames,
             toolScopeProvider: $toolScopeProvider,
+            toolCategories: $toolCategories,
+            writeToolNamesByPreview: $writeToolNamesByPreview,
         );
     }
 }

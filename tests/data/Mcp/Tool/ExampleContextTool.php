@@ -14,6 +14,7 @@ use Mcp\Server\RequestContext;
 #[AsMcpTool(
     name: ExampleContextTool::NAME,
     description: 'Echoes the called tool.',
+    category: ExampleToolCategory::EXAMPLES,
     readOnly: true,
 )]
 final readonly class ExampleContextTool

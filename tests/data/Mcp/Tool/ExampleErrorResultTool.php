@@ -10,7 +10,7 @@ use Mcp\Schema\Content\TextContent;
 use Mcp\Schema\Result\CallToolResult;
 use Mcp\Server\RequestContext;
 
-#[AsMcpTool(name: self::NAME, description: 'Returns an error result built by the tool.')]
+#[AsMcpTool(name: self::NAME, description: 'Returns an error result built by the tool.', category: ExampleToolCategory::EXAMPLES)]
 final readonly class ExampleErrorResultTool
 {
     public const string NAME = 'example_error_result';

@@ -12,6 +12,7 @@ use AnzuSystems\CommonBundle\Mcp\Model\Response\McpLogsByContextResponse;
 #[AsMcpTool(
     name: InvalidParameterExampleTool::NAME,
     description: 'Searches examples of a site.',
+    category: ExampleToolCategory::EXAMPLES,
     readOnly: true,
 )]
 final readonly class InvalidParameterExampleTool

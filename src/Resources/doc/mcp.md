@@ -120,6 +120,7 @@ its `__invoke()` takes the request DTO and returns the response.
         Searches active keywords (editorial topic tags) by name.
         Filter {{ list_published_articles }} by the returned ids.
         TXT,
+    category: McpToolCategory::CODEBOOKS,
     values: ['list_published_articles' => ListPublishedArticlesTool::NAME],
     readOnly: true,
 )]
@@ -153,6 +154,12 @@ final readonly class ListKeywordsTool
   is a write tool unless it says `readOnly: true`, so a forgotten flag hides it from tokens without the write grant;
   `destructive` (default `true`, as in the MCP specification) and `idempotent` (default `false`) describe a write tool
   only.
+* `category` (required) names the group the tool belongs to, e.g. in the tool list of a token form. It is camelCase
+  (`^[a-z][a-zA-Z0-9]*$`), so a client can build a translation key from it; a host orders its categories by their first
+  tool in `mcp.tool_permissions`. The bundle log tools are in `AsMcpTool::CATEGORY_DIAGNOSTICS` (`diagnostics`).
+  `McpToolAccessChecker::getToolCategory()` returns the category of a tool and throws a `LogicException` for a tool
+  without one.
+* `previewOf` makes the tool the preview of a write tool, see "Preview tools" below.
 * `values` replace the `{{ name }}` placeholders of the description, like the parameters of a validation message;
   point to another tool through its `NAME` constant, so a renamed or removed tool breaks the build instead of the
   text. A placeholder without a value, or a value without a placeholder, fails the container compilation.
@@ -283,10 +290,19 @@ and fails the container compilation with a `LogicException` when
   registry keeps only the last tool registered under a name, and the read/write classification would be ambiguous;
 * a tool name is not 1 to 64 letters, digits, dots, underscores, hyphens or slashes (the SDK `NameValidator`) — the
   SDK would register it and only log a warning;
-* a `tool_permissions` key matches no registered tool (e.g. a typo) — such a mapping would grant nothing.
+* a `tool_permissions` key matches no registered tool (e.g. a typo) — such a mapping would grant nothing;
+* a tool in `tool_permissions` is not declared by `#[AsMcpTool]`, so it has no category;
+* a `category` is not camelCase (`^[a-z][a-zA-Z0-9]*$`);
+* `previewOf` names an unknown tool, or one that is not a write tool declared by `#[AsMcpTool]` (e.g. another
+  preview);
+* a preview is not `readOnly`;
+* a write tool has more than one preview;
+* a preview is mapped in `tool_permissions`;
+* a preview is in another category than its write tool.
 
 A tool that is not declared by `#[McpTool]` on a tagged `mcp.tool` service (e.g. one registered by an McpBundle app)
-is unknown to these checks and cannot be mapped in `tool_permissions`.
+is unknown to these checks and cannot be mapped in `tool_permissions`. A tool mapped there is declared by
+`#[AsMcpTool]` with a category.
 
 ### Write tools
 
@@ -315,9 +331,32 @@ every read tool, or it disappears for clients without the write grant:
 #[AsMcpTool(
     name: ListSitesTool::NAME,
     description: '…',
+    category: McpToolCategory::SITES,
     readOnly: true,
 )]
 ```
+
+### Preview tools
+
+A preview is a read tool that shows what a write tool would save and changes nothing. It declares its write tool with
+`previewOf` and is in the same category:
+
+```php
+#[AsMcpTool(
+    name: PreviewQuizTool::NAME,
+    description: '…',
+    category: McpToolCategory::QUIZZES,
+    readOnly: true,
+    previewOf: CreateQuizTool::NAME,
+)]
+```
+
+A preview has no entry in `tool_permissions`: `McpToolAccessChecker` grants it exactly when it grants its write tool —
+the token scope, the mapped permission and the `mcp_tool_write` grant of the write tool — in `tools/list` and on
+`tools/call`; otherwise the call gets the usual tool access error. `getToolNames()`, `getWriteToolNames()`,
+`getPermittedToolNames()` and `getPermittedWriteToolNames()` read the keys of `tool_permissions`, so they never list a
+preview. As a read tool it skips the write grant check of its own, read-only mode, the one write per request and the
+audit log.
 
 ### Token scope
 
@@ -328,7 +367,7 @@ service every permitted tool stays available. The scope only narrows: a tool in 
 permission and, for a write tool, the write grant. A tool outside the scope is hidden from `tools/list` and denied on
 `tools/call` with the usual access error. `McpToolAccessChecker::getPermittedToolNames()` lists every tool mapped in
 `tool_permissions` whose permission the current user holds, in map order, without the scope, so a host can offer them
-for a new token.
+for a new token. A preview follows the scope of its write tool, so a token never names it.
 
 ## Date windows
 

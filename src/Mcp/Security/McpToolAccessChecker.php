@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace AnzuSystems\CommonBundle\Mcp\Security;
 
+use LogicException;
 use Symfony\Bundle\SecurityBundle\Security;
 
 final readonly class McpToolAccessChecker
@@ -13,12 +14,16 @@ final readonly class McpToolAccessChecker
     /**
      * @param array<string, string> $toolPermissions
      * @param list<string> $readOnlyToolNames
+     * @param array<string, string> $toolCategories tool name => category
+     * @param array<string, string> $writeToolNamesByPreview preview tool name => the write tool it previews
      */
     public function __construct(
         private array $toolPermissions,
         private Security $security,
         private array $readOnlyToolNames,
         private ?McpToolScopeProviderInterface $toolScopeProvider = null,
+        private array $toolCategories = [],
+        private array $writeToolNamesByPreview = [],
     ) {
     }
 
@@ -29,6 +34,12 @@ final readonly class McpToolAccessChecker
 
     public function isToolPermissionGranted(string $toolName): bool
     {
+        // A preview is granted exactly with its write tool, write grant included, so a token never sees it alone.
+        $writeToolName = $this->writeToolNamesByPreview[$toolName] ?? null;
+        if (is_string($writeToolName)) {
+            return $this->isToolGranted($writeToolName);
+        }
+
         return $this->isInToolScope($toolName) && $this->isPermissionGranted($toolName);
     }
 
@@ -80,6 +91,12 @@ final readonly class McpToolAccessChecker
             $this->getWriteToolNames(),
             $this->isPermissionGranted(...),
         ));
+    }
+
+    public function getToolCategory(string $toolName): string
+    {
+        return $this->toolCategories[$toolName]
+            ?? throw new LogicException(sprintf('The MCP tool "%s" has no category.', $toolName));
     }
 
     public function isWriteTool(string $toolName): bool

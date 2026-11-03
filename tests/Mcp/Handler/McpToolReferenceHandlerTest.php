@@ -61,6 +61,7 @@ final class McpToolReferenceHandlerTest extends TestCase
     private const string LIMIT_VIOLATION = 'limit: This value should be greater than or equal to 1.';
     private const string INVOKE_METHOD = '__invoke';
     private const string READ_TOOL_METHOD = 'listExamples';
+    private const string PREVIEWED_WRITE_TOOL_NAME = 'create_example';
     private const array TOOL_NAMES = [
         ExampleSearchTool::NAME,
         ExampleWithoutInputTool::NAME,
@@ -221,6 +222,51 @@ final class McpToolReferenceHandlerTest extends TestCase
                 true,
                 false,
                 sprintf(McpWriteToolGuard::WRITE_TOOL_NOT_GRANTED_MESSAGE, ExampleWithoutInputTool::NAME),
+            ],
+        ];
+    }
+
+    /**
+     * @dataProvider previewProvider
+     */
+    public function testPreviewRunsAsAReadToolOnlyWithItsWriteGrant(
+        bool $writeGranted,
+        int $expectedRuns,
+        ?string $expectedError,
+    ): void {
+        $runs = 0;
+        $handler = $this->createHandlerWithoutInputTool(
+            toolHandler: static function () use (&$runs): McpLogsByContextResponse {
+                ++$runs;
+
+                return self::createResponse();
+            },
+            writeGranted: $writeGranted,
+            previewOf: self::PREVIEWED_WRITE_TOOL_NAME,
+        );
+
+        $this->initAppReadOnlyMode(true);
+        try {
+            $result = $this->callToolWithoutInput($handler);
+        } finally {
+            $this->initAppReadOnlyMode(false);
+        }
+
+        self::assertSame($expectedRuns, $runs);
+        self::assertSame($expectedError, $result->structuredContent[McpToolReferenceHandler::ERROR_KEY] ?? null);
+    }
+
+    /**
+     * @return array<string, array{bool, int, string|null}>
+     */
+    public static function previewProvider(): array
+    {
+        return [
+            'write grant runs the preview also in read-only mode' => [true, 1, null],
+            'missing write grant denies the preview like a tool the token may not use' => [
+                false,
+                0,
+                sprintf(McpToolReferenceHandler::TOOL_ACCESS_DENIED_MESSAGE, ExampleWithoutInputTool::NAME),
             ],
         ];
     }
@@ -521,6 +567,7 @@ final class McpToolReferenceHandlerTest extends TestCase
         bool $readOnlyTool = true,
         bool $writeGranted = true,
         RequestStack $requestStack = new RequestStack(),
+        ?string $previewOf = null,
     ): McpToolReferenceHandler {
         return $this->createHandler(
             tool: new ExampleWithoutInputTool($toolHandler),
@@ -529,6 +576,7 @@ final class McpToolReferenceHandlerTest extends TestCase
             readOnlyTool: $readOnlyTool,
             writeGranted: $writeGranted,
             requestStack: $requestStack,
+            previewOf: $previewOf,
         );
     }
 
@@ -542,6 +590,7 @@ final class McpToolReferenceHandlerTest extends TestCase
         bool $readOnlyTool = true,
         bool $writeGranted = true,
         RequestStack $requestStack = new RequestStack(),
+        ?string $previewOf = null,
     ): McpToolReferenceHandler {
         $this->insertedDocuments = [];
 
@@ -566,10 +615,20 @@ final class McpToolReferenceHandlerTest extends TestCase
                 default => $toolGranted,
             });
 
+        $toolPermissions = array_fill_keys(self::TOOL_NAMES, self::TOOL_PERMISSION);
+        $readOnlyToolNames = $readOnlyTool ? self::TOOL_NAMES : [];
+        $writeToolNamesByPreview = [];
+        if (is_string($previewOf)) {
+            unset($toolPermissions[ExampleWithoutInputTool::NAME]);
+            $toolPermissions[$previewOf] = self::TOOL_PERMISSION;
+            $readOnlyToolNames[] = ExampleWithoutInputTool::NAME;
+            $writeToolNamesByPreview[ExampleWithoutInputTool::NAME] = $previewOf;
+        }
         $toolAccessChecker = new McpToolAccessChecker(
-            toolPermissions: array_fill_keys(self::TOOL_NAMES, self::TOOL_PERMISSION),
+            toolPermissions: $toolPermissions,
             security: $security,
-            readOnlyToolNames: $readOnlyTool ? self::TOOL_NAMES : [],
+            readOnlyToolNames: $readOnlyToolNames,
+            writeToolNamesByPreview: $writeToolNamesByPreview,
         );
 
         return new McpToolReferenceHandler(

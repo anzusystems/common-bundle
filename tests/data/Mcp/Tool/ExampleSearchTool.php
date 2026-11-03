@@ -12,6 +12,7 @@ use Closure;
 #[AsMcpTool(
     name: ExampleSearchTool::NAME,
     description: 'Searches examples.',
+    category: ExampleToolCategory::EXAMPLES,
     readOnly: true,
 )]
 final readonly class ExampleSearchTool

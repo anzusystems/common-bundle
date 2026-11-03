@@ -9,6 +9,7 @@ use AnzuSystems\CommonBundle\Mcp\Attribute\AsMcpTool;
 #[AsMcpTool(
     name: InvalidReturnExampleTool::NAME,
     description: 'Lists examples as an array.',
+    category: ExampleToolCategory::EXAMPLES,
     readOnly: true,
 )]
 final readonly class InvalidReturnExampleTool

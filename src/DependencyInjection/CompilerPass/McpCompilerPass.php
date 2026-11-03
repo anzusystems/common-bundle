@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace AnzuSystems\CommonBundle\DependencyInjection\CompilerPass;
 
+use AnzuSystems\CommonBundle\Helper\StringHelper;
+use AnzuSystems\CommonBundle\Mcp\Attribute\AsMcpTool;
 use AnzuSystems\CommonBundle\Mcp\Controller\McpController;
 use AnzuSystems\CommonBundle\Mcp\Security\McpToolAccessChecker;
 use LogicException;
@@ -24,12 +26,23 @@ final class McpCompilerPass implements CompilerPassInterface
     public const string BUILDER_ID_FORMAT = 'mcp.server.%s.builder';
     public const string SESSION_CACHE_ID = 'anzu_systems_common.mcp.session_cache';
     public const string TOOL_TAG = 'mcp.tool';
+    public const string TOOL_WITHOUT_CATEGORY_MESSAGE = 'The MCP tool "%s" has no category: declare it with #[AsMcpTool(category: …)].';
+    public const string INVALID_CATEGORY_MESSAGE = 'The category "%s" of the MCP tool "%s" must be camelCase (' . self::CATEGORY_PATTERN . '), so a client can build a translation key from it.';
+    public const string PREVIEW_OF_UNKNOWN_TOOL_MESSAGE = 'The MCP tool "%s" is a preview of the unknown MCP tool "%s".';
+    public const string PREVIEW_OF_READ_TOOL_MESSAGE = 'The MCP tool "%s" can only preview a write tool declared by #[AsMcpTool], "%s" is not one.';
+    public const string WRITABLE_PREVIEW_MESSAGE = 'The MCP tool "%s" previews "%s", so it must be readOnly.';
+    public const string SECOND_PREVIEW_MESSAGE = 'The MCP tool "%s" is previewed by more than one tool (%s), a write tool has one preview at most.';
+    public const string MAPPED_PREVIEW_MESSAGE = 'The MCP tool "%s" takes the permission of "%s", remove it from mcp.tool_permissions.';
+    public const string PREVIEW_IN_OTHER_CATEGORY_MESSAGE = 'The MCP tool "%1$s" previews "%2$s", so it must be in the category "%3$s" of "%2$s".';
 
     private const string TOOL_TAG_METHOD = 'method';
     private const string INVOKE_METHOD = '__invoke';
     private const string TOOL_METHOD_FORMAT = '%s::%s';
     private const string TOOL_PERMISSIONS_ARGUMENT = '$toolPermissions';
     private const string READ_ONLY_TOOL_NAMES_ARGUMENT = '$readOnlyToolNames';
+    private const string TOOL_CATEGORIES_ARGUMENT = '$toolCategories';
+    private const string WRITE_TOOL_NAMES_BY_PREVIEW_ARGUMENT = '$writeToolNamesByPreview';
+    private const string CATEGORY_PATTERN = '/^[a-z][a-zA-Z0-9]*$/';
     private const string SET_INSTRUCTIONS_METHOD = 'setInstructions';
 
     public function process(ContainerBuilder $container): void
@@ -52,14 +65,23 @@ final class McpCompilerPass implements CompilerPassInterface
         $this->assertToolNamesAreUnique($toolsByName);
         $this->assertToolNamesAreValid($toolsByName);
         $accessCheckerDefinition = $container->getDefinition(McpToolAccessChecker::class);
-        $this->assertToolPermissionsMatchTools(
-            (array) $accessCheckerDefinition->getArgument(self::TOOL_PERMISSIONS_ARGUMENT),
-            $toolsByName,
-        );
-        $accessCheckerDefinition->replaceArgument(
-            self::READ_ONLY_TOOL_NAMES_ARGUMENT,
-            $this->resolveReadOnlyToolNames($toolsByName),
-        );
+        $toolPermissions = (array) $accessCheckerDefinition->getArgument(self::TOOL_PERMISSIONS_ARGUMENT);
+        $this->assertToolPermissionsMatchTools($toolPermissions, $toolsByName);
+        $toolCategories = $this->resolveToolCategories($toolsByName);
+        $this->assertMappedToolsHaveCategories($toolPermissions, $toolCategories);
+        $readOnlyToolNames = $this->resolveReadOnlyToolNames($toolsByName);
+        $accessCheckerDefinition
+            ->replaceArgument(self::READ_ONLY_TOOL_NAMES_ARGUMENT, $readOnlyToolNames)
+            ->replaceArgument(self::TOOL_CATEGORIES_ARGUMENT, $toolCategories)
+            ->replaceArgument(
+                self::WRITE_TOOL_NAMES_BY_PREVIEW_ARGUMENT,
+                $this->resolveWriteToolNamesByPreview(
+                    toolsByName: $toolsByName,
+                    toolPermissions: $toolPermissions,
+                    toolCategories: $toolCategories,
+                    readOnlyToolNames: $readOnlyToolNames,
+                ),
+            );
     }
 
     private function setInstructionsFromFile(ContainerBuilder $container, string $serverName): void
@@ -222,5 +244,119 @@ final class McpCompilerPass implements CompilerPassInterface
                 static fn (McpTool $tool): bool => true === $tool->annotations?->readOnlyHint,
             ),
         ));
+    }
+
+    /**
+     * @param array<string, array<string, McpTool>> $toolsByName
+     *
+     * @return array<string, string>
+     */
+    private function resolveToolCategories(array $toolsByName): array
+    {
+        $toolCategories = [];
+        foreach ($toolsByName as $toolName => $tools) {
+            $tool = array_first($tools);
+            if (false === $tool instanceof AsMcpTool) {
+                continue;
+            }
+            if (1 !== preg_match(self::CATEGORY_PATTERN, $tool->category)) {
+                throw new LogicException(sprintf(self::INVALID_CATEGORY_MESSAGE, $tool->category, $toolName));
+            }
+            $toolCategories[$toolName] = $tool->category;
+        }
+
+        return $toolCategories;
+    }
+
+    /**
+     * @param array<string, string> $toolPermissions
+     * @param array<string, string> $toolCategories
+     */
+    private function assertMappedToolsHaveCategories(array $toolPermissions, array $toolCategories): void
+    {
+        $toolNameWithoutCategory = array_key_first(array_diff_key($toolPermissions, $toolCategories));
+        if (null === $toolNameWithoutCategory) {
+            return;
+        }
+
+        throw new LogicException(sprintf(self::TOOL_WITHOUT_CATEGORY_MESSAGE, $toolNameWithoutCategory));
+    }
+
+    /**
+     * @param array<string, array<string, McpTool>> $toolsByName
+     * @param array<string, string> $toolPermissions
+     * @param array<string, string> $toolCategories
+     * @param list<string> $readOnlyToolNames
+     *
+     * @return array<string, string>
+     */
+    private function resolveWriteToolNamesByPreview(
+        array $toolsByName,
+        array $toolPermissions,
+        array $toolCategories,
+        array $readOnlyToolNames,
+    ): array {
+        $writeToolNamesByPreview = [];
+        foreach ($toolsByName as $toolName => $tools) {
+            $tool = array_first($tools);
+            if (false === $tool instanceof AsMcpTool || false === is_string($tool->previewOf)) {
+                continue;
+            }
+            $this->assertPreview(
+                previewName: $toolName,
+                preview: $tool,
+                writeToolName: $tool->previewOf,
+                toolsByName: $toolsByName,
+                toolPermissions: $toolPermissions,
+                toolCategories: $toolCategories,
+                readOnlyToolNames: $readOnlyToolNames,
+            );
+            $otherPreviewName = array_search(needle: $tool->previewOf, haystack: $writeToolNamesByPreview, strict: true);
+            if (is_string($otherPreviewName)) {
+                throw new LogicException(sprintf(
+                    self::SECOND_PREVIEW_MESSAGE,
+                    $tool->previewOf,
+                    implode(', ', [$otherPreviewName, $toolName]),
+                ));
+            }
+            $writeToolNamesByPreview[$toolName] = $tool->previewOf;
+        }
+
+        return $writeToolNamesByPreview;
+    }
+
+    /**
+     * @param array<string, array<string, McpTool>> $toolsByName
+     * @param array<string, string> $toolPermissions
+     * @param array<string, string> $toolCategories
+     * @param list<string> $readOnlyToolNames
+     */
+    private function assertPreview(
+        string $previewName,
+        AsMcpTool $preview,
+        string $writeToolName,
+        array $toolsByName,
+        array $toolPermissions,
+        array $toolCategories,
+        array $readOnlyToolNames,
+    ): void {
+        if (false === array_key_exists($writeToolName, $toolsByName)) {
+            throw new LogicException(sprintf(self::PREVIEW_OF_UNKNOWN_TOOL_MESSAGE, $previewName, $writeToolName));
+        }
+        if (
+            in_array(needle: $writeToolName, haystack: $readOnlyToolNames, strict: true)
+            || false === array_key_exists($writeToolName, $toolCategories)
+        ) {
+            throw new LogicException(sprintf(self::PREVIEW_OF_READ_TOOL_MESSAGE, $previewName, $writeToolName));
+        }
+        if (false === in_array(needle: $previewName, haystack: $readOnlyToolNames, strict: true)) {
+            throw new LogicException(sprintf(self::WRITABLE_PREVIEW_MESSAGE, $previewName, $writeToolName));
+        }
+        if (array_key_exists($previewName, $toolPermissions)) {
+            throw new LogicException(sprintf(self::MAPPED_PREVIEW_MESSAGE, $previewName, $writeToolName));
+        }
+        if (StringHelper::isNotSame($preview->category, $toolCategories[$writeToolName])) {
+            throw new LogicException(sprintf(self::PREVIEW_IN_OTHER_CATEGORY_MESSAGE, $previewName, $writeToolName, $toolCategories[$writeToolName]));
+        }
     }
 }

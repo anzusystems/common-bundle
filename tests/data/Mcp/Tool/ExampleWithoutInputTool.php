@@ -11,6 +11,7 @@ use Closure;
 #[AsMcpTool(
     name: ExampleWithoutInputTool::NAME,
     description: 'Creates an example.',
+    category: ExampleToolCategory::EXAMPLES,
 )]
 final readonly class ExampleWithoutInputTool
 {

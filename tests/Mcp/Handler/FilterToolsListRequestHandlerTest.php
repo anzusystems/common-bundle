@@ -23,6 +23,8 @@ final class FilterToolsListRequestHandlerTest extends TestCase
     private const string DENIED_TOOL_NAME = 'search_app_logs';
     private const string GRANTED_WRITE_TOOL_NAME = 'create_quiz';
     private const string NOT_GRANTED_WRITE_TOOL_NAME = 'update_robots_txt';
+    private const string GRANTED_PREVIEW_TOOL_NAME = 'preview_quiz';
+    private const string NOT_GRANTED_PREVIEW_TOOL_NAME = 'preview_robots_txt_update';
     private const string GRANTED_PERMISSION = 'cms_site_read';
     private const string DENIED_PERMISSION = 'cms_log_read';
     private const int PAGE_SIZE = 20;
@@ -44,7 +46,7 @@ final class FilterToolsListRequestHandlerTest extends TestCase
         self::assertInstanceOf(Response::class, $response);
         self::assertInstanceOf(ListToolsResult::class, $response->result);
         self::assertSame(
-            [self::GRANTED_TOOL_NAME, self::GRANTED_WRITE_TOOL_NAME],
+            [self::GRANTED_TOOL_NAME, self::GRANTED_WRITE_TOOL_NAME, self::GRANTED_PREVIEW_TOOL_NAME],
             array_map(static fn (Tool $tool): string => $tool->name, $response->result->tools),
         );
     }
@@ -52,7 +54,15 @@ final class FilterToolsListRequestHandlerTest extends TestCase
     private function createHandler(): FilterToolsListRequestHandler
     {
         $tools = [];
-        foreach ([self::GRANTED_TOOL_NAME, self::DENIED_TOOL_NAME, self::GRANTED_WRITE_TOOL_NAME, self::NOT_GRANTED_WRITE_TOOL_NAME] as $toolName) {
+        $toolNames = [
+            self::GRANTED_TOOL_NAME,
+            self::DENIED_TOOL_NAME,
+            self::GRANTED_WRITE_TOOL_NAME,
+            self::NOT_GRANTED_WRITE_TOOL_NAME,
+            self::GRANTED_PREVIEW_TOOL_NAME,
+            self::NOT_GRANTED_PREVIEW_TOOL_NAME,
+        ];
+        foreach ($toolNames as $toolName) {
             $tools[$toolName] = new Tool($toolName, null, ['type' => 'object'], null, null);
         }
         $registry = $this->createMock(RegistryInterface::class);
@@ -74,7 +84,16 @@ final class FilterToolsListRequestHandlerTest extends TestCase
                 self::NOT_GRANTED_WRITE_TOOL_NAME => self::GRANTED_PERMISSION,
             ],
             security: $security,
-            readOnlyToolNames: [self::GRANTED_TOOL_NAME, self::DENIED_TOOL_NAME],
+            readOnlyToolNames: [
+                self::GRANTED_TOOL_NAME,
+                self::DENIED_TOOL_NAME,
+                self::GRANTED_PREVIEW_TOOL_NAME,
+                self::NOT_GRANTED_PREVIEW_TOOL_NAME,
+            ],
+            writeToolNamesByPreview: [
+                self::GRANTED_PREVIEW_TOOL_NAME => self::GRANTED_WRITE_TOOL_NAME,
+                self::NOT_GRANTED_PREVIEW_TOOL_NAME => self::NOT_GRANTED_WRITE_TOOL_NAME,
+            ],
         );
 
         return new FilterToolsListRequestHandler($registry, $toolAccessChecker, self::PAGE_SIZE);
