@@ -7,13 +7,13 @@ namespace AnzuSystems\CommonBundle\Tests\Data\Mcp\Tool;
 use AnzuSystems\CommonBundle\Mcp\Attribute\AsMcpTool;
 
 #[AsMcpTool(
-    name: StandaloneExampleTool::NAME,
-    description: 'Lists examples without the base tool.',
+    name: InvalidReturnExampleTool::NAME,
+    description: 'Lists examples as an array.',
     readOnly: true,
 )]
-final readonly class StandaloneExampleTool
+final readonly class InvalidReturnExampleTool
 {
-    public const string NAME = 'standalone_example';
+    public const string NAME = 'invalid_return_example';
 
     public function __invoke(): array
     {

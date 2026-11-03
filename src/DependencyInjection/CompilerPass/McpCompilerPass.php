@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 namespace AnzuSystems\CommonBundle\DependencyInjection\CompilerPass;
 
-use AnzuSystems\CommonBundle\Mcp\AbstractMcpTool;
-use AnzuSystems\CommonBundle\Mcp\Attribute\AsMcpTool;
 use AnzuSystems\CommonBundle\Mcp\Controller\McpController;
 use AnzuSystems\CommonBundle\Mcp\Security\McpToolAccessChecker;
 use LogicException;
@@ -98,7 +96,6 @@ final class McpCompilerPass implements CompilerPassInterface
             if (null === $tool) {
                 continue;
             }
-            $this->assertExtendsAbstractMcpTool($reflection, $tool);
             $toolsByName[ElementMetadataResolver::resolveName($reflection, $tool->name)][$toolMethod] = $tool;
         }
 
@@ -157,20 +154,6 @@ final class McpCompilerPass implements CompilerPassInterface
         }
 
         return $attributes[0]->newInstance();
-    }
-
-    private function assertExtendsAbstractMcpTool(ReflectionMethod $reflection, McpTool $tool): void
-    {
-        $class = $reflection->getDeclaringClass();
-        if (false === $tool instanceof AsMcpTool || $class->isSubclassOf(AbstractMcpTool::class)) {
-            return;
-        }
-
-        throw new LogicException(sprintf(
-            'The MCP tool "%s" declares #[AsMcpTool], so it must extend %s.',
-            $class->getName(),
-            AbstractMcpTool::class,
-        ));
     }
 
     /**

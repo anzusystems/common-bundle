@@ -4,21 +4,17 @@ declare(strict_types=1);
 
 namespace AnzuSystems\CommonBundle\DependencyInjection\CompilerPass;
 
-use AnzuSystems\CommonBundle\Mcp\Attribute\AsMcpTool;
 use AnzuSystems\CommonBundle\Mcp\Factory\McpOutputDescriptionFactory;
 use AnzuSystems\CommonBundle\Mcp\Factory\McpSchemaFactory;
+use AnzuSystems\CommonBundle\Mcp\Resolver\McpToolSignatureResolver;
 use LogicException;
-use Mcp\Server\RequestContext;
-use ReflectionClass;
-use ReflectionMethod;
-use ReflectionNamedType;
 use Symfony\Component\DependencyInjection\Compiler\CompilerPassInterface;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 
 /**
  * Runs after the mcp-bundle McpPass, which puts the input schema made from the handler parameters into each addTool
- * call of the server builder; a tool with #[AsMcpTool] gets the schema of its input DTO instead and the fields of its
- * output appended to its description.
+ * call of the server builder; a tool with #[AsMcpTool] gets the schema of the input class of its __invoke() instead and
+ * the fields of its return class appended to its description.
  */
 final class McpToolSchemaCompilerPass implements CompilerPassInterface
 {
@@ -46,6 +42,7 @@ final class McpToolSchemaCompilerPass implements CompilerPassInterface
 
         $schemaFactory = new McpSchemaFactory();
         $outputDescriptionFactory = new McpOutputDescriptionFactory($schemaFactory);
+        $signatureResolver = new McpToolSignatureResolver();
         $builder = $container->getDefinition($builderId);
         $methodCalls = $builder->getMethodCalls();
         foreach ($methodCalls as $index => [$method, $arguments]) {
@@ -53,63 +50,24 @@ final class McpToolSchemaCompilerPass implements CompilerPassInterface
                 continue;
             }
             [$class, $handlerMethod] = $arguments[self::HANDLER_ARGUMENT];
-            if (false === is_string($class) || false === class_exists($class)) {
+            if (McpToolSignatureResolver::INVOKE_METHOD !== $handlerMethod || false === is_string($class) || false === class_exists($class)) {
                 continue;
             }
-            $tool = $this->resolveTool($class);
-            if (null === $tool) {
+            $signature = $signatureResolver->resolve($class);
+            if (null === $signature) {
                 continue;
             }
-            if (is_string($tool->output)) {
+            if (is_string($signature->outputClass)) {
                 $methodCalls[$index][1][self::DESCRIPTION_ARGUMENT] = implode(self::DESCRIPTION_SEPARATOR, array_filter([
                     $arguments[self::DESCRIPTION_ARGUMENT],
-                    $outputDescriptionFactory->createForClass($tool->output),
+                    $outputDescriptionFactory->createForClass($signature->outputClass),
                 ]));
             }
-            if (null === $tool->input) {
-                continue;
+            if (is_string($signature->inputClass)) {
+                $methodCalls[$index][1][self::INPUT_SCHEMA_ARGUMENT] = $schemaFactory->createForClass($signature->inputClass);
             }
-            $this->assertInputComesFromRequestContext($class, $handlerMethod, $tool->input);
-            $methodCalls[$index][1][self::INPUT_SCHEMA_ARGUMENT] = $schemaFactory->createForClass($tool->input);
         }
 
         $builder->setMethodCalls($methodCalls);
-    }
-
-    /**
-     * @param class-string $class
-     */
-    private function resolveTool(string $class): ?AsMcpTool
-    {
-        $attributes = new ReflectionClass($class)
-            ->getAttributes(AsMcpTool::class);
-        if (empty($attributes)) {
-            return null;
-        }
-
-        return $attributes[0]->newInstance();
-    }
-
-    /**
-     * @param class-string $class
-     * @param class-string $inputClass
-     */
-    private function assertInputComesFromRequestContext(string $class, string $method, string $inputClass): void
-    {
-        foreach (new ReflectionMethod($class, $method)->getParameters() as $parameter) {
-            $type = $parameter->getType();
-            if ($type instanceof ReflectionNamedType && RequestContext::class === $type->getName()) {
-                continue;
-            }
-
-            throw new LogicException(sprintf(
-                'The MCP tool "%s::%s()" takes its input from #[AsMcpTool(input: %s)], so its only parameter is %s; move "$%s" into the input class.',
-                $class,
-                $method,
-                $inputClass,
-                RequestContext::class,
-                $parameter->getName(),
-            ));
-        }
     }
 }

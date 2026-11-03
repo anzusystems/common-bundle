@@ -4,17 +4,11 @@ declare(strict_types=1);
 
 namespace AnzuSystems\CommonBundle\Mcp\Tool;
 
-use AnzuSystems\CommonBundle\Mcp\AbstractMcpTool;
 use AnzuSystems\CommonBundle\Mcp\Attribute\AsMcpTool;
 use AnzuSystems\CommonBundle\Mcp\Log\McpLogFinder;
 use AnzuSystems\CommonBundle\Mcp\Model\Request\SearchAppLogsRequest;
 use AnzuSystems\CommonBundle\Mcp\Model\Response\McpAppLogSearchResponse;
-use Mcp\Schema\Result\CallToolResult;
-use Mcp\Server\RequestContext;
 
-/**
- * @extends AbstractMcpTool<SearchAppLogsRequest>
- */
 #[AsMcpTool(
     name: SearchAppLogsTool::NAME,
     description: <<<'TXT'
@@ -26,11 +20,9 @@ use Mcp\Server\RequestContext;
         'get_logs_by_context' => GetLogsByContextTool::NAME,
         'search_audit_logs' => SearchAuditLogsTool::NAME,
     ],
-    input: SearchAppLogsRequest::class,
-    output: McpAppLogSearchResponse::class,
     readOnly: true,
 )]
-final readonly class SearchAppLogsTool extends AbstractMcpTool
+final readonly class SearchAppLogsTool
 {
     public const string NAME = 'search_app_logs';
 
@@ -39,13 +31,8 @@ final readonly class SearchAppLogsTool extends AbstractMcpTool
     ) {
     }
 
-    public function __invoke(RequestContext $context): CallToolResult
+    public function __invoke(SearchAppLogsRequest $request): McpAppLogSearchResponse
     {
-        return $this->execute($context);
-    }
-
-    protected function handle(object $input): McpAppLogSearchResponse
-    {
-        return new McpAppLogSearchResponse($this->logFinder->findAppLogs($input));
+        return new McpAppLogSearchResponse($this->logFinder->findAppLogs($request));
     }
 }

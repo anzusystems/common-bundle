@@ -10,6 +10,7 @@ use AnzuSystems\CommonBundle\Log\Repository\AuditLogRepository;
 use AnzuSystems\CommonBundle\Log\Repository\JournalLogRepository;
 use AnzuSystems\CommonBundle\Mcp\Controller\McpController;
 use AnzuSystems\CommonBundle\Mcp\Handler\FilterToolsListRequestHandler;
+use AnzuSystems\CommonBundle\Mcp\Handler\McpToolReferenceHandler;
 use AnzuSystems\CommonBundle\Mcp\Handler\StrictToolArgumentsRequestHandler;
 use AnzuSystems\CommonBundle\Mcp\Log\McpLogFinder;
 use AnzuSystems\CommonBundle\Mcp\Log\McpLogger;
@@ -130,36 +131,29 @@ return static function (ContainerConfigurator $configurator): void {
         ->tag('console.command')
     ;
 
+    $services->set(McpToolReferenceHandler::class)
+        ->arg('$inner', null)
+        ->arg('$toolAccessChecker', service(McpToolAccessChecker::class))
+        ->arg('$writeToolGuard', service(McpWriteToolGuard::class))
+        ->arg('$toolErrorResolver', service(McpToolErrorResolver::class))
+        ->arg('$toolCallLogger', service(McpToolCallLogger::class))
+        ->arg('$validator', service(ValidatorInterface::class))
+        ->arg('$serializer', service(Serializer::class))
+        ->arg('$toolSignatures', [])
+    ;
+
     $services->set(SearchAppLogsTool::class)
         ->arg('$logFinder', service(McpLogFinder::class))
-        ->call('setToolAccessChecker', [service(McpToolAccessChecker::class)])
-        ->call('setWriteToolGuard', [service(McpWriteToolGuard::class)])
-        ->call('setToolErrorResolver', [service(McpToolErrorResolver::class)])
-        ->call('setToolCallLogger', [service(McpToolCallLogger::class)])
-        ->call('setValidator', [service(ValidatorInterface::class)])
-        ->call('setSerializer', [service(Serializer::class)])
         ->tag('mcp.tool')
     ;
 
     $services->set(SearchAuditLogsTool::class)
         ->arg('$logFinder', service(McpLogFinder::class))
-        ->call('setToolAccessChecker', [service(McpToolAccessChecker::class)])
-        ->call('setWriteToolGuard', [service(McpWriteToolGuard::class)])
-        ->call('setToolErrorResolver', [service(McpToolErrorResolver::class)])
-        ->call('setToolCallLogger', [service(McpToolCallLogger::class)])
-        ->call('setValidator', [service(ValidatorInterface::class)])
-        ->call('setSerializer', [service(Serializer::class)])
         ->tag('mcp.tool')
     ;
 
     $services->set(GetLogsByContextTool::class)
         ->arg('$logFinder', service(McpLogFinder::class))
-        ->call('setToolAccessChecker', [service(McpToolAccessChecker::class)])
-        ->call('setWriteToolGuard', [service(McpWriteToolGuard::class)])
-        ->call('setToolErrorResolver', [service(McpToolErrorResolver::class)])
-        ->call('setToolCallLogger', [service(McpToolCallLogger::class)])
-        ->call('setValidator', [service(ValidatorInterface::class)])
-        ->call('setSerializer', [service(Serializer::class)])
         ->tag('mcp.tool')
     ;
 };
