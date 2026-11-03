@@ -109,7 +109,7 @@ final class McpToolReferenceHandlerCompilerPass implements CompilerPassInterface
     {
         foreach ($builder->getMethodCalls() as [$method, $arguments]) {
             if (self::SET_CONTAINER_METHOD === $method) {
-                return array_first($arguments);
+                return $arguments[0] ?? null;
             }
         }
 
@@ -123,7 +123,7 @@ final class McpToolReferenceHandlerCompilerPass implements CompilerPassInterface
         }
         $toolTemplates = (array) $container->getParameter(self::APP_TOOL_TEMPLATES_PARAM);
         foreach (array_keys((array) ($toolTemplates[$serverName] ?? [])) as $toolKey) {
-            $serviceId = explode(self::APP_TOOL_KEY_SEPARATOR, (string) $toolKey) |> array_first(...);
+            $serviceId = explode(self::APP_TOOL_KEY_SEPARATOR, (string) $toolKey)[0];
             $class = $container->getParameterBag()
                 ->resolveValue($container->findDefinition($serviceId)->getClass() ?? $serviceId);
             if (false === is_string($class) || false === class_exists($class)) {

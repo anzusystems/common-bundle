@@ -44,14 +44,14 @@ final readonly class McpToolSignatureResolver
     private function resolveInputParameter(ReflectionMethod $method): ?ReflectionParameter
     {
         $parameters = $method->getParameters();
-        $lastParameter = array_last($parameters);
+        $lastParameter = end($parameters);
         if ($lastParameter instanceof ReflectionParameter && $this->isRequestContext($lastParameter)) {
             array_pop($parameters);
         }
         if (count($parameters) > 1) {
             throw $this->createParameterException($method, $parameters[1]);
         }
-        $inputParameter = array_first($parameters);
+        $inputParameter = $parameters[0] ?? null;
         if (null === $inputParameter) {
             return null;
         }
