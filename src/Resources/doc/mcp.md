@@ -133,7 +133,7 @@ final readonly class ListKeywordsTool
 
     public function __invoke(ListKeywordsRequest $request): McpKeywordListResponse
     {
-        return $this->keywordRepoMcpDecorator->list($request);
+        return $this->keywordRepoMcpDecorator->getList($request);
     }
 }
 ```
