@@ -218,16 +218,12 @@ final class ListKeywordsRequest
 final class McpKeywordListResponse
 {
     /**
-     * @var Collection<int, McpKeywordDecorator>
+     * @param Collection<int, McpKeywordDecorator> $keywords
      */
-    #[McpField(description: 'Best matches; narrow the query when the expected keyword is missing.')]
-    #[Serialize(type: McpKeywordDecorator::class)]
-    public Collection $keywords {
-        get => $this->result->keywords->map(McpKeywordDecorator::getInstance(...));
-    }
-
     public function __construct(
-        private readonly KeywordListResult $result,
+        #[McpField(description: 'Best matches; narrow the query when the expected keyword is missing.')]
+        #[Serialize(type: McpKeywordDecorator::class)]
+        public private(set) Collection $keywords,
     ) {
     }
 }
