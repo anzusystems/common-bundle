@@ -129,7 +129,7 @@ its `__invoke()` takes the request DTO and returns the response.
         Searches active keywords (editorial topic tags) by name.
         Filter {{ list_published_articles }} by the returned ids.
         TXT,
-    category: McpToolCategory::CODEBOOKS,
+    category: McpToolCategory::KEYWORDS,
     values: ['list_published_articles' => ListPublishedArticlesTool::NAME],
     readOnly: true,
 )]
