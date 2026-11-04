@@ -7,6 +7,7 @@ namespace AnzuSystems\CommonBundle\Tests\Mcp\Handler;
 use AnzuSystems\CommonBundle\Domain\User\CurrentAnzuUserProvider;
 use AnzuSystems\CommonBundle\Exception\ValidationException;
 use AnzuSystems\CommonBundle\Log\Helper\AuditLogResourceHelper;
+use AnzuSystems\CommonBundle\Mcp\Exception\McpToolCallRejectedException;
 use AnzuSystems\CommonBundle\Mcp\Exception\McpToolInputException;
 use AnzuSystems\CommonBundle\Mcp\Handler\McpToolReferenceHandler;
 use AnzuSystems\CommonBundle\Mcp\Log\McpLogger;
@@ -16,27 +17,41 @@ use AnzuSystems\CommonBundle\Mcp\Model\Response\McpLogsByContextResponse;
 use AnzuSystems\CommonBundle\Mcp\Resolver\McpToolErrorResolver;
 use AnzuSystems\CommonBundle\Mcp\Resolver\McpToolSignatureResolver;
 use AnzuSystems\CommonBundle\Mcp\Security\McpToolAccessChecker;
+use AnzuSystems\CommonBundle\Mcp\Security\McpWriteConfirmation;
 use AnzuSystems\CommonBundle\Mcp\Security\McpWriteToolGuard;
 use AnzuSystems\CommonBundle\Tests\Data\Entity\User;
+use AnzuSystems\CommonBundle\Tests\Data\Mcp\Model\Request\ExampleWritePreviewRequest;
+use AnzuSystems\CommonBundle\Tests\Data\Mcp\Model\Request\ExampleWriteRequest;
+use AnzuSystems\CommonBundle\Tests\Data\Mcp\Model\Response\ExampleWritePreviewResponse;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Tool\ExampleContextTool;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Tool\ExampleErrorResultTool;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Tool\ExampleSearchTool;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Tool\ExampleTool;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Tool\ExampleWithoutInputTool;
+use AnzuSystems\CommonBundle\Tests\Data\Mcp\Tool\ExampleWritePreviewTool;
+use AnzuSystems\CommonBundle\Tests\Data\Mcp\Tool\ExampleWriteTool;
 use AnzuSystems\CommonBundle\Tests\Mcp\McpSerializerFactory;
 use AnzuSystems\Contracts\AnzuApp;
 use AnzuSystems\Contracts\Entity\AnzuUser;
 use Closure;
+use Mcp\Capability\Registry;
 use Mcp\Capability\Registry\ReferenceHandler;
 use Mcp\Capability\Registry\ToolReference;
+use Mcp\Schema\ClientCapabilities;
+use Mcp\Schema\Enum\ProtocolVersion;
+use Mcp\Schema\Implementation;
 use Mcp\Schema\Request\CallToolRequest;
 use Mcp\Schema\Result\CallToolResult;
+use Mcp\Schema\Result\InputRequiredResult;
 use Mcp\Schema\Tool;
 use Mcp\Server\Session\InMemorySessionStore;
 use Mcp\Server\Session\Session;
+use Mcp\Server\Stateless\InputContext;
+use Mcp\Server\Stateless\RequestMeta;
 use MongoDB\Collection;
 use MongoDB\InsertOneResult;
 use PHPUnit\Framework\TestCase;
+use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
 use RuntimeException;
 use Symfony\Bundle\SecurityBundle\Security;
@@ -45,7 +60,9 @@ use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\RequestStack;
 use Symfony\Component\Security\Core\Exception\AccessDeniedException;
 use Symfony\Component\Validator\Validation;
+use Symfony\Contracts\Translation\TranslatorInterface;
 use Throwable;
+use UnexpectedValueException;
 
 final class McpToolReferenceHandlerTest extends TestCase
 {
@@ -62,14 +79,44 @@ final class McpToolReferenceHandlerTest extends TestCase
     private const string INVOKE_METHOD = '__invoke';
     private const string READ_TOOL_METHOD = 'listExamples';
     private const string PREVIEWED_WRITE_TOOL_NAME = 'create_example';
+    private const string PREVIEW_HASH = 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
+    private const string OTHER_PREVIEW_HASH = 'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb';
+    private const string CONFIRM_KEY = McpWriteConfirmation::CONFIRM_KEY_PREFIX . self::PREVIEW_HASH;
+    private const string OTHER_CONFIRM_KEY = McpWriteConfirmation::CONFIRM_KEY_PREFIX . self::OTHER_PREVIEW_HASH;
+    private const int CONFIRM_KEY_LENGTH = 72;
+    private const string TITLE = 'Test';
+    private const string CLIENT_NAME = 'claude-code';
+    private const string CLIENT_VERSION = '2.1.317';
+    private const string LOCALE_EN = 'en';
+    private const string LOCALE_SK = 'sk';
+    private const string HASH_FIELD = 'previewHash';
+    private const string ACTION_FIELD = 'action';
+    private const string CONTENT_FIELD = 'content';
+    private const string ACTION_ACCEPT = 'accept';
+    private const string ACTION_DECLINE = 'decline';
+    private const string ACTION_CANCEL = 'cancel';
+    private const string SESSION_ARGUMENT = '_session';
+    private const string REQUEST_ARGUMENT = '_request';
+    private const string LOCALE_SEPARATOR = '|';
+    private const string HASH_VIOLATION = 'previewHash: ' . ExampleWriteRequest::PREVIEW_HASH_MESSAGE;
+    private const array WRITE_ARGUMENTS = [
+        self::TITLE_FIELD => self::TITLE,
+        self::HASH_FIELD => self::PREVIEW_HASH,
+    ];
     private const array TOOL_NAMES = [
         ExampleSearchTool::NAME,
         ExampleWithoutInputTool::NAME,
         ExampleContextTool::NAME,
         ExampleErrorResultTool::NAME,
+        ExampleWriteTool::NAME,
     ];
 
     private array $insertedDocuments = [];
+    private array $logRecords = [];
+    private array $translations = [];
+    private int $writeRuns = 0;
+    private int $previewRuns = 0;
+    private ?object $previewInput = null;
 
     public function testSuccessSerializesObjectResultAndLogsRequestParams(): void
     {
@@ -491,6 +538,593 @@ final class McpToolReferenceHandlerTest extends TestCase
         );
     }
 
+    public function testRoundOneAsksWithTheTranslatedMessageAndWritesNothing(): void
+    {
+        $handler = $this->createWriteHandler(userLocale: self::LOCALE_SK, logger: $this->createRecordingLogger());
+
+        $result = $this->callWriteTool($handler, $this->createModernArguments());
+
+        self::assertInstanceOf(InputRequiredResult::class, $result);
+        self::assertSame(self::CONFIRM_KEY_LENGTH, strlen(self::CONFIRM_KEY));
+        self::assertSame(
+            [
+                'resultType' => InputRequiredResult::RESULT_TYPE,
+                'inputRequests' => [
+                    self::CONFIRM_KEY => [
+                        'method' => 'elicitation/create',
+                        'params' => [
+                            'message' => self::translated(ExampleWritePreviewResponse::MESSAGE_KEY, self::LOCALE_SK),
+                            'requestedSchema' => [
+                                'type' => 'object',
+                                'properties' => [
+                                    McpWriteConfirmation::CONFIRM_FIELD => [
+                                        'type' => 'boolean',
+                                        'title' => self::translated(McpWriteConfirmation::FIELD_TITLE_KEY, self::LOCALE_SK),
+                                    ],
+                                ],
+                                'required' => [McpWriteConfirmation::CONFIRM_FIELD],
+                            ],
+                        ],
+                    ],
+                ],
+            ],
+            json_decode(json_encode($result, JSON_THROW_ON_ERROR), true, flags: JSON_THROW_ON_ERROR),
+        );
+        self::assertInstanceOf(ExampleWriteRequest::class, $this->previewInput);
+        self::assertSame(1, $this->previewRuns);
+        self::assertSame(0, $this->writeRuns);
+        self::assertSame([], $this->insertedDocuments);
+        self::assertCount(1, $this->logRecords);
+        self::assertSame(McpToolCallLogger::CONFIRMATION_ASKED_LOG_MESSAGE, $this->logRecords[0]['message']);
+        self::assertSame(ExampleWriteTool::NAME, $this->logRecords[0]['context']['tool']);
+        self::assertSame(self::USER_ID, $this->logRecords[0]['context']['userId']);
+        self::assertSame(self::TITLE, $this->logRecords[0]['context']['params'][self::TITLE_FIELD]);
+        self::assertArrayHasKey('durationMs', $this->logRecords[0]['context']);
+    }
+
+    public function testAcceptedConfirmationWritesWithoutRunningThePreview(): void
+    {
+        $handler = $this->createWriteHandler();
+
+        $result = $this->callWriteTool($handler, $this->createModernArguments(
+            inputResponses: [self::CONFIRM_KEY => self::createAcceptedAnswer()],
+        ));
+
+        self::assertInstanceOf(CallToolResult::class, $result);
+        self::assertFalse($result->isError);
+        self::assertSame(1, $this->writeRuns);
+        self::assertSame(0, $this->previewRuns);
+        self::assertSame(McpLogger::LEVEL_NAME_INFO, $this->insertedDocuments[0]['levelName']);
+    }
+
+    /**
+     * @dataProvider refusedAnswerProvider
+     *
+     * @param array<string, mixed> $answer
+     */
+    public function testAnyOtherAnswerRefusesTheWrite(array $answer): void
+    {
+        $handler = $this->createWriteHandler();
+
+        $result = $this->callWriteTool($handler, $this->createModernArguments(
+            inputResponses: [self::CONFIRM_KEY => $answer],
+        ));
+
+        $expectedError = sprintf(McpWriteConfirmation::REFUSED_MESSAGE, ExampleWriteTool::NAME);
+        $this->assertToolError($expectedError, $result);
+        self::assertSame(0, $this->writeRuns);
+        self::assertSame(0, $this->previewRuns);
+    }
+
+    /**
+     * @return array<string, array{array<string, mixed>}>
+     */
+    public static function refusedAnswerProvider(): array
+    {
+        return [
+            'accept with confirm false' => [[
+                self::ACTION_FIELD => self::ACTION_ACCEPT,
+                self::CONTENT_FIELD => [McpWriteConfirmation::CONFIRM_FIELD => false],
+            ]],
+            'accept without confirm' => [[self::ACTION_FIELD => self::ACTION_ACCEPT, self::CONTENT_FIELD => []]],
+            'accept with a confirm that is not a boolean' => [[
+                self::ACTION_FIELD => self::ACTION_ACCEPT,
+                self::CONTENT_FIELD => [McpWriteConfirmation::CONFIRM_FIELD => 'true'],
+            ]],
+            'decline' => [[self::ACTION_FIELD => self::ACTION_DECLINE]],
+            'decline with confirm true' => [[
+                self::ACTION_FIELD => self::ACTION_DECLINE,
+                self::CONTENT_FIELD => [McpWriteConfirmation::CONFIRM_FIELD => true],
+            ]],
+            'cancel' => [[self::ACTION_FIELD => self::ACTION_CANCEL]],
+            'accept without content' => [[self::ACTION_FIELD => self::ACTION_ACCEPT]],
+            'unknown action' => [[
+                self::ACTION_FIELD => 'maybe',
+                self::CONTENT_FIELD => [McpWriteConfirmation::CONFIRM_FIELD => true],
+            ]],
+        ];
+    }
+
+    public function testAnswerToAnotherKeyAsksAgain(): void
+    {
+        $handler = $this->createWriteHandler();
+
+        $result = $this->callWriteTool($handler, $this->createModernArguments(
+            inputResponses: [self::OTHER_CONFIRM_KEY => self::createAcceptedAnswer()],
+        ));
+
+        self::assertInstanceOf(InputRequiredResult::class, $result);
+        self::assertSame([self::CONFIRM_KEY], array_keys($result->inputRequests));
+        self::assertSame(1, $this->previewRuns);
+        self::assertSame(0, $this->writeRuns);
+    }
+
+    /**
+     * @dataProvider invalidPreviewHashProvider
+     *
+     * @param array<string, string> $toolArguments
+     */
+    public function testInvalidPreviewHashFailsBeforeThePreview(array $toolArguments): void
+    {
+        $handler = $this->createWriteHandler();
+
+        $result = $this->callWriteTool($handler, $this->createModernArguments(toolArguments: $toolArguments));
+
+        $this->assertToolError(McpToolReferenceHandler::INVALID_ARGUMENTS_PREFIX . self::HASH_VIOLATION, $result);
+        self::assertSame(0, $this->previewRuns);
+        self::assertSame(0, $this->writeRuns);
+    }
+
+    /**
+     * @return array<string, array{array<string, string>}>
+     */
+    public static function invalidPreviewHashProvider(): array
+    {
+        return [
+            'missing' => [[self::TITLE_FIELD => self::TITLE]],
+            'other format' => [[self::TITLE_FIELD => self::TITLE, self::HASH_FIELD => 'not-a-hash']],
+        ];
+    }
+
+    /**
+     * @dataProvider previewExceptionProvider
+     *
+     * @param array<class-string<Throwable>, string> $toolErrorExceptions
+     */
+    public function testPreviewExceptionIsTheToolError(Throwable $exception, array $toolErrorExceptions, string $expectedError): void
+    {
+        $handler = $this->createWriteHandler(previewException: $exception, toolErrorExceptions: $toolErrorExceptions);
+
+        $result = $this->callWriteTool($handler, $this->createModernArguments());
+
+        $this->assertToolError($expectedError, $result);
+        self::assertSame(1, $this->previewRuns);
+        self::assertSame(0, $this->writeRuns);
+    }
+
+    /**
+     * @return array<string, array{Throwable, array<class-string<Throwable>, string>, string}>
+     */
+    public static function previewExceptionProvider(): array
+    {
+        return [
+            'rejected call' => [new McpToolCallRejectedException(self::INPUT_ERROR_MESSAGE), [], self::INPUT_ERROR_MESSAGE],
+            'invalid input' => [new McpToolInputException(self::INPUT_ERROR_MESSAGE), [], self::INPUT_ERROR_MESSAGE],
+            'validation exception' => [
+                new ValidationException()
+                    ->addFormattedError(self::TITLE_FIELD, ValidationException::ERROR_FIELD_EMPTY),
+                [],
+                McpToolReferenceHandler::INVALID_ARGUMENTS_PREFIX . 'title: error_field_empty',
+            ],
+            'access denied' => [new AccessDeniedException(), [], McpToolReferenceHandler::ACCESS_DENIED_MESSAGE],
+            'configured tool error exception' => [
+                new RuntimeException('backend down'),
+                [RuntimeException::class => self::BACKEND_ERROR_MESSAGE],
+                self::BACKEND_ERROR_MESSAGE,
+            ],
+        ];
+    }
+
+    public function testUnhandledPreviewExceptionIsRethrown(): void
+    {
+        $handler = $this->createWriteHandler(previewException: new RuntimeException('boom'));
+
+        try {
+            $this->callWriteTool($handler, $this->createModernArguments());
+            self::fail('Expected ' . RuntimeException::class);
+        } catch (RuntimeException $exception) {
+            self::assertSame('boom', $exception->getMessage());
+        }
+
+        self::assertSame(0, $this->writeRuns);
+        self::assertSame(McpLogger::LEVEL_NAME_ERROR, $this->insertedDocuments[0]['levelName']);
+        self::assertSame(
+            sprintf(McpToolReferenceHandler::UNHANDLED_ERROR_FORMAT, RuntimeException::class),
+            $this->insertedDocuments[0]['error'],
+        );
+    }
+
+    public function testOtherPreviewHashIsRefused(): void
+    {
+        $handler = $this->createWriteHandler(previewHash: self::OTHER_PREVIEW_HASH);
+
+        $result = $this->callWriteTool($handler, $this->createModernArguments());
+
+        $this->assertToolError(sprintf(McpWriteConfirmation::PREVIEW_HASH_STALE_MESSAGE, ExampleWritePreviewTool::NAME), $result);
+        self::assertSame(1, $this->previewRuns);
+        self::assertSame(0, $this->writeRuns);
+    }
+
+    public function testNullPreviewHashRunsTheWriteWithoutAsking(): void
+    {
+        $requestStack = new RequestStack();
+        $requestStack->push(new Request());
+        $handler = $this->createWriteHandler(previewHash: null, requestStack: $requestStack);
+
+        $firstResult = $this->callWriteTool($handler, $this->createModernArguments());
+        $secondResult = $this->callWriteTool($handler, $this->createModernArguments());
+
+        self::assertInstanceOf(CallToolResult::class, $firstResult);
+        self::assertFalse($firstResult->isError);
+        self::assertSame(1, $this->previewRuns);
+        self::assertSame(1, $this->writeRuns);
+        self::assertInstanceOf(CallToolResult::class, $secondResult);
+        self::assertSame(
+            sprintf(McpWriteToolGuard::WRITE_TOOL_DONE_MESSAGE, ExampleWriteTool::NAME),
+            $secondResult->structuredContent[McpToolReferenceHandler::ERROR_KEY],
+        );
+    }
+
+    /**
+     * @dataProvider closedAccessProvider
+     */
+    public function testClosedAccessFailsBeforeThePreview(
+        bool $toolGranted,
+        bool $writeGranted,
+        bool $readOnlyMode,
+        string $expectedError,
+    ): void {
+        $handler = $this->createWriteHandler(toolGranted: $toolGranted, writeGranted: $writeGranted);
+
+        $this->initAppReadOnlyMode($readOnlyMode);
+        try {
+            $result = $this->callWriteTool($handler, $this->createModernArguments());
+        } finally {
+            $this->initAppReadOnlyMode(false);
+        }
+
+        $this->assertToolError($expectedError, $result);
+        self::assertSame(0, $this->previewRuns);
+        self::assertSame(0, $this->writeRuns);
+    }
+
+    /**
+     * @return array<string, array{bool, bool, bool, string}>
+     */
+    public static function closedAccessProvider(): array
+    {
+        return [
+            'missing tool permission' => [
+                false,
+                true,
+                false,
+                sprintf(McpToolReferenceHandler::TOOL_ACCESS_DENIED_MESSAGE, ExampleWriteTool::NAME),
+            ],
+            'write tool not granted to the request' => [
+                true,
+                false,
+                false,
+                sprintf(McpWriteToolGuard::WRITE_TOOL_NOT_GRANTED_MESSAGE, ExampleWriteTool::NAME),
+            ],
+            'read-only mode' => [true, true, true, McpWriteToolGuard::READ_ONLY_MODE_MESSAGE],
+        ];
+    }
+
+    /**
+     * @dataProvider clientWithoutFormElicitationProvider
+     */
+    public function testClientWithoutFormElicitationIsNotAsked(ClientCapabilities $capabilities): void
+    {
+        $handler = $this->createWriteHandler();
+
+        $result = $this->callWriteTool($handler, $this->createModernArguments(capabilities: $capabilities));
+
+        self::assertInstanceOf(CallToolResult::class, $result);
+        self::assertFalse($result->isError);
+        self::assertSame(1, $this->writeRuns);
+        self::assertSame(0, $this->previewRuns);
+    }
+
+    /**
+     * @return array<string, array{ClientCapabilities}>
+     */
+    public static function clientWithoutFormElicitationProvider(): array
+    {
+        return [
+            'no elicitation' => [new ClientCapabilities()],
+            'url elicitation only' => [ClientCapabilities::fromArray(['elicitation' => ['url' => []]])],
+        ];
+    }
+
+    public function testHandshakeClientIsNeverAsked(): void
+    {
+        $handler = $this->createWriteHandler();
+        $session = new Session(new InMemorySessionStore());
+        $session->set('protocol_version', ProtocolVersion::V2025_11_25->value);
+        $session->set('client_capabilities', ['elicitation' => []]);
+        $session->set('client_info', ['name' => self::CLIENT_NAME, 'version' => self::CLIENT_VERSION]);
+
+        $result = $this->callWriteTool($handler, self::WRITE_ARGUMENTS + [
+            self::SESSION_ARGUMENT => $session,
+            self::REQUEST_ARGUMENT => new CallToolRequest(ExampleWriteTool::NAME, self::WRITE_ARGUMENTS),
+        ]);
+
+        self::assertInstanceOf(CallToolResult::class, $result);
+        self::assertFalse($result->isError);
+        self::assertSame(1, $this->writeRuns);
+        self::assertSame(0, $this->previewRuns);
+    }
+
+    public function testReadToolIsNotAsked(): void
+    {
+        $handler = $this->createHandler(
+            tool: new ExampleSearchTool(static fn (): McpLogsByContextResponse => self::createResponse()),
+        );
+        $toolArguments = ['level' => self::LEVEL, 'limit' => self::LIMIT];
+
+        $result = $handler->handle(
+            new ToolReference($this->createSdkTool(ExampleSearchTool::NAME), [ExampleSearchTool::class, self::INVOKE_METHOD]),
+            $this->createModernArguments(toolName: ExampleSearchTool::NAME, toolArguments: $toolArguments),
+        );
+
+        self::assertInstanceOf(CallToolResult::class, $result);
+        self::assertFalse($result->isError);
+    }
+
+    public function testWriteToolInputWithoutHashIsAProgramError(): void
+    {
+        $handler = $this->createHandlerWithoutInputTool(
+            toolHandler: function (): McpLogsByContextResponse {
+                ++$this->writeRuns;
+
+                return self::createResponse();
+            },
+            readOnlyTool: false,
+        );
+
+        try {
+            $handler->handle(
+                new ToolReference($this->createSdkTool(ExampleWithoutInputTool::NAME), [ExampleWithoutInputTool::class, self::INVOKE_METHOD]),
+                $this->createModernArguments(toolName: ExampleWithoutInputTool::NAME, toolArguments: []),
+            );
+            self::fail('Expected ' . UnexpectedValueException::class);
+        } catch (UnexpectedValueException) {
+            self::assertSame(0, $this->writeRuns);
+        }
+    }
+
+    /**
+     * @dataProvider questionLanguageProvider
+     */
+    public function testQuestionLanguage(?string $userLocale, ?string $fallbackLocale, ?string $expectedLocale): void
+    {
+        $handler = $this->createWriteHandler(userLocale: $userLocale, fallbackLocale: $fallbackLocale);
+
+        $this->callWriteTool($handler, $this->createModernArguments());
+
+        self::assertSame(
+            [
+                [
+                    'id' => ExampleWritePreviewResponse::MESSAGE_KEY,
+                    'parameters' => [ExampleWritePreviewResponse::TITLE_PARAMETER => self::TITLE],
+                    'domain' => McpWriteConfirmation::TRANSLATION_DOMAIN,
+                    'locale' => $expectedLocale,
+                ],
+                [
+                    'id' => McpWriteConfirmation::FIELD_TITLE_KEY,
+                    'parameters' => [],
+                    'domain' => McpWriteConfirmation::TRANSLATION_DOMAIN,
+                    'locale' => $expectedLocale,
+                ],
+            ],
+            $this->translations,
+        );
+    }
+
+    /**
+     * @return array<string, array{string|null, string|null, string|null}>
+     */
+    public static function questionLanguageProvider(): array
+    {
+        return [
+            'language of the user' => [self::LOCALE_EN, null, self::LOCALE_EN],
+            'language of the user wins over the fallback' => [self::LOCALE_EN, self::LOCALE_SK, self::LOCALE_EN],
+            'fallback for a user without a language' => [null, self::LOCALE_SK, self::LOCALE_SK],
+            'default of the translator without a fallback' => [null, null, null],
+        ];
+    }
+
+    /**
+     * @dataProvider clientNameProvider
+     *
+     * @param array<string, string>|null $handshakeClientInfo
+     */
+    public function testClientNameIsLogged(?RequestMeta $requestMeta, ?array $handshakeClientInfo, ?string $expectedClient): void
+    {
+        $handler = $this->createHandler(
+            tool: new ExampleSearchTool(static fn (): McpLogsByContextResponse => self::createResponse()),
+            logger: $this->createRecordingLogger(),
+        );
+        $session = new Session(new InMemorySessionStore());
+        $session->set(RequestMeta::class, $requestMeta);
+        $session->set('client_info', $handshakeClientInfo);
+        $toolArguments = ['level' => self::LEVEL, 'limit' => self::LIMIT];
+
+        $handler->handle(
+            new ToolReference($this->createSdkTool(ExampleSearchTool::NAME), [ExampleSearchTool::class, self::INVOKE_METHOD]),
+            $toolArguments + [
+                self::SESSION_ARGUMENT => $session,
+                self::REQUEST_ARGUMENT => new CallToolRequest(ExampleSearchTool::NAME, $toolArguments),
+            ],
+        );
+
+        self::assertSame($expectedClient, $this->insertedDocuments[0]['client']);
+        self::assertSame(McpToolCallLogger::CALL_LOG_MESSAGE, $this->logRecords[0]['message']);
+        self::assertSame($expectedClient, $this->logRecords[0]['context']['client']);
+    }
+
+    /**
+     * @return array<string, array{RequestMeta|null, array<string, string>|null, string|null}>
+     */
+    public static function clientNameProvider(): array
+    {
+        return [
+            'modern client' => [
+                self::createRequestMeta(new ClientCapabilities(), new Implementation(self::CLIENT_NAME, self::CLIENT_VERSION)),
+                null,
+                self::CLIENT_NAME,
+            ],
+            'modern client without its info' => [self::createRequestMeta(new ClientCapabilities()), null, null],
+            'handshake client' => [null, ['name' => self::CLIENT_NAME, 'version' => self::CLIENT_VERSION], self::CLIENT_NAME],
+            'no client info' => [null, null, null],
+        ];
+    }
+
+    private static function createRequestMeta(ClientCapabilities $capabilities, ?Implementation $clientInfo = null): RequestMeta
+    {
+        return new RequestMeta(
+            protocolVersion: ProtocolVersion::V2026_07_28->value,
+            clientCapabilities: $capabilities,
+            clientInfo: $clientInfo,
+        );
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private static function createAcceptedAnswer(): array
+    {
+        return [
+            self::ACTION_FIELD => self::ACTION_ACCEPT,
+            self::CONTENT_FIELD => [McpWriteConfirmation::CONFIRM_FIELD => true],
+        ];
+    }
+
+    private static function translated(string $key, ?string $locale): string
+    {
+        return $key . self::LOCALE_SEPARATOR . $locale;
+    }
+
+    private function assertToolError(string $expectedError, CallToolResult|InputRequiredResult $result): void
+    {
+        self::assertInstanceOf(CallToolResult::class, $result);
+        self::assertTrue($result->isError);
+        self::assertSame($expectedError, $result->structuredContent[McpToolReferenceHandler::ERROR_KEY]);
+        self::assertSame(McpLogger::LEVEL_NAME_ERROR, $this->insertedDocuments[0]['levelName']);
+        self::assertSame($expectedError, $this->insertedDocuments[0]['error']);
+    }
+
+    /**
+     * @param array<string, mixed> $arguments
+     */
+    private function callWriteTool(McpToolReferenceHandler $handler, array $arguments): CallToolResult|InputRequiredResult
+    {
+        return $handler->handle(
+            new ToolReference($this->createSdkTool(ExampleWriteTool::NAME), [ExampleWriteTool::class, self::INVOKE_METHOD]),
+            $arguments,
+        );
+    }
+
+    /**
+     * @param array<string, mixed> $toolArguments
+     * @param array<string, mixed>|null $inputResponses
+     *
+     * @return array<string, mixed>
+     */
+    private function createModernArguments(
+        string $toolName = ExampleWriteTool::NAME,
+        array $toolArguments = self::WRITE_ARGUMENTS,
+        ?array $inputResponses = null,
+        ClientCapabilities $capabilities = new ClientCapabilities(elicitationForm: true),
+    ): array {
+        $session = new Session(new InMemorySessionStore());
+        $session->set(RequestMeta::class, self::createRequestMeta($capabilities));
+        if (is_array($inputResponses)) {
+            $session->set(InputContext::class, new InputContext($inputResponses));
+        }
+
+        return $toolArguments + [
+            self::SESSION_ARGUMENT => $session,
+            self::REQUEST_ARGUMENT => new CallToolRequest($toolName, $toolArguments),
+        ];
+    }
+
+    private function createRecordingLogger(): LoggerInterface
+    {
+        $logger = $this->createMock(LoggerInterface::class);
+        $logger->method('info')
+            ->willReturnCallback(function (string $message, array $context = []): void {
+                $this->logRecords[] = ['message' => $message, 'context' => $context];
+            });
+
+        return $logger;
+    }
+
+    private function createTranslator(): TranslatorInterface
+    {
+        $translator = $this->createMock(TranslatorInterface::class);
+        $translator->method('trans')
+            ->willReturnCallback(function (string $id, array $parameters = [], ?string $domain = null, ?string $locale = null): string {
+                $this->translations[] = ['id' => $id, 'parameters' => $parameters, 'domain' => $domain, 'locale' => $locale];
+
+                return self::translated($id, $locale);
+            });
+
+        return $translator;
+    }
+
+    /**
+     * @param array<class-string<Throwable>, string> $toolErrorExceptions
+     */
+    private function createWriteHandler(
+        ?string $previewHash = self::PREVIEW_HASH,
+        ?Throwable $previewException = null,
+        array $toolErrorExceptions = [],
+        bool $toolGranted = true,
+        bool $writeGranted = true,
+        RequestStack $requestStack = new RequestStack(),
+        ?string $userLocale = null,
+        ?string $fallbackLocale = null,
+        LoggerInterface $logger = new NullLogger(),
+    ): McpToolReferenceHandler {
+        return $this->createHandler(
+            tool: new ExampleWriteTool(function (): McpLogsByContextResponse {
+                ++$this->writeRuns;
+
+                return self::createResponse();
+            }),
+            toolErrorExceptions: $toolErrorExceptions,
+            toolGranted: $toolGranted,
+            readOnlyTool: false,
+            writeGranted: $writeGranted,
+            requestStack: $requestStack,
+            previewTool: new ExampleWritePreviewTool(
+                function (ExampleWritePreviewRequest $request) use ($previewHash, $previewException): ExampleWritePreviewResponse {
+                    ++$this->previewRuns;
+                    $this->previewInput = $request;
+                    if ($previewException instanceof Throwable) {
+                        throw $previewException;
+                    }
+
+                    return new ExampleWritePreviewResponse($previewHash, $request->title);
+                },
+            ),
+            userLocale: $userLocale,
+            fallbackLocale: $fallbackLocale,
+            logger: $logger,
+        );
+    }
+
     private static function createResponse(): McpLogsByContextResponse
     {
         return new McpLogsByContextResponse(new McpLogsByContextResult([], [], []));
@@ -551,8 +1185,8 @@ final class McpToolReferenceHandlerTest extends TestCase
     private function createArguments(string $toolName, array $toolArguments): array
     {
         return $toolArguments + [
-            '_session' => new Session(new InMemorySessionStore()),
-            '_request' => new CallToolRequest($toolName, $toolArguments),
+            self::SESSION_ARGUMENT => new Session(new InMemorySessionStore()),
+            self::REQUEST_ARGUMENT => new CallToolRequest($toolName, $toolArguments),
         ];
     }
 
@@ -591,6 +1225,10 @@ final class McpToolReferenceHandlerTest extends TestCase
         bool $writeGranted = true,
         RequestStack $requestStack = new RequestStack(),
         ?string $previewOf = null,
+        ?object $previewTool = null,
+        ?string $userLocale = null,
+        ?string $fallbackLocale = null,
+        LoggerInterface $logger = new NullLogger(),
     ): McpToolReferenceHandler {
         $this->insertedDocuments = [];
 
@@ -603,7 +1241,7 @@ final class McpToolReferenceHandlerTest extends TestCase
                 return $this->createStub(InsertOneResult::class);
             });
 
-        $user = $this->createConfiguredMock(AnzuUser::class, ['getId' => self::USER_ID]);
+        $user = $this->createConfiguredMock(AnzuUser::class, ['getId' => self::USER_ID, 'getLocale' => $userLocale]);
         $currentUserProvider = $this->createMock(CurrentAnzuUserProvider::class);
         $currentUserProvider->method('getCurrentUser')
             ->willReturn($user);
@@ -624,6 +1262,16 @@ final class McpToolReferenceHandlerTest extends TestCase
             $readOnlyToolNames[] = ExampleWithoutInputTool::NAME;
             $writeToolNamesByPreview[ExampleWithoutInputTool::NAME] = $previewOf;
         }
+        $registry = new Registry();
+        $services = [$tool::class => static fn (): object => $tool];
+        $toolSignatures = [$tool::class => new McpToolSignatureResolver()->resolve($tool::class)];
+        if (is_object($previewTool)) {
+            $readOnlyToolNames[] = $previewTool::NAME;
+            $writeToolNamesByPreview[$previewTool::NAME] = $tool::NAME;
+            $registry->registerTool($this->createSdkTool($previewTool::NAME), [$previewTool::class, self::INVOKE_METHOD]);
+            $services[$previewTool::class] = static fn (): object => $previewTool;
+            $toolSignatures[$previewTool::class] = new McpToolSignatureResolver()->resolve($previewTool::class);
+        }
         $toolAccessChecker = new McpToolAccessChecker(
             toolPermissions: $toolPermissions,
             security: $security,
@@ -632,23 +1280,29 @@ final class McpToolReferenceHandlerTest extends TestCase
         );
 
         return new McpToolReferenceHandler(
-            inner: new ReferenceHandler(new ServiceLocator([$tool::class => static fn (): object => $tool])),
+            inner: new ReferenceHandler(new ServiceLocator($services)),
             toolAccessChecker: $toolAccessChecker,
             writeToolGuard: new McpWriteToolGuard(
                 toolAccessChecker: $toolAccessChecker,
                 requestStack: $requestStack,
             ),
+            writeConfirmation: new McpWriteConfirmation(
+                translator: $this->createTranslator(),
+                currentUserProvider: $currentUserProvider,
+                fallbackLocale: $fallbackLocale,
+            ),
+            registry: $registry,
             toolErrorResolver: new McpToolErrorResolver($toolErrorExceptions),
             toolCallLogger: new McpToolCallLogger(
                 currentUserProvider: $currentUserProvider,
-                logger: new NullLogger(),
+                logger: $logger,
                 mcpLogger: new McpLogger($collection),
             ),
             validator: Validation::createValidatorBuilder()
                 ->enableAttributeMapping()
                 ->getValidator(),
             serializer: McpSerializerFactory::create(),
-            toolSignatures: array_filter([$tool::class => new McpToolSignatureResolver()->resolve($tool::class)]),
+            toolSignatures: array_filter($toolSignatures),
         );
     }
 }

@@ -217,6 +217,19 @@ final class McpToolAccessCheckerTest extends TestCase
         self::assertNotContains(self::PREVIEW_TOOL, $checker->getPermittedWriteToolNames());
     }
 
+    public function testPreviewToolNameIsFoundByItsWriteTool(): void
+    {
+        $checker = $this->createChecker(
+            readOnlyToolNames: [self::PREVIEW_TOOL],
+            grantedWriteTools: [],
+            writeToolNamesByPreview: [self::PREVIEW_TOOL => self::GRANTED_TOOL],
+        );
+
+        self::assertSame(self::PREVIEW_TOOL, $checker->getPreviewToolName(self::GRANTED_TOOL));
+        self::assertNull($checker->getPreviewToolName(self::DENIED_TOOL));
+        self::assertNull($checker->getPreviewToolName(self::UNMAPPED_TOOL));
+    }
+
     public function testToolCategoryIsReturnedAndAToolWithoutCategoryFails(): void
     {
         $checker = $this->createChecker(

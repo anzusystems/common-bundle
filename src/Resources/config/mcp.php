@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Symfony\Component\DependencyInjection\Loader\Configurator;
 
+use AnzuSystems\CommonBundle\AnzuSystemsCommonBundle;
 use AnzuSystems\CommonBundle\Command\CreateMcpLogCollectionCommand;
 use AnzuSystems\CommonBundle\Domain\User\CurrentAnzuUserProvider;
 use AnzuSystems\CommonBundle\Log\Repository\AuditLogRepository;
@@ -23,8 +24,10 @@ use AnzuSystems\CommonBundle\Mcp\Resolver\McpDateWindowResolver;
 use AnzuSystems\CommonBundle\Mcp\Resolver\McpHostResolver;
 use AnzuSystems\CommonBundle\Mcp\Resolver\McpPageWindowResolver;
 use AnzuSystems\CommonBundle\Mcp\Resolver\McpToolErrorResolver;
+use AnzuSystems\CommonBundle\Mcp\Security\McpDeleteGuard;
 use AnzuSystems\CommonBundle\Mcp\Security\McpToolAccessChecker;
 use AnzuSystems\CommonBundle\Mcp\Security\McpToolScopeProviderInterface;
+use AnzuSystems\CommonBundle\Mcp\Security\McpWriteConfirmation;
 use AnzuSystems\CommonBundle\Mcp\Security\McpWriteToolGuard;
 use AnzuSystems\CommonBundle\Mcp\Tool\GetLogsByContextTool;
 use AnzuSystems\CommonBundle\Mcp\Tool\SearchAppLogsTool;
@@ -32,6 +35,7 @@ use AnzuSystems\CommonBundle\Mcp\Tool\SearchAuditLogsTool;
 use AnzuSystems\SerializerBundle\Serializer;
 use Symfony\Component\HttpKernel\KernelEvents;
 use Symfony\Component\Validator\Validator\ValidatorInterface;
+use Symfony\Contracts\Translation\TranslatorInterface;
 
 return static function (ContainerConfigurator $configurator): void {
     $services = $configurator->services();
@@ -93,6 +97,20 @@ return static function (ContainerConfigurator $configurator): void {
         ->arg('$requestStack', service('request_stack'))
     ;
 
+    $services->set(McpDeleteGuard::class)
+        ->arg('$currentUserProvider', service(CurrentAnzuUserProvider::class))
+        ->arg('$dependencyProviders', tagged_locator(
+            tag: AnzuSystemsCommonBundle::TAG_MCP_DELETE_DEPENDENCY_PROVIDER,
+            defaultIndexMethod: 'getSupportedEntity',
+        ))
+    ;
+
+    $services->set(McpWriteConfirmation::class)
+        ->arg('$translator', service(TranslatorInterface::class))
+        ->arg('$currentUserProvider', service(CurrentAnzuUserProvider::class))
+        ->arg('$fallbackLocale', null)
+    ;
+
     $services->set(McpToolErrorResolver::class)
         ->arg('$toolErrorExceptions', null)
     ;
@@ -151,6 +169,8 @@ return static function (ContainerConfigurator $configurator): void {
         ->arg('$inner', null)
         ->arg('$toolAccessChecker', service(McpToolAccessChecker::class))
         ->arg('$writeToolGuard', service(McpWriteToolGuard::class))
+        ->arg('$writeConfirmation', service(McpWriteConfirmation::class))
+        ->arg('$registry', null)
         ->arg('$toolErrorResolver', service(McpToolErrorResolver::class))
         ->arg('$toolCallLogger', service(McpToolCallLogger::class))
         ->arg('$validator', service(ValidatorInterface::class))

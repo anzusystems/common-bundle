@@ -7,16 +7,22 @@ namespace AnzuSystems\CommonBundle\DependencyInjection\CompilerPass;
 use AnzuSystems\CommonBundle\Helper\StringHelper;
 use AnzuSystems\CommonBundle\Mcp\Attribute\AsMcpTool;
 use AnzuSystems\CommonBundle\Mcp\Controller\McpController;
+use AnzuSystems\CommonBundle\Mcp\Model\McpPreviewHashAwareInterface;
+use AnzuSystems\CommonBundle\Mcp\Model\McpToolSignature;
+use AnzuSystems\CommonBundle\Mcp\Model\McpWritePreviewInterface;
+use AnzuSystems\CommonBundle\Mcp\Resolver\McpToolSignatureResolver;
 use AnzuSystems\CommonBundle\Mcp\Security\McpToolAccessChecker;
 use LogicException;
 use Mcp\Capability\Attribute\McpTool;
 use Mcp\Capability\Discovery\ElementMetadataResolver;
 use Mcp\Capability\Tool\NameValidator;
+use Mcp\Schema\ServerCapabilities;
 use ReflectionAttribute;
 use ReflectionMethod;
 use Symfony\Component\Config\Resource\FileResource;
 use Symfony\Component\DependencyInjection\Compiler\CompilerPassInterface;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
+use Symfony\Component\DependencyInjection\Definition;
 use Symfony\Component\Filesystem\Filesystem;
 
 final class McpCompilerPass implements CompilerPassInterface
@@ -34,16 +40,29 @@ final class McpCompilerPass implements CompilerPassInterface
     public const string SECOND_PREVIEW_MESSAGE = 'The MCP tool "%s" is previewed by more than one tool (%s), a write tool has one preview at most.';
     public const string MAPPED_PREVIEW_MESSAGE = 'The MCP tool "%s" takes the permission of "%s", remove it from mcp.tool_permissions.';
     public const string PREVIEW_IN_OTHER_CATEGORY_MESSAGE = 'The MCP tool "%1$s" previews "%2$s", so it must be in the category "%3$s" of "%2$s".';
+    public const string WRITE_TOOL_WITHOUT_PREVIEW_MESSAGE = 'The MCP write tool "%1$s" has no preview: declare a read tool with #[AsMcpTool(previewOf: "%1$s")].';
+    public const string PREVIEW_RESPONSE_WITHOUT_CONFIRMATION_MESSAGE = 'The MCP tool "%s" previews "%s", so its response class must implement %s.';
+    public const string WRITE_INPUT_NOT_PREVIEW_INPUT_MESSAGE = 'The input class of the MCP write tool "%s" must implement %s and extend the input class of its preview "%s".';
+
+    // 0 means forever in the SDK; a client that opens a listen stream anyway gets its ack and complete within one 250 ms tick.
+    public const float SUBSCRIPTION_LIFETIME_SECONDS = 0.001;
 
     private const string TOOL_TAG_METHOD = 'method';
     private const string INVOKE_METHOD = '__invoke';
     private const string TOOL_METHOD_FORMAT = '%s::%s';
+    private const string TOOL_METHOD_SEPARATOR = '::';
     private const string TOOL_PERMISSIONS_ARGUMENT = '$toolPermissions';
     private const string READ_ONLY_TOOL_NAMES_ARGUMENT = '$readOnlyToolNames';
     private const string TOOL_CATEGORIES_ARGUMENT = '$toolCategories';
     private const string WRITE_TOOL_NAMES_BY_PREVIEW_ARGUMENT = '$writeToolNamesByPreview';
     private const string CATEGORY_PATTERN = '/^[a-z][a-zA-Z0-9]*$/';
     private const string SET_INSTRUCTIONS_METHOD = 'setInstructions';
+    private const string SET_CAPABILITIES_METHOD = 'setCapabilities';
+    private const string SET_SUBSCRIPTION_LIFETIME_METHOD = 'setSubscriptionLifetime';
+    private const string WITHOUT_INPUT_REQUIRED_SHIM_METHOD = 'withoutInputRequiredShim';
+    private const string PROMPT_TAG = 'mcp.prompt';
+    private const string RESOURCE_TAG = 'mcp.resource';
+    private const string RESOURCE_TEMPLATE_TAG = 'mcp.resource_template';
 
     public function process(ContainerBuilder $container): void
     {
@@ -60,6 +79,7 @@ final class McpCompilerPass implements CompilerPassInterface
             ->setAlias(sprintf('mcp.server.%s.controller', $serverName), McpController::class)
             ->setPublic(true);
         $this->setInstructionsFromFile($container, $serverName);
+        $this->configureServerBuilder($container, $serverName);
 
         $toolsByName = $this->resolveToolsByName($container);
         $this->assertToolNamesAreUnique($toolsByName);
@@ -70,18 +90,21 @@ final class McpCompilerPass implements CompilerPassInterface
         $toolCategories = $this->resolveToolCategories($toolsByName);
         $this->assertMappedToolsHaveCategories($toolPermissions, $toolCategories);
         $readOnlyToolNames = $this->resolveReadOnlyToolNames($toolsByName);
+        $writeToolNamesByPreview = $this->resolveWriteToolNamesByPreview(
+            toolsByName: $toolsByName,
+            toolPermissions: $toolPermissions,
+            toolCategories: $toolCategories,
+            readOnlyToolNames: $readOnlyToolNames,
+        );
         $accessCheckerDefinition
             ->replaceArgument(self::READ_ONLY_TOOL_NAMES_ARGUMENT, $readOnlyToolNames)
             ->replaceArgument(self::TOOL_CATEGORIES_ARGUMENT, $toolCategories)
-            ->replaceArgument(
-                self::WRITE_TOOL_NAMES_BY_PREVIEW_ARGUMENT,
-                $this->resolveWriteToolNamesByPreview(
-                    toolsByName: $toolsByName,
-                    toolPermissions: $toolPermissions,
-                    toolCategories: $toolCategories,
-                    readOnlyToolNames: $readOnlyToolNames,
-                ),
-            );
+            ->replaceArgument(self::WRITE_TOOL_NAMES_BY_PREVIEW_ARGUMENT, $writeToolNamesByPreview);
+        $this->assertWriteTools(
+            toolsByName: $toolsByName,
+            readOnlyToolNames: $readOnlyToolNames,
+            writeToolNamesByPreview: $writeToolNamesByPreview,
+        );
     }
 
     private function setInstructionsFromFile(ContainerBuilder $container, string $serverName): void
@@ -105,6 +128,38 @@ final class McpCompilerPass implements CompilerPassInterface
             ->getDefinition($builderId)
             ->removeMethodCall(self::SET_INSTRUCTIONS_METHOD)
             ->addMethodCall(self::SET_INSTRUCTIONS_METHOD, [$instructions]);
+    }
+
+    private function configureServerBuilder(ContainerBuilder $container, string $serverName): void
+    {
+        $builderId = sprintf(self::BUILDER_ID_FORMAT, $serverName);
+        if (false === $container->hasDefinition($builderId)) {
+            return;
+        }
+        $container
+            ->getDefinition($builderId)
+            ->addMethodCall(self::SET_CAPABILITIES_METHOD, [new Definition(ServerCapabilities::class, [
+                '$tools' => true,
+                '$toolsListChanged' => false,
+                '$resources' => $this->hasTaggedService($container, self::RESOURCE_TAG, self::RESOURCE_TEMPLATE_TAG),
+                '$resourcesSubscribe' => false,
+                '$resourcesListChanged' => false,
+                '$prompts' => $this->hasTaggedService($container, self::PROMPT_TAG),
+                '$promptsListChanged' => false,
+                '$logging' => true,
+                '$completions' => true,
+            ])])
+            ->addMethodCall(self::SET_SUBSCRIPTION_LIFETIME_METHOD, [self::SUBSCRIPTION_LIFETIME_SECONDS])
+            // With the shim a returned InputRequiredResult would hold the worker on a handshake revision.
+            ->addMethodCall(self::WITHOUT_INPUT_REQUIRED_SHIM_METHOD);
+    }
+
+    private function hasTaggedService(ContainerBuilder $container, string ...$tags): bool
+    {
+        return array_any(
+            $tags,
+            static fn (string $tag): bool => false === empty($container->findTaggedServiceIds($tag)),
+        );
     }
 
     /**
@@ -358,5 +413,64 @@ final class McpCompilerPass implements CompilerPassInterface
         if (StringHelper::isNotSame($preview->category, $toolCategories[$writeToolName])) {
             throw new LogicException(sprintf(self::PREVIEW_IN_OTHER_CATEGORY_MESSAGE, $previewName, $writeToolName, $toolCategories[$writeToolName]));
         }
+    }
+
+    /**
+     * @param array<string, array<string, McpTool>> $toolsByName
+     * @param list<string> $readOnlyToolNames
+     * @param array<string, string> $writeToolNamesByPreview
+     */
+    private function assertWriteTools(array $toolsByName, array $readOnlyToolNames, array $writeToolNamesByPreview): void
+    {
+        foreach ($toolsByName as $toolName => $tools) {
+            if (false === array_first($tools) instanceof AsMcpTool || in_array(needle: $toolName, haystack: $readOnlyToolNames, strict: true)) {
+                continue;
+            }
+            $previewName = array_search(needle: $toolName, haystack: $writeToolNamesByPreview, strict: true);
+            if (false === is_string($previewName)) {
+                throw new LogicException(sprintf(self::WRITE_TOOL_WITHOUT_PREVIEW_MESSAGE, $toolName));
+            }
+            $this->assertWriteToolFitsPreview(
+                toolName: $toolName,
+                previewName: $previewName,
+                signature: $this->resolveToolSignature($tools),
+                previewSignature: $this->resolveToolSignature($toolsByName[$previewName]),
+            );
+        }
+    }
+
+    private function assertWriteToolFitsPreview(
+        string $toolName,
+        string $previewName,
+        McpToolSignature $signature,
+        McpToolSignature $previewSignature,
+    ): void {
+        $previewOutputClass = $previewSignature->outputClass;
+        if (false === is_string($previewOutputClass) || false === is_a($previewOutputClass, McpWritePreviewInterface::class, true)) {
+            throw new LogicException(sprintf(self::PREVIEW_RESPONSE_WITHOUT_CONFIRMATION_MESSAGE, $previewName, $toolName, McpWritePreviewInterface::class));
+        }
+        $inputClass = $signature->inputClass;
+        $previewInputClass = $previewSignature->inputClass;
+        if (
+            false === is_string($inputClass)
+            || false === is_string($previewInputClass)
+            || false === is_a($inputClass, McpPreviewHashAwareInterface::class, true)
+            || false === is_a($inputClass, $previewInputClass, true)
+        ) {
+            throw new LogicException(sprintf(self::WRITE_INPUT_NOT_PREVIEW_INPUT_MESSAGE, $toolName, McpPreviewHashAwareInterface::class, $previewName));
+        }
+    }
+
+    /**
+     * @param array<string, McpTool> $tools
+     */
+    private function resolveToolSignature(array $tools): McpToolSignature
+    {
+        $toolMethod = (string) array_key_first($tools);
+        $class = explode(self::TOOL_METHOD_SEPARATOR, $toolMethod)[0];
+
+        return new McpToolSignatureResolver()
+            ->resolve($class)
+            ?? throw new LogicException(sprintf('The MCP tool "%s" is not declared by #[AsMcpTool].', $toolMethod));
     }
 }

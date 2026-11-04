@@ -8,16 +8,22 @@ use AnzuSystems\CommonBundle\Exception\ValidationException;
 use AnzuSystems\CommonBundle\Mcp\Exception\McpToolCallRejectedException;
 use AnzuSystems\CommonBundle\Mcp\Exception\McpToolInputException;
 use AnzuSystems\CommonBundle\Mcp\Log\McpToolCallLogger;
+use AnzuSystems\CommonBundle\Mcp\Model\McpPreviewHashAwareInterface;
 use AnzuSystems\CommonBundle\Mcp\Model\McpToolSignature;
+use AnzuSystems\CommonBundle\Mcp\Model\McpWritePreviewInterface;
 use AnzuSystems\CommonBundle\Mcp\Resolver\McpToolErrorResolver;
 use AnzuSystems\CommonBundle\Mcp\Security\McpToolAccessChecker;
+use AnzuSystems\CommonBundle\Mcp\Security\McpWriteConfirmation;
 use AnzuSystems\CommonBundle\Mcp\Security\McpWriteToolGuard;
 use AnzuSystems\SerializerBundle\Serializer;
 use Mcp\Capability\Formatter\ToolResultFormatter;
 use Mcp\Capability\Registry\ElementReference;
 use Mcp\Capability\Registry\ReferenceHandlerInterface;
 use Mcp\Capability\Registry\ToolReference;
+use Mcp\Capability\RegistryInterface;
 use Mcp\Schema\Result\CallToolResult;
+use Mcp\Schema\Result\InputRequiredResult;
+use Mcp\Server\RequestContext;
 use Symfony\Component\Security\Core\Exception\AccessDeniedException;
 use Symfony\Component\Validator\Validator\ValidatorInterface;
 use Throwable;
@@ -37,9 +43,11 @@ final readonly class McpToolReferenceHandler implements ReferenceHandlerInterfac
     public const string UNHANDLED_ERROR_FORMAT = 'Unhandled %s';
 
     private const string INVOKE_METHOD = '__invoke';
+    private const string SESSION_ARGUMENT = '_session';
+    private const string REQUEST_ARGUMENT = '_request';
     private const array SDK_ARGUMENT_KEYS = [
-        '_session' => true,
-        '_request' => true,
+        self::SESSION_ARGUMENT => true,
+        self::REQUEST_ARGUMENT => true,
     ];
     private const string VIOLATION_FORMAT = '%s: %s';
     private const string VIOLATION_SEPARATOR = ' ';
@@ -51,6 +59,8 @@ final readonly class McpToolReferenceHandler implements ReferenceHandlerInterfac
         private ReferenceHandlerInterface $inner,
         private McpToolAccessChecker $toolAccessChecker,
         private McpWriteToolGuard $writeToolGuard,
+        private McpWriteConfirmation $writeConfirmation,
+        private RegistryInterface $registry,
         private McpToolErrorResolver $toolErrorResolver,
         private McpToolCallLogger $toolCallLogger,
         private ValidatorInterface $validator,
@@ -87,17 +97,23 @@ final readonly class McpToolReferenceHandler implements ReferenceHandlerInterfac
     /**
      * @param array<string, mixed> $arguments
      */
-    private function callTool(ToolReference $reference, McpToolSignature $signature, array $arguments): CallToolResult
+    private function callTool(ToolReference $reference, McpToolSignature $signature, array $arguments): CallToolResult|InputRequiredResult
     {
         $startedAt = hrtime(true);
         $toolName = $reference->tool->name;
         $params = [];
         $error = null;
+        $confirmationRequest = null;
 
         try {
             $input = $this->resolveInput($toolName, $signature, $arguments);
             $params = is_object($input) ? $this->toArray($input) : [];
             $this->assertCallable($toolName, $input);
+
+            $confirmationRequest = $this->askWriteConfirmation(toolName: $toolName, input: $input, arguments: $arguments);
+            if ($confirmationRequest instanceof InputRequiredResult) {
+                return $confirmationRequest;
+            }
 
             $result = $this->run($reference, $toolName, $this->createToolArguments($signature, $input, $arguments));
             if ($result->isError) {
@@ -115,13 +131,88 @@ final readonly class McpToolReferenceHandler implements ReferenceHandlerInterfac
 
             return $this->createErrorResult($error);
         } finally {
-            $this->toolCallLogger->logCall(
+            $this->logResult(
                 toolName: $toolName,
                 params: $params,
                 error: $error,
-                durationMs: (int) round((hrtime(true) - $startedAt) / 1_000_000),
+                confirmationRequest: $confirmationRequest,
+                startedAt: $startedAt,
+                arguments: $arguments,
             );
         }
+    }
+
+    /**
+     * @param array<string, mixed> $arguments
+     */
+    private function askWriteConfirmation(string $toolName, ?object $input, array $arguments): ?InputRequiredResult
+    {
+        if (false === $this->toolAccessChecker->isWriteTool($toolName)) {
+            return null;
+        }
+        $context = new RequestContext($arguments[self::SESSION_ARGUMENT], $arguments[self::REQUEST_ARGUMENT]);
+        if (false === $this->writeConfirmation->isSupportedBy($context)) {
+            return null;
+        }
+        if (false === $input instanceof McpPreviewHashAwareInterface) {
+            throw new UnexpectedValueException(sprintf('The input of the MCP write tool "%s" is "%s" instead of %s.', $toolName, get_debug_type($input), McpPreviewHashAwareInterface::class));
+        }
+        if ($this->writeConfirmation->isAnswered($context, $input)) {
+            $this->writeConfirmation->assertConfirmed(toolName: $toolName, context: $context, input: $input);
+
+            return null;
+        }
+        $previewToolName = $this->toolAccessChecker->getPreviewToolName($toolName)
+            ?? throw new UnexpectedValueException(sprintf('The MCP write tool "%s" has no preview.', $toolName));
+
+        return $this->writeConfirmation->createInputRequiredResult(
+            previewToolName: $previewToolName,
+            input: $input,
+            preview: $this->runPreview(previewToolName: $previewToolName, input: $input, arguments: $arguments),
+        );
+    }
+
+    /**
+     * @param array<string, mixed> $arguments
+     */
+    private function runPreview(string $previewToolName, McpPreviewHashAwareInterface $input, array $arguments): McpWritePreviewInterface
+    {
+        $reference = $this->registry->getTool($previewToolName);
+        $signature = $this->resolveSignature($reference)
+            ?? throw new UnexpectedValueException(sprintf('The MCP preview tool "%s" is not declared by #[AsMcpTool].', $previewToolName));
+        $preview = $this->inner->handle($reference, $this->createToolArguments(signature: $signature, input: $input, arguments: $arguments));
+        if (false === $preview instanceof McpWritePreviewInterface) {
+            throw new UnexpectedValueException(sprintf('The MCP preview tool "%s" returned "%s" instead of %s.', $previewToolName, get_debug_type($preview), McpWritePreviewInterface::class));
+        }
+
+        return $preview;
+    }
+
+    /**
+     * @param array<string, mixed> $params
+     * @param array<string, mixed> $arguments
+     */
+    private function logResult(
+        string $toolName,
+        array $params,
+        ?string $error,
+        ?InputRequiredResult $confirmationRequest,
+        int $startedAt,
+        array $arguments,
+    ): void {
+        $durationMs = (int) round((hrtime(true) - $startedAt) / 1_000_000);
+        if ($confirmationRequest instanceof InputRequiredResult) {
+            $this->toolCallLogger->logConfirmationAsked(toolName: $toolName, params: $params, durationMs: $durationMs);
+
+            return;
+        }
+        $this->toolCallLogger->logCall(
+            toolName: $toolName,
+            params: $params,
+            error: $error,
+            durationMs: $durationMs,
+            session: $arguments[self::SESSION_ARGUMENT],
+        );
     }
 
     /**

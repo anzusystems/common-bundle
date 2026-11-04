@@ -7,6 +7,7 @@ namespace AnzuSystems\CommonBundle\Mcp\Factory;
 use AnzuSystems\CommonBundle\Mcp\Attribute\McpField;
 use AnzuSystems\SerializerBundle\Attributes\Serialize;
 use BackedEnum;
+use Doctrine\Common\Collections\Collection;
 use LogicException;
 use ReflectionAttribute;
 use ReflectionClass;
@@ -29,6 +30,8 @@ use Symfony\Component\Validator\Constraints as Assert;
  * The JSON Schema of an MCP tool input or output, made from the DTO the serializer reads: its #[Serialize] properties
  * and getters with their types, defaults and validation constraints. Assert\Regex is left out on purpose: PCRE is not
  * the ECMA-262 dialect of "pattern", and the validator answers the agent with a better message than a schema rejection.
+ * A Collection<string, X> is an object here; the serializer writes it as one only with strategy: Serialize::KEYS_VALUES,
+ * otherwise as a list.
  */
 final class McpSchemaFactory
 {
@@ -38,6 +41,7 @@ final class McpSchemaFactory
     public const string DESCRIPTION = 'description';
     public const string TYPE_OBJECT = 'object';
     public const string TYPE_ARRAY = 'array';
+    public const string UNTYPED_COLLECTION_MESSAGE = 'The MCP schema cannot describe %s::%s, a Collection without its key and item types: declare Collection<int, X> (Collection<string, X> for a keyed map) in its @var, or in its @return for a getter.';
 
     private const string REQUIRED = 'required';
     private const string ADDITIONAL_PROPERTIES = 'additionalProperties';
@@ -161,7 +165,11 @@ final class McpSchemaFactory
      */
     private function createForMember(ReflectionProperty|ReflectionMethod $member, Serialize $serialize): array
     {
-        $schema = $this->createForType($this->typeResolver->resolve($member));
+        $type = $this->typeResolver->resolve($member);
+        if ($this->isUntypedCollection($type)) {
+            throw new LogicException(sprintf(self::UNTYPED_COLLECTION_MESSAGE, $member->class, $member->getName()));
+        }
+        $schema = $this->createForType($type);
         $itemClass = $serialize->type;
         if (false === self::isOfType($schema, self::TYPE_ARRAY) || isset($schema[self::ITEMS]) || false === is_string($itemClass)) {
             return $schema;
@@ -171,6 +179,16 @@ final class McpSchemaFactory
         }
 
         return $schema;
+    }
+
+    private function isUntypedCollection(Type $type): bool
+    {
+        $innerType = $type instanceof NullableType ? $type->getWrappedType() : $type;
+        if ($innerType instanceof CollectionType) {
+            $innerType = $innerType->getWrappedType();
+        }
+
+        return $innerType instanceof ObjectType && is_a($innerType->getClassName(), Collection::class, true);
     }
 
     /**

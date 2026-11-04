@@ -20,6 +20,7 @@ final class AnzuSystemsCommonBundle extends Bundle
     public const string TAG_EXCEPTION_HANDLER = 'anzu_systems_common.logs.exception_handler';
     public const string TAG_DATA_FIXTURE = 'anzu_systems_common.data_fixtures';
     public const string TAG_JOB_PROCESSOR = 'anzu_systems_common.job_processor';
+    public const string TAG_MCP_DELETE_DEPENDENCY_PROVIDER = 'anzu_systems_common.mcp.delete_dependency_provider';
     public const string TAG_SERIALIZER_HANDLER = AnzuSystemsSerializerBundle::TAG_SERIALIZER_HANDLER;
 
     public function build(ContainerBuilder $container): void

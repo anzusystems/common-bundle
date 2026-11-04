@@ -32,6 +32,7 @@ infrastructure after a bundle upgrade.
            instructions_file: '%kernel.project_dir%/config/mcp/instructions.md'
            allowed_hosts: '%env(csv:ANZU_MCP_ALLOWED_HOSTS)%'
            pod: '%env(bool:ANZU_MCP_POD)%'
+           confirmation_fallback_locale: 'sk'
            tool_error_exceptions:
                App\Exception\SomeBackendException: 'Backend is temporarily unavailable, retry the call.'
            rate_limiter:
@@ -51,6 +52,8 @@ infrastructure after a bundle upgrade.
    ```
    `instructions_file` is a Markdown file that `McpCompilerPass` reads into the server instructions; it is a container
    resource, so an edit rebuilds the container in dev.
+   `confirmation_fallback_locale` is the language of the write confirmation for a user without `AnzuUser::getLocale()`;
+   the default `null` uses the default locale of the translator.
    The `logs.mongo` connection options (`uri`, `username`, `password`, `database`, `ssl`) default to the
    `logs.journal.mongo` connection, so they only need to be set when the mcp log collection lives elsewhere.
    `session.cache_pool` is a PSR-6 pool; the bundle wraps it in a `Psr16Cache` and prepends it as the McpBundle
@@ -83,9 +86,13 @@ infrastructure after a bundle upgrade.
   object with the anzu serializer, converts `McpToolInputException`, `ValidationException`, `AccessDeniedException`
   and configured `tool_error_exceptions` into `CallToolResult`s with `isError: true`, refuses write tools in read-only
   mode, includes a successful write tool call in the audit log, logs every call (with the serialized input as
-  `params`) to the monolog `mcp` channel and to the `mcpLogs` capped collection (see below). The tool itself stays a
-  plain invokable service with only its own dependencies.
+  `params`) to the monolog `mcp` channel and to the `mcpLogs` capped collection (see below). It asks the user to confirm
+  a write when the client can answer, see "Write confirmation" below. The tool itself stays a plain invokable service
+  with only its own dependencies.
 * `McpWriteToolGuard` — the write grant, read-only mode, one write per request and the audit log of write tools.
+* `McpWriteConfirmation` — when a write asks the user to confirm, how it reads the answer and what the question looks
+  like, see "Write confirmation" below.
+* `McpDeleteGuard` — the rule of deleting an entity through MCP, see "Delete tools" below.
 * `McpToolCallLogger` and `McpToolErrorResolver` — the call log and the `tool_error_exceptions` map of the handler.
 * `StrictToolArgumentsRequestHandler` — rejects tool calls with unknown arguments.
 * `McpToolAccessChecker` + `FilterToolsListRequestHandler` — per-tool permissions mapped to host permissions (see
@@ -107,6 +114,8 @@ pre-consume state. The lock store is Redis (`settings.app_redis`), shared by eve
 The endpoint accepts JSON-RPC batches, so `McpController` counts the messages of the request body and charges that
 many tokens (clamped at the bucket size), otherwise one batch of up to `MessageFactory::DEFAULT_MAX_BATCH_SIZE` (100)
 tool calls would cost a single token. A request that is not a JSON array of messages costs one token.
+
+A write the user confirms takes two requests, so it costs two tokens.
 
 ## Tool requests and responses
 
@@ -167,7 +176,11 @@ final readonly class ListKeywordsTool
   `#[Serialize]` properties (`McpSchemaFactory`) — type, default, `required` and the limits of its `Assert`
   constraints (`Regex` is left out: PCRE is not the ECMA-262 dialect of `pattern`). A property is required when it has
   no default value or carries `NotBlank`, `NotNull` or `Count(min ≥ 1)`. A `Uuid` property (also nullable or in a list)
-  is a string of format `uuid`, so the SDK rejects an invalid UUID before the call reaches the handler.
+  is a string of format `uuid`, so the SDK rejects an invalid UUID before the call reaches the handler. A
+  `Collection<int, X>` (from its `@var`, or the `@return` of a getter, also nullable) is an array of `X`, the same schema
+  as `list<X>`. A `Collection<string, X>` is an object with `additionalProperties`; a response writes it as an object
+  only with `strategy: Serialize::KEYS_VALUES`. A `Collection` without its key and item types fails the container
+  compilation with a `LogicException` naming the member.
 * The return class is the response: the pass appends a `Returns:` list of its `#[Serialize]` properties to the
   description, because clients hand the model the description and the input schema, not necessarily an output schema.
 * `#[McpField(description: …, values: […])]` describes a DTO property, a response property or a case of a backed
@@ -180,6 +193,13 @@ writes a public or hooked property directly, so a property with a hook must be `
 request property cannot be `private(set)` (it is not deserialized). A `set` hook normalizes the input, and a virtual
 `get` property exposes the result in the response; it has no default, so it is `required` in the output schema like
 the getter it replaces. The fields are listed in declaration order.
+
+A list of objects is a `Collection<int, X>` with `#[Serialize(type: X::class)]`:
+
+* On input `type:` is required, otherwise `ObjectHandler` builds the items as the collection class.
+* A parameterless constructor sets an input `Collection` to `new ArrayCollection()`. A promoted parameter would be
+  required.
+* `McpObjectArrayRule` reports an array of the host's objects in the MCP classes, also with `#[Serialize]`.
 
 ```php
 final class ListKeywordsRequest
@@ -198,12 +218,12 @@ final class ListKeywordsRequest
 final class McpKeywordListResponse
 {
     /**
-     * @var list<McpKeywordDecorator>
+     * @var Collection<int, McpKeywordDecorator>
      */
     #[McpField(description: 'Best matches; narrow the query when the expected keyword is missing.')]
     #[Serialize(type: McpKeywordDecorator::class)]
-    public array $keywords {
-        get => array_map(McpKeywordDecorator::getInstance(...), $this->result->keywords);
+    public Collection $keywords {
+        get => $this->result->keywords->map(McpKeywordDecorator::getInstance(...));
     }
 
     public function __construct(
@@ -298,13 +318,20 @@ and fails the container compilation with a `LogicException` when
 * a preview is not `readOnly`;
 * a write tool has more than one preview;
 * a preview is mapped in `tool_permissions`;
-* a preview is in another category than its write tool.
+* a preview is in another category than its write tool;
+* a write tool declared by `#[AsMcpTool]` has no preview (`WRITE_TOOL_WITHOUT_PREVIEW_MESSAGE`);
+* the response class of a preview does not implement `McpWritePreviewInterface`
+  (`PREVIEW_RESPONSE_WITHOUT_CONFIRMATION_MESSAGE`);
+* the input class of a write tool does not implement `McpPreviewHashAwareInterface` or does not extend the input class
+  of its preview (`WRITE_INPUT_NOT_PREVIEW_INPUT_MESSAGE`).
 
 A tool that is not declared by `#[McpTool]` on a tagged `mcp.tool` service (e.g. one registered by an McpBundle app)
 is unknown to these checks and cannot be mapped in `tool_permissions`. A tool mapped there is declared by
 `#[AsMcpTool]` with a category.
 
 ### Write tools
+
+A write tool declared by `#[AsMcpTool]` must have a preview, see "Preview tools" below.
 
 A tool is a read tool only when its `#[McpTool]` declares `annotations: new ToolAnnotations(readOnlyHint: true)`
 (`#[AsMcpTool(readOnly: true)]`);
@@ -357,6 +384,98 @@ the token scope, the mapped permission and the `mcp_tool_write` grant of the wri
 `getPermittedToolNames()` and `getPermittedWriteToolNames()` read the keys of `tool_permissions`, so they never list a
 preview. As a read tool it skips the write grant check of its own, read-only mode, the one write per request and the
 audit log.
+
+The response class of a preview implements `McpWritePreviewInterface`. The input class of the write tool implements
+`McpPreviewHashAwareInterface` and extends the input class of the preview (the same class is allowed), because the
+validated input of the write goes straight into the preview.
+
+### Write confirmation
+
+A write tool asks the user to confirm when the client declares form elicitation on revision 2026-07-28
+(`RequestContext::getClientCapabilities()?->elicitationForm`). `McpToolReferenceHandler` does it after the access checks
+and the validation of the input, so a call without the right to write asks nothing:
+
+1. Without an answer it runs the preview, without a call log of its own and with the input of the write:
+   * an exception of the preview is the result of the call, the same tool error the write would give, and nothing is
+     written;
+   * `previewHash: null` runs the write without a question, because such a write saves nothing;
+   * another `previewHash` than in the arguments is a tool error (`McpWriteConfirmation::PREVIEW_HASH_STALE_MESSAGE`);
+   * the same `previewHash` ends the call with `input_required`, under the key `confirm_<previewHash>`.
+2. The client repeats the call with `inputResponses`. With `accept` and `confirm: true` the write runs, without the
+   preview. Any other answer under that key is a tool error (`McpWriteConfirmation::REFUSED_MESSAGE`), and nothing is
+   asked again: `decline`, `cancel`, an unticked box and an answer that cannot be read. An answer under another key asks
+   again.
+
+A client on an older revision, or without form elicitation, is never asked. It stays on the preview and `previewHash`.
+
+The text comes from `McpWritePreviewInterface::$confirmationMessage`, a translation key and its parameters, as a virtual
+property without `#[Serialize]`, so the output of the preview does not change. The translation domain is
+`McpWriteConfirmation::TRANSLATION_DOMAIN`, the title of the field is the key `McpWriteConfirmation::FIELD_TITLE_KEY`, and
+the host needs the Symfony translator enabled and the catalogues in place. Take the text from stored data; the model may
+influence only a name in quotes. The language is `AnzuUser::getLocale()`, then `confirmation_fallback_locale`.
+
+The field has no `default`: a preset `true` would turn an unticked box into consent.
+
+This protects against the model, not against a hostile client. The model sees only the `arguments`, and
+`inputResponses` is their sibling in `params`. The owner of a token can write the answer alone, or leave out the
+capability and take the preview path. The answer is not one-time: a client that sends an accepted call again writes
+again.
+
+The round that only asks has no row in `mcpLogs`, only `Mcp tool confirmation asked.` in the `mcp` channel, with `tool`,
+`userId`, `params` and `durationMs`. `Mcp tool call.` and `mcpLogs` have the `client` field: the client name from the
+request on revision 2026-07-28, from the session on a handshake revision, otherwise `null`.
+
+`McpCompilerPass` sets three things on the server builder, and it does nothing when the server has no builder:
+
+* explicit capabilities without `listChanged` and `subscribe`. McpBundle always sets an event dispatcher, so the SDK
+  would announce `listChanged`, which the server never sends, and Claude Code would open a `subscriptions/listen` stream
+  that holds an FPM worker. `prompts` and `resources` follow the `mcp.prompt`, `mcp.resource` and
+  `mcp.resource_template` tags;
+* `McpCompilerPass::SUBSCRIPTION_LIFETIME_SECONDS`: a client that opens the stream anyway gets its ack and complete
+  within one 250 ms tick. `0` means forever in the SDK;
+* `withoutInputRequiredShim()`: with the shim a returned `InputRequiredResult` would hold the worker on a handshake
+  revision.
+
+### Delete tools
+
+Each entity gets its own delete tool, with its own permission and preview. `McpDeleteGuard` holds the rule they share.
+An entity may be deleted through MCP only when all of these hold:
+
+* it was created at most `McpDeleteGuard::MAX_AGE_DAYS` days ago (`createdAt` against `AnzuApp::date()`);
+* its `createdBy` is the current user, so an entity without an author is refused;
+* nothing uses it.
+
+`resolveRefusals()` returns every failed condition as one sentence, for a preview that shows them as data.
+`assertDeletable()` throws `McpToolCallRejectedException` with all of them, for the write tool, in its transaction after
+the row is locked.
+
+A host reports what uses an entity with one `McpDeleteDependencyProviderInterface` per entity class:
+
+```php
+final readonly class QuizDeleteDependencyProvider implements McpDeleteDependencyProviderInterface
+{
+    public static function getSupportedEntity(): string
+    {
+        return Quiz::class;
+    }
+
+    public function provideDependencies(object $entity): array
+    {
+        if (false === $entity instanceof Quiz) {
+            throw new UnexpectedValueException(sprintf('Unsupported entity "%s".', get_debug_type($entity)));
+        }
+        $embedCount = $entity->getEmbeds()->count();
+
+        return $embedCount > 0 ? [sprintf('embedded %d times in articles', $embedCount)] : [];
+    }
+}
+```
+
+With the `mcp` section the bundle tags an autoconfigured implementation itself. `$entity::class` is the key of the
+provider, and an entity without a provider throws a `LogicException`, never "no dependencies".
+
+The guard does not check the delete permission: the host tool does, on the stored entity. Record the audit resource
+before `remove()`, because Doctrine clears the id after the flush.
 
 ### Token scope
 

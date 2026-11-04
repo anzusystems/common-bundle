@@ -99,6 +99,13 @@ final readonly class McpToolAccessChecker
             ?? throw new LogicException(sprintf('The MCP tool "%s" has no category.', $toolName));
     }
 
+    public function getPreviewToolName(string $writeToolName): ?string
+    {
+        $previewToolName = array_search(needle: $writeToolName, haystack: $this->writeToolNamesByPreview, strict: true);
+
+        return is_string($previewToolName) ? $previewToolName : null;
+    }
+
     public function isWriteTool(string $toolName): bool
     {
         return false === in_array(needle: $toolName, haystack: $this->readOnlyToolNames, strict: true);

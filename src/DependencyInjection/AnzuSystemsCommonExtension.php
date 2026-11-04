@@ -73,11 +73,14 @@ use AnzuSystems\CommonBundle\Log\Repository\JournalLogRepository;
 use AnzuSystems\CommonBundle\Mcp\Controller\McpController;
 use AnzuSystems\CommonBundle\Mcp\Event\Listener\McpHostRouteListener;
 use AnzuSystems\CommonBundle\Mcp\Handler\FilterToolsListRequestHandler;
+use AnzuSystems\CommonBundle\Mcp\Handler\McpToolReferenceHandler;
 use AnzuSystems\CommonBundle\Mcp\Handler\StrictToolArgumentsRequestHandler;
 use AnzuSystems\CommonBundle\Mcp\McpRateLimiter;
 use AnzuSystems\CommonBundle\Mcp\Resolver\McpHostResolver;
 use AnzuSystems\CommonBundle\Mcp\Resolver\McpToolErrorResolver;
+use AnzuSystems\CommonBundle\Mcp\Security\McpDeleteDependencyProviderInterface;
 use AnzuSystems\CommonBundle\Mcp\Security\McpToolAccessChecker;
+use AnzuSystems\CommonBundle\Mcp\Security\McpWriteConfirmation;
 use AnzuSystems\CommonBundle\Messenger\Message\AuditLogMessage;
 use AnzuSystems\CommonBundle\Messenger\Message\JournalLogMessage;
 use AnzuSystems\CommonBundle\Request\ParamConverter\ApiFilterParamConverter;
@@ -632,6 +635,10 @@ final class AnzuSystemsCommonExtension extends Extension implements PrependExten
 
         $loader->load('mcp.php');
 
+        $container
+            ->registerForAutoconfiguration(McpDeleteDependencyProviderInterface::class)
+            ->addTag(AnzuSystemsCommonBundle::TAG_MCP_DELETE_DEPENDENCY_PROVIDER);
+
         $mongo = $this->resolveMcpLogMongo();
         $clientDefinition = new Definition(MongoDB\Client::class);
         $clientDefinition->setArgument('$uri', $mongo['uri']);
@@ -698,6 +705,14 @@ final class AnzuSystemsCommonExtension extends Extension implements PrependExten
             ->getDefinition(FilterToolsListRequestHandler::class)
             ->replaceArgument('$registry', $registryReference)
             ->replaceArgument('$pageSize', $this->resolveMcpPaginationLimit($container, $serverName));
+
+        $container
+            ->getDefinition(McpToolReferenceHandler::class)
+            ->replaceArgument('$registry', $registryReference);
+
+        $container
+            ->getDefinition(McpWriteConfirmation::class)
+            ->replaceArgument('$fallbackLocale', $mcp['confirmation_fallback_locale']);
 
         $container
             ->getDefinition(McpToolErrorResolver::class)

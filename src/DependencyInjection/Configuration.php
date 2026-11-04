@@ -349,6 +349,7 @@ final class Configuration implements ConfigurationInterface
                 ->scalarNode('instructions_file')->defaultNull()->end()
                 ->variableNode('allowed_hosts')->defaultValue([])->end()
                 ->scalarNode('pod')->defaultFalse()->end()
+                ->scalarNode('confirmation_fallback_locale')->defaultNull()->end()
                 ->arrayNode('tool_error_exceptions')
                     ->useAttributeAsKey('name')
                     ->validate()

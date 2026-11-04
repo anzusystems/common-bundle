@@ -24,7 +24,7 @@ final readonly class McpLogger
     /**
      * @param array<string, mixed> $params
      */
-    public function log(string $tool, array $params, ?int $userId, int $durationMs, ?string $error): void
+    public function log(string $tool, array $params, ?int $userId, int $durationMs, ?string $error, ?string $client): void
     {
         $this->mcpLogCollection->insertOne([
             'datetime' => new UTCDateTime(AnzuApp::date()),
@@ -32,6 +32,7 @@ final readonly class McpLogger
             'tool' => $tool,
             'params' => $params,
             'userId' => $userId,
+            'client' => $client,
             'contextId' => AnzuApp::getContextId(),
             'durationMs' => $durationMs,
             'error' => $error,

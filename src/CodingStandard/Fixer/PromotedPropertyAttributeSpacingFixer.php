@@ -29,7 +29,7 @@ final class PromotedPropertyAttributeSpacingFixer extends AbstractFixer implemen
     public function getDefinition(): FixerDefinitionInterface
     {
         return new FixerDefinition(
-            'In a multi-line constructor with an attributed promoted parameter, parameters are separated by one blank line.',
+            'In a multi-line constructor with an attributed promoted parameter, a parameter with an attribute or a comment above it is set off by one blank line; other parameters follow each other without one.',
             [
                 new CodeSample(
                     "<?php\nfinal class Foo\n{\n    public function __construct(\n        #[Serialize]\n        private(set) string \$headline,\n        private readonly Bar \$bar,\n    ) {\n    }\n}\n"
@@ -104,12 +104,25 @@ final class PromotedPropertyAttributeSpacingFixer extends AbstractFixer implemen
         $this->setLineBreaks(tokens: $tokens, index: $openIndex + 1, lineBreaks: 1);
         $this->setLineBreaks(tokens: $tokens, index: $closeIndex - 1, lineBreaks: 1);
 
-        foreach (array_slice(array_keys($parameters), 1) as $startIndex) {
-            $separatorIndex = $this->findSeparatorIndex(tokens: $tokens, startIndex: $startIndex);
+        $previousHasHeader = null;
 
-            if (is_int($separatorIndex)) {
-                $this->setLineBreaks(tokens: $tokens, index: $separatorIndex, lineBreaks: 2);
+        foreach ($parameters as $startIndex => $endIndex) {
+            $separatorIndex = $this->findSeparatorIndex(tokens: $tokens, startIndex: $startIndex);
+            $hasHeader = $this->hasHeader(
+                tokens: $tokens,
+                startIndex: $separatorIndex ?? $startIndex,
+                endIndex: $endIndex,
+            );
+
+            if (is_int($separatorIndex) && is_bool($previousHasHeader)) {
+                $this->setLineBreaks(
+                    tokens: $tokens,
+                    index: $separatorIndex,
+                    lineBreaks: $previousHasHeader || $hasHeader ? 2 : 1,
+                );
             }
+
+            $previousHasHeader = $hasHeader;
         }
     }
 
@@ -151,6 +164,14 @@ final class PromotedPropertyAttributeSpacingFixer extends AbstractFixer implemen
 
         return array_any($indexes, static fn (int $index): bool => $tokens[$index]->isGivenKind(T_ATTRIBUTE))
             && array_any($indexes, static fn (int $index): bool => $tokens[$index]->isGivenKind(self::PROMOTION_KINDS));
+    }
+
+    private function hasHeader(Tokens $tokens, int $startIndex, int $endIndex): bool
+    {
+        return array_any(
+            range($startIndex, $endIndex),
+            static fn (int $index): bool => $tokens[$index]->isGivenKind(T_ATTRIBUTE) || $tokens[$index]->isComment(),
+        );
     }
 
     /**

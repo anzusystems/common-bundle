@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace AnzuSystems\CommonBundle\Mcp\Log;
 
 use AnzuSystems\CommonBundle\Domain\User\CurrentAnzuUserProvider;
+use Mcp\Server\Session\SessionInterface;
+use Mcp\Server\Stateless\RequestMeta;
 use Monolog\Attribute\WithMonologChannel;
 use Psr\Log\LoggerInterface;
 use Throwable;
@@ -12,6 +14,12 @@ use Throwable;
 #[WithMonologChannel('mcp')]
 final readonly class McpToolCallLogger
 {
+    public const string CALL_LOG_MESSAGE = 'Mcp tool call.';
+    public const string CONFIRMATION_ASKED_LOG_MESSAGE = 'Mcp tool confirmation asked.';
+
+    private const string SESSION_CLIENT_INFO_KEY = 'client_info';
+    private const string CLIENT_NAME_KEY = 'name';
+
     public function __construct(
         private CurrentAnzuUserProvider $currentUserProvider,
         private LoggerInterface $logger,
@@ -22,18 +30,27 @@ final readonly class McpToolCallLogger
     /**
      * @param array<string, mixed> $params
      */
-    public function logCall(string $toolName, array $params, ?string $error, int $durationMs): void
+    public function logCall(string $toolName, array $params, ?string $error, int $durationMs, SessionInterface $session): void
     {
         $userId = $this->resolveCurrentUserId();
-        $this->logger->info('Mcp tool call.', [
+        $client = $this->resolveClientName($session);
+        $this->logger->info(self::CALL_LOG_MESSAGE, [
             'tool' => $toolName,
             'userId' => $userId,
+            'client' => $client,
             'params' => $params,
             'error' => $error,
             'durationMs' => $durationMs,
         ]);
         try {
-            $this->mcpLogger->log($toolName, $params, $userId, $durationMs, $error);
+            $this->mcpLogger->log(
+                tool: $toolName,
+                params: $params,
+                userId: $userId,
+                durationMs: $durationMs,
+                error: $error,
+                client: $client,
+            );
         } catch (Throwable $exception) {
             $this->logger->error('Mcp tool call mongo log failed.', [
                 'tool' => $toolName,
@@ -42,12 +59,37 @@ final readonly class McpToolCallLogger
         }
     }
 
+    /**
+     * @param array<string, mixed> $params
+     */
+    public function logConfirmationAsked(string $toolName, array $params, int $durationMs): void
+    {
+        $this->logger->info(self::CONFIRMATION_ASKED_LOG_MESSAGE, [
+            'tool' => $toolName,
+            'userId' => $this->resolveCurrentUserId(),
+            'params' => $params,
+            'durationMs' => $durationMs,
+        ]);
+    }
+
     public function logBackendFailure(string $toolName, Throwable $exception): void
     {
         $this->logger->error('Mcp tool call failed on backend.', [
             'tool' => $toolName,
             'exception' => $exception,
         ]);
+    }
+
+    private function resolveClientName(SessionInterface $session): ?string
+    {
+        $meta = $session->get(RequestMeta::class);
+        if ($meta instanceof RequestMeta) {
+            return $meta->clientInfo?->name;
+        }
+        $clientInfo = $session->get(self::SESSION_CLIENT_INFO_KEY);
+        $name = is_array($clientInfo) ? ($clientInfo[self::CLIENT_NAME_KEY] ?? null) : null;
+
+        return is_string($name) ? $name : null;
     }
 
     private function resolveCurrentUserId(): ?int

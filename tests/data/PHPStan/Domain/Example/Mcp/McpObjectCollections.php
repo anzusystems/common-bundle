@@ -22,21 +22,19 @@ final class McpObjectCollections
     public Collection $examples;
 
     /**
-     * @var list<DummyDto>
+     * @var Collection<int, DummyDto>
      */
     #[Serialize(type: DummyDto::class)]
-    public array $serializedDtos = [];
+    public Collection $serializedDtos;
 
     /**
      * @param Collection<int, Collection<int, Example>> $examplesByGroupId
-     * @param list<DummyDto> $serializedExamples
      */
     public function __construct(
         public Collection $examplesByGroupId,
-        #[Serialize(type: DummyDto::class)]
-        public array $serializedExamples,
     ) {
         $this->examples = new ArrayCollection();
+        $this->serializedDtos = new ArrayCollection();
     }
 
     /**

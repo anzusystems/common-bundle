@@ -7,30 +7,40 @@ namespace AnzuSystems\CommonBundle\Tests\DependencyInjection\CompilerPass;
 use AnzuSystems\CommonBundle\DependencyInjection\CompilerPass\McpCompilerPass;
 use AnzuSystems\CommonBundle\Mcp\Attribute\AsMcpTool;
 use AnzuSystems\CommonBundle\Mcp\Controller\McpController;
+use AnzuSystems\CommonBundle\Mcp\Model\McpPreviewHashAwareInterface;
+use AnzuSystems\CommonBundle\Mcp\Model\McpWritePreviewInterface;
 use AnzuSystems\CommonBundle\Mcp\Security\McpToolAccessChecker;
 use AnzuSystems\CommonBundle\Mcp\Tool\SearchAppLogsTool;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Tool\ConflictingExampleTool;
-use AnzuSystems\CommonBundle\Tests\Data\Mcp\Tool\ExampleErrorResultTool;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Tool\ExamplePreviewTool;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Tool\ExampleSearchTool;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Tool\ExampleTool;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Tool\ExampleToolCategory;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Tool\ExampleWithoutInputTool;
+use AnzuSystems\CommonBundle\Tests\Data\Mcp\Tool\ExampleWritePreviewTool;
+use AnzuSystems\CommonBundle\Tests\Data\Mcp\Tool\ExampleWriteTool;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Tool\InvalidCategoryExampleTool;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Tool\InvalidNameExampleTool;
+use AnzuSystems\CommonBundle\Tests\Data\Mcp\Tool\NoHashInputExamplePreviewTool;
+use AnzuSystems\CommonBundle\Tests\Data\Mcp\Tool\NoHashInputExampleTool;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Tool\OtherCategoryExamplePreviewTool;
+use AnzuSystems\CommonBundle\Tests\Data\Mcp\Tool\OtherInputExamplePreviewTool;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Tool\ReadToolPreviewExampleTool;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Tool\SecondExamplePreviewTool;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Tool\WritablePreviewExampleTool;
 use LogicException;
+use Mcp\Schema\ServerCapabilities;
 use PHPUnit\Framework\TestCase;
 use stdClass;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
+use Symfony\Component\DependencyInjection\Definition;
 
 final class McpCompilerPassTest extends TestCase
 {
     private const string SERVER_NAME = 'core_cms';
     private const string CONTROLLER_ID = 'mcp.server.core_cms.controller';
+    private const string BUILDER_ID = 'mcp.server.core_cms.builder';
+    private const string TAGGED_SERVICE_ID = 'tagged_service';
     private const string READ_ONLY_TOOL_NAMES_ARGUMENT = '$readOnlyToolNames';
     private const string TOOL_CATEGORIES_ARGUMENT = '$toolCategories';
     private const string WRITE_TOOL_NAMES_BY_PREVIEW_ARGUMENT = '$writeToolNamesByPreview';
@@ -90,14 +100,12 @@ final class McpCompilerPassTest extends TestCase
     {
         $container = $this->createMcpContainer([
             SearchAppLogsTool::NAME => self::TOOL_PERMISSION,
-            ExampleWithoutInputTool::NAME => self::TOOL_PERMISSION,
-            ExampleErrorResultTool::NAME => self::TOOL_PERMISSION,
+            ExampleWriteTool::NAME => self::TOOL_PERMISSION,
         ]);
         $this->registerTools($container, [
             SearchAppLogsTool::class,
-            ExampleWithoutInputTool::class,
-            ExamplePreviewTool::class,
-            ExampleErrorResultTool::class,
+            ExampleWriteTool::class,
+            ExampleWritePreviewTool::class,
         ]);
 
         new McpCompilerPass()
@@ -107,18 +115,17 @@ final class McpCompilerPassTest extends TestCase
         self::assertSame(
             [
                 SearchAppLogsTool::NAME => AsMcpTool::CATEGORY_DIAGNOSTICS,
-                ExampleWithoutInputTool::NAME => ExampleToolCategory::EXAMPLES,
-                ExamplePreviewTool::NAME => ExampleToolCategory::EXAMPLES,
-                ExampleErrorResultTool::NAME => ExampleToolCategory::EXAMPLES,
+                ExampleWriteTool::NAME => ExampleToolCategory::EXAMPLES,
+                ExampleWritePreviewTool::NAME => ExampleToolCategory::EXAMPLES,
             ],
             $accessCheckerDefinition->getArgument(self::TOOL_CATEGORIES_ARGUMENT),
         );
         self::assertSame(
-            [ExamplePreviewTool::NAME => ExampleWithoutInputTool::NAME],
+            [ExampleWritePreviewTool::NAME => ExampleWriteTool::NAME],
             $accessCheckerDefinition->getArgument(self::WRITE_TOOL_NAMES_BY_PREVIEW_ARGUMENT),
         );
         self::assertSame(
-            [SearchAppLogsTool::NAME, ExamplePreviewTool::NAME],
+            [SearchAppLogsTool::NAME, ExampleWritePreviewTool::NAME],
             $accessCheckerDefinition->getArgument(self::READ_ONLY_TOOL_NAMES_ARGUMENT),
         );
     }
@@ -212,7 +219,108 @@ final class McpCompilerPassTest extends TestCase
                     ExampleToolCategory::EXAMPLES,
                 ),
             ],
+            'write tool without a preview' => [
+                [ExampleWriteTool::class],
+                [],
+                sprintf(McpCompilerPass::WRITE_TOOL_WITHOUT_PREVIEW_MESSAGE, ExampleWriteTool::NAME),
+            ],
+            'preview response without the confirmation message' => [
+                [ExampleWithoutInputTool::class, ExamplePreviewTool::class],
+                [],
+                sprintf(
+                    McpCompilerPass::PREVIEW_RESPONSE_WITHOUT_CONFIRMATION_MESSAGE,
+                    ExamplePreviewTool::NAME,
+                    ExampleWithoutInputTool::NAME,
+                    McpWritePreviewInterface::class,
+                ),
+            ],
+            'write input without the preview hash' => [
+                [NoHashInputExampleTool::class, NoHashInputExamplePreviewTool::class],
+                [],
+                sprintf(
+                    McpCompilerPass::WRITE_INPUT_NOT_PREVIEW_INPUT_MESSAGE,
+                    NoHashInputExampleTool::NAME,
+                    McpPreviewHashAwareInterface::class,
+                    NoHashInputExamplePreviewTool::NAME,
+                ),
+            ],
+            'write input that does not extend the preview input' => [
+                [ExampleWriteTool::class, OtherInputExamplePreviewTool::class],
+                [],
+                sprintf(
+                    McpCompilerPass::WRITE_INPUT_NOT_PREVIEW_INPUT_MESSAGE,
+                    ExampleWriteTool::NAME,
+                    McpPreviewHashAwareInterface::class,
+                    OtherInputExamplePreviewTool::NAME,
+                ),
+            ],
         ];
+    }
+
+    /**
+     * @dataProvider serverCapabilitiesProvider
+     */
+    public function testServerBuilderGetsCapabilitiesLifetimeAndNoShim(?string $tag, bool $expectedResources, bool $expectedPrompts): void
+    {
+        $container = $this->createMcpContainer();
+        $container->register(self::BUILDER_ID);
+        if (is_string($tag)) {
+            $container->register(self::TAGGED_SERVICE_ID, stdClass::class)
+                ->addTag($tag);
+        }
+
+        new McpCompilerPass()
+            ->process($container);
+
+        $methodCalls = $container->getDefinition(self::BUILDER_ID)
+            ->getMethodCalls();
+        self::assertSame(
+            ['setCapabilities', 'setSubscriptionLifetime', 'withoutInputRequiredShim'],
+            array_column($methodCalls, 0),
+        );
+        $capabilities = $methodCalls[0][1][0];
+        self::assertInstanceOf(Definition::class, $capabilities);
+        self::assertSame(ServerCapabilities::class, $capabilities->getClass());
+        self::assertSame(
+            [
+                '$tools' => true,
+                '$toolsListChanged' => false,
+                '$resources' => $expectedResources,
+                '$resourcesSubscribe' => false,
+                '$resourcesListChanged' => false,
+                '$prompts' => $expectedPrompts,
+                '$promptsListChanged' => false,
+                '$logging' => true,
+                '$completions' => true,
+            ],
+            $capabilities->getArguments(),
+        );
+        self::assertSame([McpCompilerPass::SUBSCRIPTION_LIFETIME_SECONDS], $methodCalls[1][1]);
+        self::assertGreaterThan(0, McpCompilerPass::SUBSCRIPTION_LIFETIME_SECONDS);
+    }
+
+    /**
+     * @return array<string, array{string|null, bool, bool}>
+     */
+    public static function serverCapabilitiesProvider(): array
+    {
+        return [
+            'no prompts and no resources' => [null, false, false],
+            'prompt' => ['mcp.prompt', false, true],
+            'resource' => ['mcp.resource', true, false],
+            'resource template' => ['mcp.resource_template', true, false],
+        ];
+    }
+
+    public function testPassDoesNotTouchAMissingBuilder(): void
+    {
+        $container = $this->createMcpContainer();
+
+        new McpCompilerPass()
+            ->process($container);
+
+        self::assertFalse($container->hasDefinition(self::BUILDER_ID));
+        self::assertTrue($container->hasAlias(self::CONTROLLER_ID));
     }
 
     public function testToolNameRegisteredByTwoToolsFailsAtCompileTime(): void

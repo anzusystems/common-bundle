@@ -78,7 +78,6 @@ final class PromotedPropertyAttributeSpacingFixerTest extends TestCase
             {
                 public function __construct(
                     private readonly Bar $bar,
-
                     string $plain,
 
                     #[Serialize(type: Baz::class, strategy: Serialize::KEYS_VALUES)]
@@ -91,6 +90,78 @@ final class PromotedPropertyAttributeSpacingFixerTest extends TestCase
             PHP;
 
         yield 'mix of parameters with and without attributes' => [$input, $expected];
+
+        $input = <<<'PHP'
+            <?php
+            final class Foo
+            {
+                public function __construct(
+                    Quiz $decorated,
+
+                    string $adminUrl,
+
+                    #[Serialize]
+                    public private(set) bool $changed,
+                ) {
+                }
+            }
+            PHP;
+        $expected = <<<'PHP'
+            <?php
+            final class Foo
+            {
+                public function __construct(
+                    Quiz $decorated,
+                    string $adminUrl,
+
+                    #[Serialize]
+                    public private(set) bool $changed,
+                ) {
+                }
+            }
+            PHP;
+
+        yield 'blank line between parameters without attributes goes away' => [$input, $expected];
+
+        $input = <<<'PHP'
+            <?php
+            final class Foo
+            {
+                public function __construct(
+                    private readonly Bar $bar, // the front page
+                    /**
+                     * @var list<int>
+                     */
+                    private array $ids,
+                    string $plain,
+                    #[Serialize]
+                    private(set) string $headline,
+                ) {
+                }
+            }
+            PHP;
+        $expected = <<<'PHP'
+            <?php
+            final class Foo
+            {
+                public function __construct(
+                    private readonly Bar $bar, // the front page
+
+                    /**
+                     * @var list<int>
+                     */
+                    private array $ids,
+
+                    string $plain,
+
+                    #[Serialize]
+                    private(set) string $headline,
+                ) {
+                }
+            }
+            PHP;
+
+        yield 'comment above a parameter without attributes keeps the blank lines' => [$input, $expected];
 
         $input = <<<'PHP'
             <?php

@@ -4,10 +4,8 @@ declare(strict_types=1);
 
 namespace AnzuSystems\CommonBundle\PHPStan\Rules;
 
-use AnzuSystems\SerializerBundle\Attributes\Serialize;
 use Generator;
 use PhpParser\Node;
-use PhpParser\Node\AttributeGroup;
 use PhpParser\Node\Expr\Variable;
 use PhpParser\Node\Stmt\ClassLike;
 use PHPStan\Analyser\Scope;
@@ -22,8 +20,8 @@ use PHPStan\Type\TypeCombinator;
 use PHPStan\Type\VerbosityLevel;
 
 /**
- * Serialized properties stay arrays: they are the MCP tool schema, and McpSchemaFactory describes a Collection as an
- * object.
+ * #[Serialize] properties are checked too: McpSchemaFactory describes Collection<int, X> exactly like list<X>, so the
+ * tool schema stays the same.
  *
  * @implements Rule<InClassNode>
  */
@@ -87,9 +85,6 @@ final readonly class McpObjectArrayRule implements Rule
     {
         $className = $classReflection->getName();
         foreach ($classLike->getProperties() as $property) {
-            if ($this->isSerialized($property->attrGroups)) {
-                continue;
-            }
             foreach ($property->props as $propertyItem) {
                 $propertyName = $propertyItem->name->toString();
 
@@ -110,10 +105,6 @@ final readonly class McpObjectArrayRule implements Rule
                 }
                 $paramName = $param->var->name;
                 if ($param->isPromoted()) {
-                    if ($this->isSerialized($param->attrGroups)) {
-                        continue;
-                    }
-
                     yield [
                         sprintf('Property %s::$%s', $className, $paramName),
                         $classReflection->getNativeProperty($paramName)
@@ -137,22 +128,6 @@ final readonly class McpObjectArrayRule implements Rule
                 $method->getStartLine(),
             ];
         }
-    }
-
-    /**
-     * @param array<AttributeGroup> $attributeGroups
-     */
-    private function isSerialized(array $attributeGroups): bool
-    {
-        foreach ($attributeGroups as $attributeGroup) {
-            foreach ($attributeGroup->attrs as $attribute) {
-                if (Serialize::class === $attribute->name->toString()) {
-                    return true;
-                }
-            }
-        }
-
-        return false;
     }
 
     private function findArrayObjectClassName(Type $type): ?string
