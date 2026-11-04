@@ -32,7 +32,7 @@ final class SearchAuditLogsRequest
     #[Serialize]
     public ?string $contextId = null;
 
-    #[McpField(description: 'Only records at or after this ISO 8601 date-time, e.g. "2026-07-20T06:00:00+02:00". Defaults to 1 day before until.')]
+    #[McpField(description: 'Only records at or after this ISO 8601 date-time, e.g. "2026-07-20T06:00:00+02:00". Defaults to 1 day before until. ' . McpDateWindowResolver::DATE_TIME_OFFSET_DESCRIPTION)]
     #[Serialize]
     public ?string $from = null;
 
@@ -40,9 +40,13 @@ final class SearchAuditLogsRequest
         description: <<<'TXT'
             Only records at or before this ISO 8601 date-time.
             Defaults to now; the from..until window is capped at {{ logWindowMaxDays }} days.
+            {{ dateTimeOffset }}
             TXT
         ,
-        values: ['logWindowMaxDays' => McpDateWindowResolver::LOG_WINDOW_MAX_DAYS],
+        values: [
+            'dateTimeOffset' => McpDateWindowResolver::DATE_TIME_OFFSET_DESCRIPTION,
+            'logWindowMaxDays' => McpDateWindowResolver::LOG_WINDOW_MAX_DAYS,
+        ],
     )]
     #[Serialize]
     public ?string $until = null;

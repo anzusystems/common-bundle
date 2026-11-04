@@ -30,6 +30,7 @@
 * `McpToolAccessChecker::getPreviewToolName()` returns the preview of a write tool, `null` when it has none.
 
 ### Changes
+* `McpDateWindowResolver::parseDateTime()` converts the parsed date-time to UTC, and a value without an offset is read as UTC. A host that binds the window to a Doctrine datetime column dropped the offset and shifted the window by it.
 * BC change: the bundle requires PHP 8.5.
 * BC change (security): a host MCP tool without `readOnlyHint: true` is now a write tool, hidden from `tools/list`, denied on `tools/call` unless `McpToolAccessChecker::WRITE_PERMISSION` is granted for it and refused in read-only mode. Annotate every read tool with `annotations: new ToolAnnotations(readOnlyHint: true)` on its `#[McpTool]` before upgrading; the bundle log tools (`search_app_logs`, `search_audit_logs`, `get_logs_by_context`) declare `ToolAnnotations(readOnlyHint: true, openWorldHint: false)`.
 * BC change: `McpToolAccessChecker` requires the read-only tool names (`list<string> $readOnlyToolNames`, filled by `McpCompilerPass` from the `#[McpTool]` annotations at compile time, not read from the MCP registry) and `McpToolExecutor` requires a `RequestStack` (before the optional `$toolErrorExceptions`); only code constructing them by hand is affected.

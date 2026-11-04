@@ -8,16 +8,19 @@ use AnzuSystems\CommonBundle\Mcp\Exception\McpToolInputException;
 use AnzuSystems\CommonBundle\Mcp\Model\McpDateWindow;
 use AnzuSystems\Contracts\AnzuApp;
 use DateTimeImmutable;
+use DateTimeZone;
 use Exception;
 
 final readonly class McpDateWindowResolver
 {
     public const int DATE_RANGE_MAX_DAYS = 31;
     public const int LOG_WINDOW_MAX_DAYS = self::DATE_RANGE_MAX_DAYS;
+    public const string DATE_TIME_OFFSET_DESCRIPTION = 'Any UTC offset is honoured; a value without an offset is read as UTC.';
 
     private const int LOG_WINDOW_DEFAULT_DAYS = 1;
     private const string ERROR_INVERTED_DATE_WINDOW = 'publishedUntil must not be before publishedFrom.';
     private const string ERROR_INVERTED_LOG_WINDOW = 'until must not be before from.';
+    private const string UTC_TIMEZONE = 'UTC';
 
     public function resolveArticleWindow(?string $publishedFrom, ?string $publishedUntil): McpDateWindow
     {
@@ -58,7 +61,9 @@ final readonly class McpDateWindowResolver
         }
 
         try {
-            return new DateTimeImmutable($value);
+            $utc = new DateTimeZone(self::UTC_TIMEZONE);
+
+            return new DateTimeImmutable($value, $utc)->setTimezone($utc);
         } catch (Exception) {
             throw new McpToolInputException(
                 sprintf('Invalid %s value "%s", provide an ISO 8601 date-time, e.g. "2026-07-09T06:00:00+02:00".', $paramName, $value),
