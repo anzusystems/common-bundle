@@ -292,6 +292,25 @@ A host tool declares it in the attribute:
 )]
 ```
 
+`permission` holds for the tool whatever its input, so `tools/list` can check it. A tool whose input names what it reads
+adds `inputPermission`, a permission whose voter gets the input as its subject:
+
+```php
+#[AsMcpTool(
+    name: ListBoxItemHistoryTool::NAME,
+    description: '…',
+    category: McpToolCategory::BOXES,
+    permission: Permission::CMS_BOX_READ,
+    inputPermission: Permission::CMS_BOX_MCP_INNER_ACCESS,
+    readOnly: true,
+)]
+```
+
+`McpToolReferenceHandler` checks it after the validation of the input, before the tool runs, and a refusal is the usual
+access error. Then it calls the host service `McpInputEnricherInterface`, which narrows the input to what the user may
+read, e.g. an empty site filter to the allowed sites. The host sets the alias of the interface to its service. A tool with
+`inputPermission` fails the container compilation when it has no input class or the host has no such service.
+
 A log tool of this bundle (`search_app_logs`, `search_audit_logs`, `get_logs_by_context`) cannot know the permissions of
 its host, so the host names the one permission they share:
 
@@ -342,8 +361,9 @@ A tool is a read tool only when its `#[McpTool]` declares `annotations: new Tool
 (`#[AsMcpTool(readOnly: true)]`);
 every other tool (`readOnlyHint` false or missing) is a write tool. `McpCompilerPass` reads the attribute of every
 `mcp.tool` service at compile time (on the tagged method, or on the class for `__invoke`, as McpBundle does) and passes
-the read tool names to `McpToolAccessChecker`, so the classification needs no built MCP server and a tool name it does
-not know is a write tool. A tool without an explicit `name` is matched by the name the SDK derives
+the result to `McpToolDefinitions`, one `McpToolDefinition` per tool, which `McpToolAccessChecker`, `McpWriteRateLimiter`
+and `McpToolReferenceHandler` read. So the classification needs no built MCP server and a tool name it does not know is a
+write tool. A tool without an explicit `name` is matched by the name the SDK derives
 (`ElementMetadataResolver::resolveName()`: the class short name for `__invoke`, the method name otherwise).
 
 A write tool additionally has to be in the write tools of the request's scope (*Token scope* below), so it is hidden
@@ -377,14 +397,27 @@ A preview is a read tool that shows what a write tool would save and changes not
 )]
 ```
 
-Before every write tool with a preview, `McpToolReferenceHandler` runs the preview with the same input and compares its
-`previewHash` with the one the call sent. A different hash answers `McpWriteRejectedException::createPreviewStale()`, a
-preview without a hash has nothing to write, so the tool runs and reports its own result. A host tool only calculates the
-hash in its preview and has no check of its own.
+`McpToolReferenceHandler` signs every preview: when `McpWritePreviewInterface::$writable` is true, it sets `previewHash`
+from the write tool name, the arguments and `$currentState`, the decorator of what the write would change (`null` when
+the write creates something new). `McpPreviewHashFactory` serializes the decorator and leaves out
+`McpPreviewHashFactory::VOLATILE_FIELDS` (`id`, `adminUrl`, `createdAt`, `modifiedAt`) at any depth, so saving a record
+unchanged invalidates no preview, and everything else the decorator shows does. A host needs no hash code of its own for
+a new entity: its preview says whether a write is possible and returns the decorator. A facade that needs to compare two
+versions of a record calls `McpPreviewHashFactory::createStateHash()` on both.
+
+Before every write tool with a preview, the handler runs the preview with the same input and compares its `previewHash`
+with the one the call sent. A different hash answers `McpWriteRejectedException::createPreviewStale()`, a preview without a
+hash has nothing to write, so the tool runs and reports its own result. An `OptimisticLockException` of a write tool, a
+record changed in between, answers the same, so a host has neither a check nor a catch of its own.
+
+`McpPreviewHashTrait` adds the `previewHash` field to the input of a write tool; the class declares the constant
+`PREVIEW_TOOL` with the name of its preview, which the error and the field description use.
 
 `#[AsMcpTool(rateLimiter: 'quiz_write')]` names a limiter of `framework.rate_limiter`, the budget of writes per user on top
 of `McpRateLimiter`. A write that passed its preview takes one token before the tool runs, tools naming one limiter share
-it and the error names them. A call without a change or refused by its preview takes none.
+it and the error names them. A call without a change or refused by its preview takes none. `McpToolSchemaCompilerPass`
+adds a sentence about the limit to the description of the tool, naming the tools that share it, so a description does not
+repeat it.
 
 A preview has no permission of its own: `McpToolAccessChecker` grants it exactly when it grants its write tool —
 the write tools of the scope and the mapped permission of the write tool — in `tools/list` and on
@@ -417,7 +450,7 @@ and the validation of the input, so a call without the right to write asks nothi
 A client on an older revision, or without form elicitation, is never asked. It stays on the preview and `previewHash`.
 
 The text comes from `McpWritePreviewInterface::$confirmationMessage`, a translation key and its parameters, as a virtual
-property without `#[Serialize]`, so the output of the preview does not change. The translation domain is
+property without `#[Serialize]`, like `$writable` and `$currentState`, so the output of the preview does not change. The translation domain is
 `McpWriteConfirmation::TRANSLATION_DOMAIN`, the title of the field is the key `McpWriteConfirmation::FIELD_TITLE_KEY`, and
 the host needs the Symfony translator enabled and the catalogues in place. Take the text from stored data; the model may
 influence only a name in quotes. The language is `AnzuUser::getLocale()`, then `confirmation_fallback_locale`.

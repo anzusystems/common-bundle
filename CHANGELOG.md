@@ -27,10 +27,19 @@
 * the call log (`mcpLogs`, `mcp` channel) has the `client` name, and the round that only asks is logged to the channel alone.
 * `mcp.confirmation_fallback_locale` (default `null`): the language of the write confirmation for a user without `AnzuUser::getLocale()`; `null` uses the default locale of the translator.
 * `McpToolAccessChecker::getPreviewToolName()` returns the preview of a write tool, `null` when it has none.
+* `McpPreviewHashFactory` and `McpPreviewHashTrait` (moved from the host): the hash covers the serialized decorator of the current state without `id`, `adminUrl`, `createdAt` and `modifiedAt`, so a new entity needs no hash code of its own.
+* `#[AsMcpTool(inputPermission: …)]`: a permission checked on the input of every call, with the input as the voter subject, before the tool runs; `McpInputEnricherInterface` then narrows the input. A tool with it fails the compilation without an input class or without that service.
+* `McpPageResponseTrait`: `page`, `limit` and the warning about a reduced page of a list response.
+* `McpSchemaFactory` describes a property with a `Compound` constraint by the constraints inside it.
+* `McpToolSchemaCompilerPass` adds the write limit of a tool to its description, with the tools that share it.
 
 ### Changes
 * BC change: `#[AsMcpTool]` takes `permission`, the permission of the host the tool needs, instead of the removed `mcp.tool_permissions` map. The log tools of the bundle take theirs from the new required `mcp.log_tools_permission`. A tool declared by `#[AsMcpTool]` without a permission or a preview now fails the container compilation instead of staying hidden. Tools and their categories come in the order of the tool services, no longer in the order of the map.
 * BC change: the `values` argument of `#[AsMcpTool]` and `#[McpField]` is now `descriptionValues`.
+* BC change: `McpWritePreviewInterface` declares `$writable` and `$currentState`, and `$previewHash` is set by `McpToolReferenceHandler`: a preview no longer calculates its hash.
+* BC change: an `OptimisticLockException` of a write tool answers `McpWriteRejectedException::createPreviewStale()`, so a host drops its catch.
+* BC change: `McpToolAccessChecker` takes the new `McpToolDefinitions` instead of the maps of permissions, read tools, categories and previews; `McpWriteRateLimiter` and `McpToolReferenceHandler` read it too, and `McpToolSignature` moved into `McpToolDefinition`.
+* BC change: `McpToolReferenceHandler::ACCESS_DENIED_MESSAGE` and `INVALID_ARGUMENTS_PREFIX` move to `McpToolErrorResolver`, and `McpToolErrorResolver::resolveMessage()` is now `resolveBackendMessage()`. The confirmation and the write limit moved from the handler to `McpWriteToolGuard::guardPreview()`.
 * BC change: `McpToolReferenceHandler` compares the `previewHash` of every write tool with its preview for all clients, not only with elicitation, so a host drops its own check. `#[AsMcpTool(rateLimiter: …)]` names a limiter of `framework.rate_limiter` taking one token per write that passed its preview, with the new `McpWriteRateLimiter` and `McpWriteRejectedException::createRateLimitExceeded()`.
 * BC change: `McpWriteToolGuard` no longer records the audit log: `addAuditLogResource()` is replaced by `McpAuditLogAwareTrait`, which a write tool uses, and `AuditLogResourceHelper::addResourceByEntity()` is removed. A failed write stays out of the audit log unless the tool recorded a resource before it failed.
 * BC change: `McpToolInputException` and `McpToolCallRejectedException` are abstract with a protected constructor. A host adds a subclass with static `create*()` methods, the handler keeps turning them into tool errors. The message constants of `McpWriteToolGuard`, `McpWriteConfirmation`, `McpToolReferenceHandler::TOOL_ACCESS_DENIED_MESSAGE` and `McpDeleteGuard::REFUSED_MESSAGE` moved into the new `McpWriteRejectedException`, `McpToolAccessRejectedException` and `McpDeleteRejectedException`.

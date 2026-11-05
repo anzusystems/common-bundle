@@ -7,12 +7,14 @@ namespace AnzuSystems\CommonBundle\DependencyInjection\CompilerPass;
 use AnzuSystems\CommonBundle\Helper\StringHelper;
 use AnzuSystems\CommonBundle\Mcp\Attribute\AsMcpTool;
 use AnzuSystems\CommonBundle\Mcp\Controller\McpController;
+use AnzuSystems\CommonBundle\Mcp\McpToolDefinitions;
 use AnzuSystems\CommonBundle\Mcp\McpWriteRateLimiter;
 use AnzuSystems\CommonBundle\Mcp\Model\McpPreviewHashAwareInterface;
+use AnzuSystems\CommonBundle\Mcp\Model\McpToolDefinition;
 use AnzuSystems\CommonBundle\Mcp\Model\McpToolSignature;
 use AnzuSystems\CommonBundle\Mcp\Model\McpWritePreviewInterface;
 use AnzuSystems\CommonBundle\Mcp\Resolver\McpToolSignatureResolver;
-use AnzuSystems\CommonBundle\Mcp\Security\McpToolAccessChecker;
+use AnzuSystems\CommonBundle\Mcp\Security\McpInputEnricherInterface;
 use LogicException;
 use Mcp\Capability\Attribute\McpTool;
 use Mcp\Capability\Discovery\ElementMetadataResolver;
@@ -43,6 +45,8 @@ final class McpCompilerPass implements CompilerPassInterface
     public const string MAPPED_PREVIEW_MESSAGE = 'The MCP tool "%s" takes the permission of "%s", remove its own permission.';
     public const string UNKNOWN_RATE_LIMITER_MESSAGE = 'The MCP tool "%s" names the unknown rate limiter "%s": declare it in framework.rate_limiter.';
     public const string READ_TOOL_RATE_LIMITER_MESSAGE = 'The MCP tool "%s" is a read tool, so it cannot name a rate limiter.';
+    public const string INPUT_PERMISSION_WITHOUT_INPUT_MESSAGE = 'The MCP tool "%s" has an inputPermission, so its __invoke() must take an input class.';
+    public const string INPUT_PERMISSION_WITHOUT_ENRICHER_MESSAGE = 'The MCP tool "%s" has an inputPermission, so the host must provide %s.';
     public const string TOOL_WITHOUT_PERMISSION_MESSAGE = 'The MCP tool "%s" has no permission: declare it with #[AsMcpTool(permission: …)].';
     public const string PREVIEW_IN_OTHER_CATEGORY_MESSAGE = 'The MCP tool "%1$s" previews "%2$s", so it must be in the category "%3$s" of "%2$s".';
     public const string WRITE_TOOL_WITHOUT_PREVIEW_MESSAGE = 'The MCP write tool "%1$s" has no preview: declare a read tool with #[AsMcpTool(previewOf: "%1$s")].';
@@ -56,11 +60,8 @@ final class McpCompilerPass implements CompilerPassInterface
     private const string INVOKE_METHOD = '__invoke';
     private const string TOOL_METHOD_FORMAT = '%s::%s';
     private const string TOOL_METHOD_SEPARATOR = '::';
-    private const string TOOL_PERMISSIONS_ARGUMENT = '$toolPermissions';
+    private const string DEFINITIONS_ARGUMENT = '$definitions';
     private const string RATE_LIMITER_ID_FORMAT = 'limiter.%s';
-    private const string READ_ONLY_TOOL_NAMES_ARGUMENT = '$readOnlyToolNames';
-    private const string TOOL_CATEGORIES_ARGUMENT = '$toolCategories';
-    private const string WRITE_TOOL_NAMES_BY_PREVIEW_ARGUMENT = '$writeToolNamesByPreview';
     private const string CATEGORY_PATTERN = '/^[a-z][a-zA-Z0-9]*$/';
     private const string SET_INSTRUCTIONS_METHOD = 'setInstructions';
     private const string SET_CAPABILITIES_METHOD = 'setCapabilities';
@@ -90,7 +91,6 @@ final class McpCompilerPass implements CompilerPassInterface
         $toolsByName = $this->resolveToolsByName($container);
         $this->assertToolNamesAreUnique($toolsByName);
         $this->assertToolNamesAreValid($toolsByName);
-        $accessCheckerDefinition = $container->getDefinition(McpToolAccessChecker::class);
         $toolPermissions = $this->resolveToolPermissions($container, $toolsByName);
         $toolCategories = $this->resolveToolCategories($toolsByName);
         $readOnlyToolNames = $this->resolveReadOnlyToolNames($toolsByName);
@@ -100,18 +100,75 @@ final class McpCompilerPass implements CompilerPassInterface
             toolCategories: $toolCategories,
             readOnlyToolNames: $readOnlyToolNames,
         );
-        $accessCheckerDefinition
-            ->replaceArgument(self::TOOL_PERMISSIONS_ARGUMENT, $toolPermissions)
-            ->replaceArgument(self::READ_ONLY_TOOL_NAMES_ARGUMENT, $readOnlyToolNames)
-            ->replaceArgument(self::TOOL_CATEGORIES_ARGUMENT, $toolCategories)
-            ->replaceArgument(self::WRITE_TOOL_NAMES_BY_PREVIEW_ARGUMENT, $writeToolNamesByPreview);
         $this->assertWriteTools(
             toolsByName: $toolsByName,
             readOnlyToolNames: $readOnlyToolNames,
             writeToolNamesByPreview: $writeToolNamesByPreview,
         );
         $this->assertToolsHavePermission($toolsByName, $toolPermissions);
-        $this->configureWriteRateLimiter($container, $toolsByName, $readOnlyToolNames);
+        $this->assertInputPermissions($container, $toolsByName);
+        $toolRateLimiters = $this->configureWriteRateLimiter($container, $toolsByName, $readOnlyToolNames);
+        $container
+            ->getDefinition(McpToolDefinitions::class)
+            ->replaceArgument(self::DEFINITIONS_ARGUMENT, $this->createToolDefinitions(
+                toolsByName: $toolsByName,
+                toolPermissions: $toolPermissions,
+                toolCategories: $toolCategories,
+                readOnlyToolNames: $readOnlyToolNames,
+                writeToolNamesByPreview: $writeToolNamesByPreview,
+                toolRateLimiters: $toolRateLimiters,
+            ));
+    }
+
+    /**
+     * @param array<string, array<string, McpTool>> $toolsByName
+     * @param array<string, string> $toolPermissions
+     * @param array<string, string> $toolCategories
+     * @param list<string> $readOnlyToolNames
+     * @param array<string, string> $writeToolNamesByPreview
+     * @param array<string, string> $toolRateLimiters
+     *
+     * @return array<string, Definition>
+     */
+    private function createToolDefinitions(
+        array $toolsByName,
+        array $toolPermissions,
+        array $toolCategories,
+        array $readOnlyToolNames,
+        array $writeToolNamesByPreview,
+        array $toolRateLimiters,
+    ): array {
+        $previewToolNames = array_flip($writeToolNamesByPreview);
+        $definitions = [];
+        foreach ($toolsByName as $toolName => $tools) {
+            $tool = array_first($tools);
+            $definitions[$toolName] = new Definition(McpToolDefinition::class, [
+                $toolPermissions[$toolName] ?? null,
+                $tool instanceof AsMcpTool ? $tool->inputPermission : null,
+                in_array(needle: $toolName, haystack: $readOnlyToolNames, strict: true),
+                $toolCategories[$toolName] ?? null,
+                $writeToolNamesByPreview[$toolName] ?? null,
+                $previewToolNames[$toolName] ?? null,
+                $toolRateLimiters[$toolName] ?? null,
+                $tool instanceof AsMcpTool ? $this->createSignatureDefinition($tools) : null,
+            ]);
+        }
+
+        return $definitions;
+    }
+
+    /**
+     * @param array<string, McpTool> $tools
+     */
+    private function createSignatureDefinition(array $tools): Definition
+    {
+        $signature = $this->resolveToolSignature($tools);
+
+        return new Definition(McpToolSignature::class, [
+            $signature->inputParameterName,
+            $signature->inputClass,
+            $signature->outputClass,
+        ]);
     }
 
     private function setInstructionsFromFile(ContainerBuilder $container, string $serverName): void
@@ -296,8 +353,10 @@ final class McpCompilerPass implements CompilerPassInterface
     /**
      * @param array<string, array<string, McpTool>> $toolsByName
      * @param list<string> $readOnlyToolNames
+     *
+     * @return array<string, string> tool name => rate limiter name
      */
-    private function configureWriteRateLimiter(ContainerBuilder $container, array $toolsByName, array $readOnlyToolNames): void
+    private function configureWriteRateLimiter(ContainerBuilder $container, array $toolsByName, array $readOnlyToolNames): array
     {
         $toolRateLimiters = [];
         $rateLimiters = [];
@@ -318,8 +377,9 @@ final class McpCompilerPass implements CompilerPassInterface
         }
         $container
             ->getDefinition(McpWriteRateLimiter::class)
-            ->replaceArgument('$rateLimiters', ServiceLocatorTagPass::register($container, $rateLimiters))
-            ->replaceArgument('$toolRateLimiters', $toolRateLimiters);
+            ->replaceArgument('$rateLimiters', ServiceLocatorTagPass::register($container, $rateLimiters));
+
+        return $toolRateLimiters;
     }
 
     /**
@@ -336,6 +396,25 @@ final class McpCompilerPass implements CompilerPassInterface
                 && false === array_key_exists($toolName, $toolPermissions)
             ) {
                 throw new LogicException(sprintf(self::TOOL_WITHOUT_PERMISSION_MESSAGE, $toolName));
+            }
+        }
+    }
+
+    /**
+     * @param array<string, array<string, McpTool>> $toolsByName
+     */
+    private function assertInputPermissions(ContainerBuilder $container, array $toolsByName): void
+    {
+        foreach ($toolsByName as $toolName => $tools) {
+            $tool = array_first($tools);
+            if (false === $tool instanceof AsMcpTool || null === $tool->inputPermission) {
+                continue;
+            }
+            if (null === $this->resolveToolSignature($tools)->inputClass) {
+                throw new LogicException(sprintf(self::INPUT_PERMISSION_WITHOUT_INPUT_MESSAGE, $toolName));
+            }
+            if (false === $container->has(McpInputEnricherInterface::class)) {
+                throw new LogicException(sprintf(self::INPUT_PERMISSION_WITHOUT_ENRICHER_MESSAGE, $toolName, McpInputEnricherInterface::class));
             }
         }
     }

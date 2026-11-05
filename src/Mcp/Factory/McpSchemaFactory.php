@@ -396,7 +396,13 @@ final class McpSchemaFactory
     {
         $constraints = [];
         foreach ($member->getAttributes(Constraint::class, ReflectionAttribute::IS_INSTANCEOF) as $attribute) {
-            $constraints[] = $attribute->newInstance();
+            $constraint = $attribute->newInstance();
+            if ($constraint instanceof Assert\Compound) {
+                array_push($constraints, ...$constraint->constraints);
+
+                continue;
+            }
+            $constraints[] = $constraint;
         }
 
         return $constraints;

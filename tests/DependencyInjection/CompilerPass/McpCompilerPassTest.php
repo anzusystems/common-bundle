@@ -7,10 +7,12 @@ namespace AnzuSystems\CommonBundle\Tests\DependencyInjection\CompilerPass;
 use AnzuSystems\CommonBundle\DependencyInjection\CompilerPass\McpCompilerPass;
 use AnzuSystems\CommonBundle\Mcp\Attribute\AsMcpTool;
 use AnzuSystems\CommonBundle\Mcp\Controller\McpController;
+use AnzuSystems\CommonBundle\Mcp\McpToolDefinitions;
 use AnzuSystems\CommonBundle\Mcp\McpWriteRateLimiter;
 use AnzuSystems\CommonBundle\Mcp\Model\McpPreviewHashAwareInterface;
+use AnzuSystems\CommonBundle\Mcp\Model\McpToolSignature;
 use AnzuSystems\CommonBundle\Mcp\Model\McpWritePreviewInterface;
-use AnzuSystems\CommonBundle\Mcp\Security\McpToolAccessChecker;
+use AnzuSystems\CommonBundle\Mcp\Security\McpInputEnricherInterface;
 use AnzuSystems\CommonBundle\Mcp\Tool\SearchAppLogsTool;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Tool\ConflictingExampleTool;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Tool\ExamplePermissionTool;
@@ -21,6 +23,8 @@ use AnzuSystems\CommonBundle\Tests\Data\Mcp\Tool\ExampleToolCategory;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Tool\ExampleWithoutInputTool;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Tool\ExampleWritePreviewTool;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Tool\ExampleWriteTool;
+use AnzuSystems\CommonBundle\Tests\Data\Mcp\Tool\InputPermissionExampleTool;
+use AnzuSystems\CommonBundle\Tests\Data\Mcp\Tool\InputPermissionWithoutInputExampleTool;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Tool\InvalidCategoryExampleTool;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Tool\InvalidNameExampleTool;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Tool\NoHashInputExamplePreviewTool;
@@ -47,10 +51,15 @@ final class McpCompilerPassTest extends TestCase
     private const string CONTROLLER_ID = 'mcp.server.core_cms.controller';
     private const string BUILDER_ID = 'mcp.server.core_cms.builder';
     private const string TAGGED_SERVICE_ID = 'tagged_service';
-    private const string READ_ONLY_TOOL_NAMES_ARGUMENT = '$readOnlyToolNames';
-    private const string TOOL_CATEGORIES_ARGUMENT = '$toolCategories';
-    private const string WRITE_TOOL_NAMES_BY_PREVIEW_ARGUMENT = '$writeToolNamesByPreview';
-    private const string TOOL_PERMISSIONS_ARGUMENT = '$toolPermissions';
+    private const string DEFINITIONS_ARGUMENT = '$definitions';
+    private const int PERMISSION_INDEX = 0;
+    private const int INPUT_PERMISSION_INDEX = 1;
+    private const int READ_ONLY_INDEX = 2;
+    private const int CATEGORY_INDEX = 3;
+    private const int PREVIEW_OF_INDEX = 4;
+    private const int PREVIEW_TOOL_INDEX = 5;
+    private const int RATE_LIMITER_INDEX = 6;
+    private const int SIGNATURE_INDEX = 7;
     private const string TOOL_PERMISSION = 'cms_example_read';
     private const string RATE_LIMITER_ID = 'limiter.example_write';
     private const string TOOL_TAG_METHOD = 'method';
@@ -96,7 +105,7 @@ final class McpCompilerPassTest extends TestCase
 
         self::assertSame(
             [SearchAppLogsTool::NAME, self::READ_TOOL_METHOD],
-            $container->getDefinition(McpToolAccessChecker::class)->getArgument(self::READ_ONLY_TOOL_NAMES_ARGUMENT),
+            array_keys(array_filter($this->getDefinitionField($container, self::READ_ONLY_INDEX))),
         );
     }
 
@@ -112,22 +121,33 @@ final class McpCompilerPassTest extends TestCase
         new McpCompilerPass()
             ->process($container);
 
-        $accessCheckerDefinition = $container->getDefinition(McpToolAccessChecker::class);
         self::assertSame(
             [
                 SearchAppLogsTool::NAME => AsMcpTool::CATEGORY_DIAGNOSTICS,
                 ExampleWriteTool::NAME => ExampleToolCategory::EXAMPLES,
                 ExampleWritePreviewTool::NAME => ExampleToolCategory::EXAMPLES,
             ],
-            $accessCheckerDefinition->getArgument(self::TOOL_CATEGORIES_ARGUMENT),
+            $this->getDefinitionField($container, self::CATEGORY_INDEX),
         );
         self::assertSame(
-            [ExampleWritePreviewTool::NAME => ExampleWriteTool::NAME],
-            $accessCheckerDefinition->getArgument(self::WRITE_TOOL_NAMES_BY_PREVIEW_ARGUMENT),
+            [
+                SearchAppLogsTool::NAME => null,
+                ExampleWriteTool::NAME => null,
+                ExampleWritePreviewTool::NAME => ExampleWriteTool::NAME,
+            ],
+            $this->getDefinitionField($container, self::PREVIEW_OF_INDEX),
+        );
+        self::assertSame(
+            [
+                SearchAppLogsTool::NAME => null,
+                ExampleWriteTool::NAME => ExampleWritePreviewTool::NAME,
+                ExampleWritePreviewTool::NAME => null,
+            ],
+            $this->getDefinitionField($container, self::PREVIEW_TOOL_INDEX),
         );
         self::assertSame(
             [SearchAppLogsTool::NAME, ExampleWritePreviewTool::NAME],
-            $accessCheckerDefinition->getArgument(self::READ_ONLY_TOOL_NAMES_ARGUMENT),
+            array_keys(array_filter($this->getDefinitionField($container, self::READ_ONLY_INDEX))),
         );
     }
 
@@ -144,11 +164,76 @@ final class McpCompilerPassTest extends TestCase
                 SearchAppLogsTool::NAME => self::TOOL_PERMISSION,
                 ExamplePermissionTool::NAME => ExamplePermissionTool::PERMISSION,
             ],
-            $container->getDefinition(McpToolAccessChecker::class)->getArgument(self::TOOL_PERMISSIONS_ARGUMENT),
+            $this->getDefinitionField($container, self::PERMISSION_INDEX),
         );
     }
 
-    public function testToolRateLimitersReachTheWriteRateLimiter(): void
+    public function testSignatureOfAnAsMcpToolReachesItsDefinition(): void
+    {
+        $container = $this->createMcpContainer();
+        $this->registerTools($container, [SearchAppLogsTool::class]);
+
+        new McpCompilerPass()
+            ->process($container);
+
+        $signature = $this->getDefinitionField($container, self::SIGNATURE_INDEX)[SearchAppLogsTool::NAME];
+        self::assertInstanceOf(Definition::class, $signature);
+        self::assertSame(McpToolSignature::class, $signature->getClass());
+    }
+
+    public function testInputPermissionReachesItsDefinition(): void
+    {
+        $container = $this->createMcpContainer();
+        $container->register(McpInputEnricherInterface::class);
+        $this->registerTools($container, [InputPermissionExampleTool::class]);
+
+        new McpCompilerPass()
+            ->process($container);
+
+        self::assertSame(
+            InputPermissionExampleTool::INPUT_PERMISSION,
+            $this->getDefinitionField($container, self::INPUT_PERMISSION_INDEX)[InputPermissionExampleTool::NAME],
+        );
+    }
+
+    public function testInputPermissionWithoutEnricherFailsAtCompileTime(): void
+    {
+        $container = $this->createMcpContainer();
+        $this->registerTools($container, [InputPermissionExampleTool::class]);
+
+        $this->expectException(LogicException::class);
+        $this->expectExceptionMessage(sprintf(McpCompilerPass::INPUT_PERMISSION_WITHOUT_ENRICHER_MESSAGE, InputPermissionExampleTool::NAME, McpInputEnricherInterface::class));
+
+        new McpCompilerPass()
+            ->process($container);
+    }
+
+    public function testInputPermissionWithoutInputFailsAtCompileTime(): void
+    {
+        $container = $this->createMcpContainer();
+        $container->register(McpInputEnricherInterface::class);
+        $this->registerTools($container, [InputPermissionWithoutInputExampleTool::class]);
+
+        $this->expectException(LogicException::class);
+        $this->expectExceptionMessage(sprintf(McpCompilerPass::INPUT_PERMISSION_WITHOUT_INPUT_MESSAGE, InputPermissionWithoutInputExampleTool::NAME));
+
+        new McpCompilerPass()
+            ->process($container);
+    }
+
+    public function testPlainMcpToolHasNoSignature(): void
+    {
+        $container = $this->createMcpContainer();
+        $container->register(ExampleTool::class)
+            ->addTag(McpCompilerPass::TOOL_TAG, [self::TOOL_TAG_METHOD => self::READ_TOOL_METHOD]);
+
+        new McpCompilerPass()
+            ->process($container);
+
+        self::assertNull($this->getDefinitionField($container, self::SIGNATURE_INDEX)[self::READ_TOOL_METHOD]);
+    }
+
+    public function testToolRateLimitersReachTheirDefinitions(): void
     {
         $container = $this->createMcpContainer();
         $container->register(self::RATE_LIMITER_ID);
@@ -158,8 +243,8 @@ final class McpCompilerPassTest extends TestCase
             ->process($container);
 
         self::assertSame(
-            [RateLimitedExampleTool::NAME => RateLimitedExampleTool::RATE_LIMITER],
-            $container->getDefinition(McpWriteRateLimiter::class)->getArgument('$toolRateLimiters'),
+            RateLimitedExampleTool::RATE_LIMITER,
+            $this->getDefinitionField($container, self::RATE_LIMITER_INDEX)[RateLimitedExampleTool::NAME],
         );
     }
 
@@ -371,8 +456,7 @@ final class McpCompilerPassTest extends TestCase
         $container->setParameter(McpCompilerPass::SERVER_NAME_PARAM, [self::SERVER_NAME]);
         $container->register(McpController::class);
         $container->register(McpWriteRateLimiter::class)
-            ->setArgument('$rateLimiters', null)
-            ->setArgument('$toolRateLimiters', []);
+            ->setArgument('$rateLimiters', null);
 
         $this->expectException(LogicException::class);
 
@@ -398,14 +482,21 @@ final class McpCompilerPassTest extends TestCase
         $container->setParameter(AsMcpTool::LOG_TOOLS_PERMISSION_PARAM, self::TOOL_PERMISSION);
         $container->register(McpController::class);
         $container->register(McpWriteRateLimiter::class)
-            ->setArgument('$rateLimiters', null)
-            ->setArgument('$toolRateLimiters', []);
-        $container->register(McpToolAccessChecker::class)
-            ->setArgument(self::TOOL_PERMISSIONS_ARGUMENT, [])
-            ->setArgument(self::READ_ONLY_TOOL_NAMES_ARGUMENT, [])
-            ->setArgument(self::TOOL_CATEGORIES_ARGUMENT, [])
-            ->setArgument(self::WRITE_TOOL_NAMES_BY_PREVIEW_ARGUMENT, []);
+            ->setArgument('$rateLimiters', null);
+        $container->register(McpToolDefinitions::class)
+            ->setArgument(self::DEFINITIONS_ARGUMENT, []);
 
         return $container;
+    }
+
+    /**
+     * @return array<string, mixed> tool name => the field of its definition
+     */
+    private function getDefinitionField(ContainerBuilder $container, int $index): array
+    {
+        return array_map(
+            static fn (Definition $definition): mixed => $definition->getArgument($index),
+            $container->getDefinition(McpToolDefinitions::class)->getArgument(self::DEFINITIONS_ARGUMENT),
+        );
     }
 }

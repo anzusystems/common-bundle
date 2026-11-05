@@ -4,24 +4,17 @@ declare(strict_types=1);
 
 namespace AnzuSystems\CommonBundle\Mcp\Security;
 
+use AnzuSystems\CommonBundle\Mcp\McpToolDefinitions;
+use AnzuSystems\CommonBundle\Mcp\Model\McpToolDefinition;
 use LogicException;
 use Symfony\Bundle\SecurityBundle\Security;
 
 final readonly class McpToolAccessChecker
 {
-    /**
-     * @param array<string, string> $toolPermissions
-     * @param list<string> $readOnlyToolNames
-     * @param array<string, string> $toolCategories tool name => category
-     * @param array<string, string> $writeToolNamesByPreview preview tool name => the write tool it previews
-     */
     public function __construct(
-        private array $toolPermissions,
+        private McpToolDefinitions $toolDefinitions,
         private Security $security,
-        private array $readOnlyToolNames,
         private ?McpToolScopeProviderInterface $toolScopeProvider = null,
-        private array $toolCategories = [],
-        private array $writeToolNamesByPreview = [],
     ) {
     }
 
@@ -33,12 +26,19 @@ final readonly class McpToolAccessChecker
     public function isToolPermissionGranted(string $toolName): bool
     {
         // A preview is granted exactly with its write tool, so a token never sees it alone.
-        $writeToolName = $this->writeToolNamesByPreview[$toolName] ?? null;
+        $writeToolName = $this->toolDefinitions->find($toolName)?->previewOf;
         if (is_string($writeToolName)) {
             return $this->isToolGranted($writeToolName);
         }
 
         return $this->isInReadScope($toolName) && $this->isPermissionGranted($toolName);
+    }
+
+    public function isInputGranted(string $toolName, object $input): bool
+    {
+        $inputPermission = $this->toolDefinitions->find($toolName)?->inputPermission;
+
+        return null === $inputPermission || $this->security->isGranted($inputPermission, $input);
     }
 
     public function isWriteGranted(string $toolName): bool
@@ -60,7 +60,10 @@ final readonly class McpToolAccessChecker
      */
     public function getToolNames(): array
     {
-        return array_keys($this->toolPermissions);
+        return array_keys(array_filter(
+            $this->toolDefinitions->all(),
+            static fn (McpToolDefinition $definition): bool => is_string($definition->permission),
+        ));
     }
 
     /**
@@ -69,7 +72,7 @@ final readonly class McpToolAccessChecker
     public function getWriteToolNames(): array
     {
         return array_values(array_filter(
-            array_keys($this->toolPermissions),
+            $this->getToolNames(),
             $this->isWriteTool(...),
         ));
     }
@@ -80,7 +83,7 @@ final readonly class McpToolAccessChecker
     public function getPermittedToolNames(): array
     {
         return array_values(array_filter(
-            array_keys($this->toolPermissions),
+            $this->getToolNames(),
             $this->isPermissionGranted(...),
         ));
     }
@@ -98,20 +101,19 @@ final readonly class McpToolAccessChecker
 
     public function getToolCategory(string $toolName): string
     {
-        return $this->toolCategories[$toolName]
-            ?? throw new LogicException(sprintf('The MCP tool "%s" has no category.', $toolName));
+        return $this->toolDefinitions->find($toolName)
+            ->category
+                        ?? throw new LogicException(sprintf('The MCP tool "%s" has no category.', $toolName));
     }
 
     public function getPreviewToolName(string $writeToolName): ?string
     {
-        $previewToolName = array_search(needle: $writeToolName, haystack: $this->writeToolNamesByPreview, strict: true);
-
-        return is_string($previewToolName) ? $previewToolName : null;
+        return $this->toolDefinitions->find($writeToolName)?->previewTool;
     }
 
     public function isWriteTool(string $toolName): bool
     {
-        return false === in_array(needle: $toolName, haystack: $this->readOnlyToolNames, strict: true);
+        return true !== $this->toolDefinitions->find($toolName)?->readOnly;
     }
 
     private function isInReadScope(string $toolName): bool
@@ -129,7 +131,7 @@ final readonly class McpToolAccessChecker
 
     private function isPermissionGranted(string $toolName): bool
     {
-        $permission = $this->toolPermissions[$toolName] ?? null;
+        $permission = $this->toolDefinitions->find($toolName)?->permission;
         if (null === $permission) {
             return false;
         }

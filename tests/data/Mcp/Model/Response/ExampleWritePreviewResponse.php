@@ -17,11 +17,14 @@ final class ExampleWritePreviewResponse implements McpWritePreviewInterface
         get => new McpConfirmationMessage(self::MESSAGE_KEY, [self::TITLE_PARAMETER => $this->title]);
     }
 
+    #[Serialize]
+    public ?string $previewHash = null;
+
     public function __construct(
         #[Serialize]
-        public private(set) ?string $previewHash,
-        #[Serialize]
         public private(set) string $title,
+        public private(set) bool $writable = true,
+        public private(set) ?object $currentState = null,
     ) {
     }
 }

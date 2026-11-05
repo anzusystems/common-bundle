@@ -7,6 +7,7 @@ namespace AnzuSystems\CommonBundle\Tests\Mcp;
 use AnzuSystems\CommonBundle\Domain\User\CurrentAnzuUserProvider;
 use AnzuSystems\CommonBundle\Mcp\Exception\McpWriteRejectedException;
 use AnzuSystems\CommonBundle\Mcp\McpWriteRateLimiter;
+use AnzuSystems\CommonBundle\Tests\Data\Mcp\McpToolDefinitionsFactory;
 use AnzuSystems\Contracts\Entity\AnzuUser;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\DependencyInjection\ServiceLocator;
@@ -56,7 +57,9 @@ final class McpWriteRateLimiterTest extends TestCase
 
         return new McpWriteRateLimiter(
             rateLimiters: new ServiceLocator([self::LIMITER => static fn (): RateLimiterFactory => $factory]),
-            toolRateLimiters: [self::FIRST_TOOL => self::LIMITER, self::SECOND_TOOL => self::LIMITER],
+            toolDefinitions: McpToolDefinitionsFactory::create(
+                toolRateLimiters: [self::FIRST_TOOL => self::LIMITER, self::SECOND_TOOL => self::LIMITER],
+            ),
             currentUserProvider: $currentUserProvider,
         );
     }

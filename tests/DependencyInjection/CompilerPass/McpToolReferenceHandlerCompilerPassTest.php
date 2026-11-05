@@ -7,9 +7,6 @@ namespace AnzuSystems\CommonBundle\Tests\DependencyInjection\CompilerPass;
 use AnzuSystems\CommonBundle\DependencyInjection\CompilerPass\McpCompilerPass;
 use AnzuSystems\CommonBundle\DependencyInjection\CompilerPass\McpToolReferenceHandlerCompilerPass;
 use AnzuSystems\CommonBundle\Mcp\Handler\McpToolReferenceHandler;
-use AnzuSystems\CommonBundle\Mcp\Model\McpToolSignature;
-use AnzuSystems\CommonBundle\Mcp\Model\Request\SearchAppLogsRequest;
-use AnzuSystems\CommonBundle\Mcp\Model\Response\McpLogsByContextResponse;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Tool\ExampleSearchTool;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Tool\ExampleTool;
 use LogicException;
@@ -24,7 +21,6 @@ final class McpToolReferenceHandlerCompilerPassTest extends TestCase
     private const string SERVER_NAME = 'core_cms';
     private const string HANDLER_LOCATOR_ID = '.service_locator.example';
     private const string INNER_ARGUMENT = '$inner';
-    private const string TOOL_SIGNATURES_ARGUMENT = '$toolSignatures';
     private const string ADD_TOOL_METHOD = 'addTool';
     private const string SET_CONTAINER_METHOD = 'setContainer';
     private const string SET_REFERENCE_HANDLER_METHOD = 'setReferenceHandler';
@@ -47,24 +43,6 @@ final class McpToolReferenceHandlerCompilerPassTest extends TestCase
         $setReferenceHandlerCalls = $this->findMethodCalls($this->getBuilder($container), self::SET_REFERENCE_HANDLER_METHOD);
         self::assertCount(1, $setReferenceHandlerCalls);
         self::assertSame(McpToolReferenceHandler::class, (string) $setReferenceHandlerCalls[0][0]);
-    }
-
-    public function testPassesTheSignaturesOfTheAsMcpToolsToTheHandler(): void
-    {
-        $container = $this->createContainer();
-        $this->getBuilder($container)
-            ->addMethodCall(self::ADD_TOOL_METHOD, [[ExampleSearchTool::class, self::INVOKE_METHOD]])
-            ->addMethodCall(self::ADD_TOOL_METHOD, [[ExampleTool::class, self::READ_TOOL_METHOD]]);
-
-        new McpToolReferenceHandlerCompilerPass()
-            ->process($container);
-
-        $toolSignatures = $container->getDefinition(McpToolReferenceHandler::class)->getArgument(self::TOOL_SIGNATURES_ARGUMENT);
-        self::assertSame([ExampleSearchTool::class], array_keys($toolSignatures));
-        $signature = $toolSignatures[ExampleSearchTool::class];
-        self::assertInstanceOf(Definition::class, $signature);
-        self::assertSame(McpToolSignature::class, $signature->getClass());
-        self::assertSame(['request', SearchAppLogsRequest::class, McpLogsByContextResponse::class], $signature->getArguments());
     }
 
     public function testGoesBetweenTheMcpAppHandlerAndItsSdkHandler(): void
@@ -147,8 +125,7 @@ final class McpToolReferenceHandlerCompilerPassTest extends TestCase
         $container->register(sprintf(McpCompilerPass::BUILDER_ID_FORMAT, self::SERVER_NAME))
             ->addMethodCall(self::SET_CONTAINER_METHOD, [new Reference(self::HANDLER_LOCATOR_ID)]);
         $container->register(McpToolReferenceHandler::class)
-            ->setArgument(self::INNER_ARGUMENT, null)
-            ->setArgument(self::TOOL_SIGNATURES_ARGUMENT, []);
+            ->setArgument(self::INNER_ARGUMENT, null);
 
         return $container;
     }

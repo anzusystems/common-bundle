@@ -7,6 +7,7 @@ namespace AnzuSystems\CommonBundle\Tests\Mcp\Security;
 use AnzuSystems\CommonBundle\Mcp\Security\McpToolAccessChecker;
 use AnzuSystems\CommonBundle\Mcp\Security\McpToolScope;
 use AnzuSystems\CommonBundle\Mcp\Security\McpToolScopeProviderInterface;
+use AnzuSystems\CommonBundle\Tests\Data\Mcp\McpToolDefinitionsFactory;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Security\StaticMcpToolScopeProvider;
 use LogicException;
 use PHPUnit\Framework\TestCase;
@@ -152,12 +153,14 @@ final class McpToolAccessCheckerTest extends TestCase
         $security->method('isGranted')
             ->willReturn(true);
         $checker = new McpToolAccessChecker(
-            toolPermissions: [
-                self::GRANTED_TOOL => self::GRANTED_PERMISSION,
-                self::SECOND_GRANTED_TOOL => self::GRANTED_PERMISSION,
-            ],
+            toolDefinitions: McpToolDefinitionsFactory::create(
+                toolPermissions: [
+                    self::GRANTED_TOOL => self::GRANTED_PERMISSION,
+                    self::SECOND_GRANTED_TOOL => self::GRANTED_PERMISSION,
+                ],
+                readOnlyToolNames: [self::SECOND_GRANTED_TOOL],
+            ),
             security: $security,
-            readOnlyToolNames: [self::SECOND_GRANTED_TOOL],
             toolScopeProvider: $toolScopeProvider,
         );
 
@@ -310,16 +313,18 @@ final class McpToolAccessCheckerTest extends TestCase
             ->willReturnCallback(static fn (mixed $attribute): bool => self::GRANTED_PERMISSION === $attribute);
 
         return new McpToolAccessChecker(
-            toolPermissions: [
-                self::GRANTED_TOOL => self::GRANTED_PERMISSION,
-                self::DENIED_TOOL => self::DENIED_PERMISSION,
-                self::SECOND_GRANTED_TOOL => self::GRANTED_PERMISSION,
-            ],
+            toolDefinitions: McpToolDefinitionsFactory::create(
+                toolPermissions: [
+                    self::GRANTED_TOOL => self::GRANTED_PERMISSION,
+                    self::DENIED_TOOL => self::DENIED_PERMISSION,
+                    self::SECOND_GRANTED_TOOL => self::GRANTED_PERMISSION,
+                ],
+                readOnlyToolNames: $readOnlyToolNames,
+                toolCategories: $toolCategories,
+                writeToolNamesByPreview: $writeToolNamesByPreview,
+            ),
             security: $security,
-            readOnlyToolNames: $readOnlyToolNames,
             toolScopeProvider: $toolScopeProvider ?? self::createToolScopeProvider(null, $grantedWriteTools),
-            toolCategories: $toolCategories,
-            writeToolNamesByPreview: $writeToolNamesByPreview,
         );
     }
 }

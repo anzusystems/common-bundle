@@ -6,6 +6,7 @@ namespace AnzuSystems\CommonBundle\Mcp;
 
 use AnzuSystems\CommonBundle\Domain\User\CurrentAnzuUserProvider;
 use AnzuSystems\CommonBundle\Mcp\Exception\McpWriteRejectedException;
+use AnzuSystems\CommonBundle\Mcp\Model\McpToolDefinition;
 use Psr\Container\ContainerInterface;
 use Symfony\Component\RateLimiter\RateLimiterFactory;
 
@@ -14,19 +15,16 @@ use Symfony\Component\RateLimiter\RateLimiterFactory;
  */
 final readonly class McpWriteRateLimiter
 {
-    /**
-     * @param array<string, string> $toolRateLimiters tool name => rate limiter name
-     */
     public function __construct(
         private ContainerInterface $rateLimiters,
-        private array $toolRateLimiters,
+        private McpToolDefinitions $toolDefinitions,
         private CurrentAnzuUserProvider $currentUserProvider,
     ) {
     }
 
     public function consume(string $toolName): void
     {
-        $rateLimiterName = $this->toolRateLimiters[$toolName] ?? null;
+        $rateLimiterName = $this->toolDefinitions->find($toolName)?->rateLimiter;
         if (null === $rateLimiterName) {
             return;
         }
@@ -40,7 +38,10 @@ final readonly class McpWriteRateLimiter
         }
 
         throw McpWriteRejectedException::createRateLimitExceeded(
-            array_keys($this->toolRateLimiters, $rateLimiterName, true),
+            array_keys(array_filter(
+                $this->toolDefinitions->all(),
+                static fn (McpToolDefinition $definition): bool => $rateLimiterName === $definition->rateLimiter,
+            )),
             $rateLimit,
         );
     }

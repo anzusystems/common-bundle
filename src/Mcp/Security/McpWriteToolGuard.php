@@ -4,8 +4,15 @@ declare(strict_types=1);
 
 namespace AnzuSystems\CommonBundle\Mcp\Security;
 
+use AnzuSystems\CommonBundle\Helper\StringHelper;
 use AnzuSystems\CommonBundle\Mcp\Exception\McpWriteRejectedException;
+use AnzuSystems\CommonBundle\Mcp\McpWriteRateLimiter;
+use AnzuSystems\CommonBundle\Mcp\Model\McpPreviewHashAwareInterface;
+use AnzuSystems\CommonBundle\Mcp\Model\McpWritePreviewInterface;
 use AnzuSystems\Contracts\AnzuApp;
+use Closure;
+use Mcp\Schema\Result\InputRequiredResult;
+use Mcp\Server\RequestContext;
 use Symfony\Component\HttpFoundation\RequestStack;
 
 /**
@@ -19,6 +26,8 @@ final readonly class McpWriteToolGuard
     public function __construct(
         private McpToolAccessChecker $toolAccessChecker,
         private RequestStack $requestStack,
+        private McpWriteConfirmation $writeConfirmation,
+        private McpWriteRateLimiter $writeRateLimiter,
     ) {
     }
 
@@ -39,6 +48,39 @@ final readonly class McpWriteToolGuard
         if (true === $this->requestStack->getMainRequest()?->attributes->has(self::WRITE_TOOL_DONE_ATTR)) {
             throw McpWriteRejectedException::createAlreadyWritten($toolName);
         }
+    }
+
+    /**
+     * A write runs only with the previewHash its preview returns right now. A preview without a hash has nothing to write
+     * (no change, or a reason the tool itself reports), so the tool runs and takes no token.
+     *
+     * @param Closure(): McpWritePreviewInterface $runPreview
+     */
+    public function guardPreview(
+        string $toolName,
+        string $previewToolName,
+        McpPreviewHashAwareInterface $input,
+        RequestContext $context,
+        Closure $runPreview,
+    ): ?InputRequiredResult {
+        $isConfirmable = $this->writeConfirmation->isSupportedBy($context);
+        $isAnswered = $isConfirmable && $this->writeConfirmation->isAnswered($context, $input);
+        if ($isAnswered) {
+            $this->writeConfirmation->assertConfirmed(toolName: $toolName, context: $context, input: $input);
+        }
+        $preview = $runPreview();
+        if (null === $preview->previewHash) {
+            return null;
+        }
+        if (StringHelper::isNotSame($preview->previewHash, $input->previewHash)) {
+            throw McpWriteRejectedException::createPreviewStale($previewToolName);
+        }
+        if ($isConfirmable && false === $isAnswered) {
+            return $this->writeConfirmation->createInputRequiredResult(input: $input, preview: $preview);
+        }
+        $this->writeRateLimiter->consume($toolName);
+
+        return null;
     }
 
     public function markWritten(): void

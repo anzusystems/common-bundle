@@ -6,8 +6,6 @@ namespace AnzuSystems\CommonBundle\DependencyInjection\CompilerPass;
 
 use AnzuSystems\CommonBundle\Mcp\Attribute\AsMcpTool;
 use AnzuSystems\CommonBundle\Mcp\Handler\McpToolReferenceHandler;
-use AnzuSystems\CommonBundle\Mcp\Model\McpToolSignature;
-use AnzuSystems\CommonBundle\Mcp\Resolver\McpToolSignatureResolver;
 use LogicException;
 use Mcp\Capability\Registry\ReferenceHandler;
 use ReflectionClass;
@@ -27,9 +25,6 @@ final class McpToolReferenceHandlerCompilerPass implements CompilerPassInterface
     public const string APP_TOOL_TEMPLATES_PARAM = 'mcp.servers.app_tool_templates';
 
     private const string INNER_ARGUMENT = '$inner';
-    private const string TOOL_SIGNATURES_ARGUMENT = '$toolSignatures';
-    private const string ADD_TOOL_METHOD = 'addTool';
-    private const int ADD_TOOL_HANDLER_ARGUMENT = 0;
     private const int APP_INNER_ARGUMENT = 0;
     private const string SET_CONTAINER_METHOD = 'setContainer';
     private const string SET_REFERENCE_HANDLER_METHOD = 'setReferenceHandler';
@@ -52,7 +47,6 @@ final class McpToolReferenceHandlerCompilerPass implements CompilerPassInterface
 
         $handler = $container->getDefinition(McpToolReferenceHandler::class);
         $builder = $container->getDefinition($builderId);
-        $handler->replaceArgument(self::TOOL_SIGNATURES_ARGUMENT, $this->resolveToolSignatures($builder));
         $appHandlerId = sprintf(self::APP_REFERENCE_HANDLER_ID_FORMAT, $serverName);
         if ($container->hasDefinition($appHandlerId)) {
             $appHandler = $container->getDefinition($appHandlerId);
@@ -74,35 +68,6 @@ final class McpToolReferenceHandlerCompilerPass implements CompilerPassInterface
             new Definition(ReferenceHandler::class, [$this->resolveHandlerLocator($builder)]),
         );
         $builder->addMethodCall(self::SET_REFERENCE_HANDLER_METHOD, [new Reference(McpToolReferenceHandler::class)]);
-    }
-
-    /**
-     * @return array<class-string, Definition>
-     */
-    private function resolveToolSignatures(Definition $builder): array
-    {
-        $signatureResolver = new McpToolSignatureResolver();
-        $toolSignatures = [];
-        foreach ($builder->getMethodCalls() as [$method, $arguments]) {
-            if (self::ADD_TOOL_METHOD !== $method) {
-                continue;
-            }
-            [$class, $handlerMethod] = $arguments[self::ADD_TOOL_HANDLER_ARGUMENT];
-            if (McpToolSignatureResolver::INVOKE_METHOD !== $handlerMethod || false === is_string($class) || false === class_exists($class)) {
-                continue;
-            }
-            $signature = $signatureResolver->resolve($class);
-            if (null === $signature) {
-                continue;
-            }
-            $toolSignatures[$class] = new Definition(McpToolSignature::class, [
-                $signature->inputParameterName,
-                $signature->inputClass,
-                $signature->outputClass,
-            ]);
-        }
-
-        return $toolSignatures;
     }
 
     private function resolveHandlerLocator(Definition $builder): mixed

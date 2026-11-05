@@ -15,6 +15,8 @@ use AnzuSystems\CommonBundle\Tests\Data\Mcp\Tool\ExampleSearchTool;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Tool\ExampleWithoutInputTool;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Tool\InvalidParameterExampleTool;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Tool\InvalidReturnExampleTool;
+use AnzuSystems\CommonBundle\Tests\Data\Mcp\Tool\RateLimitedExampleTool;
+use AnzuSystems\CommonBundle\Tests\Data\Mcp\Tool\SharedRateLimitedExampleTool;
 use LogicException;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
@@ -74,6 +76,44 @@ final class McpToolSchemaCompilerPassTest extends TestCase
             'no input, response class' => [ExampleWithoutInputTool::class, null, McpLogsByContextResponse::class],
             'input class and request context, own call tool result' => [ExampleContextTool::class, SearchAppLogsRequest::class, null],
         ];
+    }
+
+    public function testWriteLimitIsAddedToTheDescription(): void
+    {
+        $container = $this->createContainer(RateLimitedExampleTool::class);
+
+        new McpToolSchemaCompilerPass()
+            ->process($container);
+
+        self::assertStringContainsString(
+            'Writes through this tool have a limit per user.',
+            $this->getAddToolArguments($container)[self::DESCRIPTION_ARGUMENT],
+        );
+    }
+
+    public function testToolsSharingALimiterNameEachOther(): void
+    {
+        $container = $this->createContainer(RateLimitedExampleTool::class);
+        $container->getDefinition(sprintf(McpCompilerPass::BUILDER_ID_FORMAT, self::SERVER_NAME))
+            ->addMethodCall(self::ADD_TOOL_METHOD, [
+                [SharedRateLimitedExampleTool::class, self::INVOKE_METHOD],
+                null,
+                null,
+                self::DESCRIPTION,
+                null,
+                self::PARAMETER_SCHEMA,
+                null,
+                null,
+                null,
+            ]);
+
+        new McpToolSchemaCompilerPass()
+            ->process($container);
+
+        self::assertStringContainsString(
+            sprintf('Writes through %s, %s share one limit per user.', RateLimitedExampleTool::NAME, SharedRateLimitedExampleTool::NAME),
+            $this->getAddToolArguments($container)[self::DESCRIPTION_ARGUMENT],
+        );
     }
 
     /**

@@ -7,6 +7,7 @@ namespace AnzuSystems\CommonBundle\Tests\Mcp\Handler;
 use AnzuSystems\CommonBundle\Mcp\Handler\FilterToolsListRequestHandler;
 use AnzuSystems\CommonBundle\Mcp\Security\McpToolAccessChecker;
 use AnzuSystems\CommonBundle\Mcp\Security\McpToolScope;
+use AnzuSystems\CommonBundle\Tests\Data\Mcp\McpToolDefinitionsFactory;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Security\StaticMcpToolScopeProvider;
 use Mcp\Capability\RegistryInterface;
 use Mcp\Schema\JsonRpc\Response;
@@ -76,26 +77,28 @@ final class FilterToolsListRequestHandlerTest extends TestCase
         $security->method('isGranted')
             ->willReturnCallback(static fn (mixed $attribute): bool => self::GRANTED_PERMISSION === $attribute);
         $toolAccessChecker = new McpToolAccessChecker(
-            toolPermissions: [
-                self::GRANTED_TOOL_NAME => self::GRANTED_PERMISSION,
-                self::DENIED_TOOL_NAME => self::DENIED_PERMISSION,
-                self::GRANTED_WRITE_TOOL_NAME => self::GRANTED_PERMISSION,
-                self::NOT_GRANTED_WRITE_TOOL_NAME => self::GRANTED_PERMISSION,
-            ],
+            toolDefinitions: McpToolDefinitionsFactory::create(
+                toolPermissions: [
+                    self::GRANTED_TOOL_NAME => self::GRANTED_PERMISSION,
+                    self::DENIED_TOOL_NAME => self::DENIED_PERMISSION,
+                    self::GRANTED_WRITE_TOOL_NAME => self::GRANTED_PERMISSION,
+                    self::NOT_GRANTED_WRITE_TOOL_NAME => self::GRANTED_PERMISSION,
+                ],
+                readOnlyToolNames: [
+                    self::GRANTED_TOOL_NAME,
+                    self::DENIED_TOOL_NAME,
+                    self::GRANTED_PREVIEW_TOOL_NAME,
+                    self::NOT_GRANTED_PREVIEW_TOOL_NAME,
+                ],
+                writeToolNamesByPreview: [
+                    self::GRANTED_PREVIEW_TOOL_NAME => self::GRANTED_WRITE_TOOL_NAME,
+                    self::NOT_GRANTED_PREVIEW_TOOL_NAME => self::NOT_GRANTED_WRITE_TOOL_NAME,
+                ],
+            ),
             security: $security,
-            readOnlyToolNames: [
-                self::GRANTED_TOOL_NAME,
-                self::DENIED_TOOL_NAME,
-                self::GRANTED_PREVIEW_TOOL_NAME,
-                self::NOT_GRANTED_PREVIEW_TOOL_NAME,
-            ],
             toolScopeProvider: new StaticMcpToolScopeProvider(
                 new McpToolScope(writeToolNames: [self::GRANTED_WRITE_TOOL_NAME]),
             ),
-            writeToolNamesByPreview: [
-                self::GRANTED_PREVIEW_TOOL_NAME => self::GRANTED_WRITE_TOOL_NAME,
-                self::NOT_GRANTED_PREVIEW_TOOL_NAME => self::NOT_GRANTED_WRITE_TOOL_NAME,
-            ],
         );
 
         return new FilterToolsListRequestHandler($registry, $toolAccessChecker, self::PAGE_SIZE);

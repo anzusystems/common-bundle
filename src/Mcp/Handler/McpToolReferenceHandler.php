@@ -4,23 +4,21 @@ declare(strict_types=1);
 
 namespace AnzuSystems\CommonBundle\Mcp\Handler;
 
-use AnzuSystems\CommonBundle\Exception\ValidationException;
-use AnzuSystems\CommonBundle\Helper\StringHelper;
 use AnzuSystems\CommonBundle\Log\Helper\AuditLogResourceHelper;
 use AnzuSystems\CommonBundle\Mcp\Exception\McpToolAccessRejectedException;
-use AnzuSystems\CommonBundle\Mcp\Exception\McpToolCallRejectedException;
-use AnzuSystems\CommonBundle\Mcp\Exception\McpToolInputException;
 use AnzuSystems\CommonBundle\Mcp\Exception\McpWriteRejectedException;
+use AnzuSystems\CommonBundle\Mcp\Factory\McpPreviewHashFactory;
 use AnzuSystems\CommonBundle\Mcp\Log\McpToolCallLogger;
-use AnzuSystems\CommonBundle\Mcp\McpWriteRateLimiter;
+use AnzuSystems\CommonBundle\Mcp\McpToolDefinitions;
 use AnzuSystems\CommonBundle\Mcp\Model\McpPreviewHashAwareInterface;
 use AnzuSystems\CommonBundle\Mcp\Model\McpToolSignature;
 use AnzuSystems\CommonBundle\Mcp\Model\McpWritePreviewInterface;
 use AnzuSystems\CommonBundle\Mcp\Resolver\McpToolErrorResolver;
+use AnzuSystems\CommonBundle\Mcp\Security\McpInputEnricherInterface;
 use AnzuSystems\CommonBundle\Mcp\Security\McpToolAccessChecker;
-use AnzuSystems\CommonBundle\Mcp\Security\McpWriteConfirmation;
 use AnzuSystems\CommonBundle\Mcp\Security\McpWriteToolGuard;
 use AnzuSystems\SerializerBundle\Serializer;
+use Doctrine\ORM\OptimisticLockException;
 use Mcp\Capability\Formatter\ToolResultFormatter;
 use Mcp\Capability\Registry\ElementReference;
 use Mcp\Capability\Registry\ReferenceHandlerInterface;
@@ -43,37 +41,29 @@ final readonly class McpToolReferenceHandler implements ReferenceHandlerInterfac
 {
     public const string ERROR_KEY = 'error';
     public const string WARNINGS_KEY = 'warnings';
-    public const string ACCESS_DENIED_MESSAGE = 'Access denied — the current MCP user is not allowed to access the requested resource.';
-    public const string INVALID_ARGUMENTS_PREFIX = 'Invalid arguments: ';
     public const string ERROR_RESULT_MESSAGE = 'The tool returned an error result.';
     public const string UNHANDLED_ERROR_FORMAT = 'Unhandled %s';
 
-    private const string INVOKE_METHOD = '__invoke';
     private const string SESSION_ARGUMENT = '_session';
     private const string REQUEST_ARGUMENT = '_request';
     private const array SDK_ARGUMENT_KEYS = [
         self::SESSION_ARGUMENT => true,
         self::REQUEST_ARGUMENT => true,
     ];
-    private const string VIOLATION_FORMAT = '%s: %s';
-    private const string VIOLATION_SEPARATOR = ' ';
 
-    /**
-     * @param array<class-string, McpToolSignature> $toolSignatures built by McpToolReferenceHandlerCompilerPass
-     */
     public function __construct(
         private ReferenceHandlerInterface $inner,
         private McpToolAccessChecker $toolAccessChecker,
         private McpWriteToolGuard $writeToolGuard,
-        private McpWriteConfirmation $writeConfirmation,
+        private McpToolDefinitions $toolDefinitions,
+        private McpPreviewHashFactory $previewHashFactory,
         private RegistryInterface $registry,
         private McpToolErrorResolver $toolErrorResolver,
         private McpToolCallLogger $toolCallLogger,
         private ValidatorInterface $validator,
         private Serializer $serializer,
         private RequestStack $requestStack,
-        private McpWriteRateLimiter $writeRateLimiter,
-        private array $toolSignatures = [],
+        private ?McpInputEnricherInterface $inputEnricher = null,
     ) {
     }
 
@@ -94,12 +84,7 @@ final readonly class McpToolReferenceHandler implements ReferenceHandlerInterfac
 
     private function resolveSignature(ToolReference $reference): ?McpToolSignature
     {
-        $handler = $reference->handler;
-        if (false === is_array($handler) || self::INVOKE_METHOD !== $handler[1] || false === is_string($handler[0])) {
-            return null;
-        }
-
-        return $this->toolSignatures[$handler[0]] ?? null;
+        return $this->toolDefinitions->find($reference->tool->name)?->signature;
     }
 
     /**
@@ -123,7 +108,12 @@ final readonly class McpToolReferenceHandler implements ReferenceHandlerInterfac
                 return $confirmationRequest;
             }
 
-            $result = $this->run($reference, $toolName, $this->createToolArguments($signature, $input, $arguments));
+            $result = $this->run(
+                reference: $reference,
+                toolName: $toolName,
+                input: $input,
+                toolArguments: $this->createToolArguments($signature, $input, $arguments),
+            );
             if ($result->isError) {
                 $error = $this->resolveResultError($result);
             }
@@ -151,51 +141,33 @@ final readonly class McpToolReferenceHandler implements ReferenceHandlerInterfac
     }
 
     /**
-     * A write runs only with the previewHash its preview returns right now. A preview without a hash has nothing to write
-     * (no change, or a reason the tool itself reports), so the tool runs and takes no token.
-     *
      * @param array<string, mixed> $arguments
      */
     private function guardWrite(string $toolName, ?object $input, array $arguments): ?InputRequiredResult
     {
-        if (false === $this->toolAccessChecker->isWriteTool($toolName)) {
-            return null;
-        }
-        $context = new RequestContext($arguments[self::SESSION_ARGUMENT], $arguments[self::REQUEST_ARGUMENT]);
-        $isConfirmable = $this->writeConfirmation->isSupportedBy($context);
         $previewToolName = $this->toolAccessChecker->getPreviewToolName($toolName);
-        if (null === $previewToolName && false === $isConfirmable) {
+        if (null === $previewToolName || false === $input instanceof McpPreviewHashAwareInterface) {
             return null;
         }
-        if (false === $input instanceof McpPreviewHashAwareInterface) {
-            throw new UnexpectedValueException(sprintf('The input of the MCP write tool "%s" is "%s" instead of %s.', $toolName, get_debug_type($input), McpPreviewHashAwareInterface::class));
-        }
-        $isAnswered = $isConfirmable && $this->writeConfirmation->isAnswered($context, $input);
-        if ($isAnswered) {
-            $this->writeConfirmation->assertConfirmed(toolName: $toolName, context: $context, input: $input);
-        }
-        if (null === $previewToolName) {
-            throw new UnexpectedValueException(sprintf('The MCP write tool "%s" has no preview.', $toolName));
-        }
-        $preview = $this->runPreview(previewToolName: $previewToolName, input: $input, arguments: $arguments);
-        if (null === $preview->previewHash) {
-            return null;
-        }
-        if (StringHelper::isNotSame($preview->previewHash, $input->previewHash)) {
-            throw McpWriteRejectedException::createPreviewStale($previewToolName);
-        }
-        if ($isConfirmable && false === $isAnswered) {
-            return $this->writeConfirmation->createInputRequiredResult(input: $input, preview: $preview);
-        }
-        $this->writeRateLimiter->consume($toolName);
 
-        return null;
+        return $this->writeToolGuard->guardPreview(
+            toolName: $toolName,
+            previewToolName: $previewToolName,
+            input: $input,
+            context: new RequestContext($arguments[self::SESSION_ARGUMENT], $arguments[self::REQUEST_ARGUMENT]),
+            runPreview: fn (): McpWritePreviewInterface => $this->runPreview(
+                writeToolName: $toolName,
+                previewToolName: $previewToolName,
+                input: $input,
+                arguments: $arguments,
+            ),
+        );
     }
 
     /**
      * @param array<string, mixed> $arguments
      */
-    private function runPreview(string $previewToolName, McpPreviewHashAwareInterface $input, array $arguments): McpWritePreviewInterface
+    private function runPreview(string $writeToolName, string $previewToolName, McpPreviewHashAwareInterface $input, array $arguments): McpWritePreviewInterface
     {
         $reference = $this->registry->getTool($previewToolName);
         $signature = $this->resolveSignature($reference)
@@ -204,8 +176,16 @@ final readonly class McpToolReferenceHandler implements ReferenceHandlerInterfac
         if (false === $preview instanceof McpWritePreviewInterface) {
             throw new UnexpectedValueException(sprintf('The MCP preview tool "%s" returned "%s" instead of %s.', $previewToolName, get_debug_type($preview), McpWritePreviewInterface::class));
         }
+        $this->signPreview(writeToolName: $writeToolName, input: $input, preview: $preview);
 
         return $preview;
+    }
+
+    private function signPreview(string $writeToolName, object $input, McpWritePreviewInterface $preview): void
+    {
+        $preview->previewHash = $preview->writable
+            ? $this->previewHashFactory->create(writeToolName: $writeToolName, input: $input, currentState: $preview->currentState)
+            : null;
     }
 
     /**
@@ -263,6 +243,7 @@ final readonly class McpToolReferenceHandler implements ReferenceHandlerInterfac
         }
         if (is_object($input)) {
             $this->assertValid($input);
+            $this->assertInputGranted($toolName, $input);
         }
         if ($isWriteTool) {
             $this->writeToolGuard->assertWritable($toolName);
@@ -272,10 +253,10 @@ final readonly class McpToolReferenceHandler implements ReferenceHandlerInterfac
     /**
      * @param array<string, mixed> $toolArguments
      */
-    private function run(ToolReference $reference, string $toolName, array $toolArguments): CallToolResult
+    private function run(ToolReference $reference, string $toolName, ?object $input, array $toolArguments): CallToolResult
     {
         if (false === $this->toolAccessChecker->isWriteTool($toolName)) {
-            return $this->createResult($toolName, $this->inner->handle($reference, $toolArguments));
+            return $this->createReadResult(reference: $reference, toolName: $toolName, input: $input, toolArguments: $toolArguments);
         }
         $this->includeInAuditLogs();
         try {
@@ -288,11 +269,29 @@ final readonly class McpToolReferenceHandler implements ReferenceHandlerInterfac
             $this->writeToolGuard->markWritten();
 
             return $this->createResult($toolName, $result);
+        } catch (OptimisticLockException) {
+            $this->excludeFailedWriteFromAuditLogs();
+
+            throw McpWriteRejectedException::createPreviewStale((string) $this->toolAccessChecker->getPreviewToolName($toolName));
         } catch (Throwable $exception) {
             $this->excludeFailedWriteFromAuditLogs();
 
             throw $exception;
         }
+    }
+
+    /**
+     * @param array<string, mixed> $toolArguments
+     */
+    private function createReadResult(ToolReference $reference, string $toolName, ?object $input, array $toolArguments): CallToolResult
+    {
+        $result = $this->inner->handle($reference, $toolArguments);
+        $writeToolName = $this->toolDefinitions->find($toolName)?->previewOf;
+        if ($result instanceof McpWritePreviewInterface && is_string($writeToolName) && is_object($input)) {
+            $this->signPreview(writeToolName: $writeToolName, input: $input, preview: $result);
+        }
+
+        return $this->createResult($toolName, $result);
     }
 
     private function includeInAuditLogs(): void
@@ -328,59 +327,38 @@ final readonly class McpToolReferenceHandler implements ReferenceHandlerInterfac
         return $toolArguments;
     }
 
+    private function assertInputGranted(string $toolName, object $input): void
+    {
+        if (false === $this->toolAccessChecker->isInputGranted($toolName, $input)) {
+            throw new AccessDeniedException();
+        }
+        if (is_string($this->toolDefinitions->find($toolName)?->inputPermission)) {
+            $this->inputEnricher?->enrich($input);
+        }
+    }
+
     private function assertValid(object $input): void
     {
         $violations = $this->validator->validate($input);
         if (0 === $violations->count()) {
             return;
         }
-        $messages = [];
-        foreach ($violations as $violation) {
-            $messages[] = sprintf(self::VIOLATION_FORMAT, $violation->getPropertyPath(), $violation->getMessage());
-        }
 
-        throw McpToolAccessRejectedException::createInvalidArguments($this->formatInvalidArguments($messages));
+        throw McpToolAccessRejectedException::createInvalidArguments($this->toolErrorResolver->formatViolations($violations));
     }
 
     private function resolveErrorMessage(string $toolName, Throwable $exception): ?string
     {
-        return match (true) {
-            $exception instanceof McpToolCallRejectedException,
-            $exception instanceof McpToolInputException => $exception->getMessage(),
-            $exception instanceof ValidationException => $this->formatValidationException($exception),
-            $exception instanceof AccessDeniedException => self::ACCESS_DENIED_MESSAGE,
-            default => $this->resolveBackendErrorMessage($toolName, $exception),
-        };
-    }
-
-    private function resolveBackendErrorMessage(string $toolName, Throwable $exception): ?string
-    {
-        $message = $this->toolErrorResolver->resolveMessage($exception);
+        $message = $this->toolErrorResolver->resolveRejectionMessage($exception);
+        if (is_string($message)) {
+            return $message;
+        }
+        $message = $this->toolErrorResolver->resolveBackendMessage($exception);
         if (is_string($message)) {
             $this->toolCallLogger->logBackendFailure($toolName, $exception);
         }
 
         return $message;
-    }
-
-    private function formatValidationException(ValidationException $exception): string
-    {
-        $messages = [];
-        foreach ($exception->getFormattedErrors() as $field => $fieldMessages) {
-            foreach ($fieldMessages as $fieldMessage) {
-                $messages[] = sprintf(self::VIOLATION_FORMAT, $field, $fieldMessage);
-            }
-        }
-
-        return $this->formatInvalidArguments($messages);
-    }
-
-    /**
-     * @param list<string> $messages
-     */
-    private function formatInvalidArguments(array $messages): string
-    {
-        return self::INVALID_ARGUMENTS_PREFIX . implode(self::VIOLATION_SEPARATOR, $messages);
     }
 
     private function resolveResultError(CallToolResult $result): string

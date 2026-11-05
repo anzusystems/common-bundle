@@ -4,17 +4,23 @@ declare(strict_types=1);
 
 namespace AnzuSystems\CommonBundle\Tests\Mcp\Security;
 
+use AnzuSystems\CommonBundle\Domain\User\CurrentAnzuUserProvider;
 use AnzuSystems\CommonBundle\Mcp\Exception\McpToolCallRejectedException;
 use AnzuSystems\CommonBundle\Mcp\Exception\McpWriteRejectedException;
+use AnzuSystems\CommonBundle\Mcp\McpWriteRateLimiter;
 use AnzuSystems\CommonBundle\Mcp\Security\McpToolAccessChecker;
 use AnzuSystems\CommonBundle\Mcp\Security\McpToolScope;
+use AnzuSystems\CommonBundle\Mcp\Security\McpWriteConfirmation;
 use AnzuSystems\CommonBundle\Mcp\Security\McpWriteToolGuard;
+use AnzuSystems\CommonBundle\Tests\Data\Mcp\McpToolDefinitionsFactory;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Security\StaticMcpToolScopeProvider;
 use AnzuSystems\Contracts\AnzuApp;
 use PHPUnit\Framework\TestCase;
 use Symfony\Bundle\SecurityBundle\Security;
+use Symfony\Component\DependencyInjection\ServiceLocator;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\RequestStack;
+use Symfony\Contracts\Translation\TranslatorInterface;
 
 final class McpWriteToolGuardTest extends TestCase
 {
@@ -103,17 +109,28 @@ final class McpWriteToolGuardTest extends TestCase
 
         return new McpWriteToolGuard(
             toolAccessChecker: new McpToolAccessChecker(
-                toolPermissions: [
-                    self::READ_TOOL_NAME => self::TOOL_PERMISSION,
-                    self::WRITE_TOOL_NAME => self::TOOL_PERMISSION,
-                ],
+                toolDefinitions: McpToolDefinitionsFactory::create(
+                    toolPermissions: [
+                        self::READ_TOOL_NAME => self::TOOL_PERMISSION,
+                        self::WRITE_TOOL_NAME => self::TOOL_PERMISSION,
+                    ],
+                    readOnlyToolNames: [self::READ_TOOL_NAME],
+                ),
                 security: $security,
-                readOnlyToolNames: [self::READ_TOOL_NAME],
                 toolScopeProvider: new StaticMcpToolScopeProvider(
                     new McpToolScope(writeToolNames: $writeGranted ? [self::WRITE_TOOL_NAME] : []),
                 ),
             ),
             requestStack: $requestStack,
+            writeConfirmation: new McpWriteConfirmation(
+                translator: $this->createStub(TranslatorInterface::class),
+                currentUserProvider: $this->createStub(CurrentAnzuUserProvider::class),
+            ),
+            writeRateLimiter: new McpWriteRateLimiter(
+                rateLimiters: new ServiceLocator([]),
+                toolDefinitions: McpToolDefinitionsFactory::create(),
+                currentUserProvider: $this->createStub(CurrentAnzuUserProvider::class),
+            ),
         );
     }
 

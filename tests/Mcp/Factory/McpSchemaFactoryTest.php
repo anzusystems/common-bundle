@@ -7,10 +7,12 @@ namespace AnzuSystems\CommonBundle\Tests\Mcp\Factory;
 use AnzuSystems\CommonBundle\Mcp\Factory\McpSchemaFactory;
 use AnzuSystems\CommonBundle\Mcp\Model\Response\McpLogsByContextResponse;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Model\Request\CollectionExampleRequest;
+use AnzuSystems\CommonBundle\Tests\Data\Mcp\Model\Request\CompoundExampleRequest;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Model\Request\HookedExampleRequest;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Model\Request\UntypedCollectionExampleRequest;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Model\Request\UuidExampleRequest;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Model\Response\UntypedCollectionExampleResponse;
+use AnzuSystems\CommonBundle\Tests\Data\Mcp\Validator\Constraints\ExampleIdFilter;
 use LogicException;
 use PHPUnit\Framework\TestCase;
 
@@ -33,6 +35,14 @@ final class McpSchemaFactoryTest extends TestCase
     ];
     private const string REQUIRED = 'required';
     private const array LOGS_BY_CONTEXT_FIELDS = ['auditLogs', 'appLogs', 'mcpToolCalls', 'hint'];
+
+    public function testCompoundConstraintDescribesThePropertyLikeItsConstraints(): void
+    {
+        $schema = new McpSchemaFactory()
+            ->createForClass(CompoundExampleRequest::class);
+
+        self::assertSame(ExampleIdFilter::MAX, $schema['properties']['ids']['maxItems']);
+    }
 
     /**
      * @dataProvider uuidPropertyProvider

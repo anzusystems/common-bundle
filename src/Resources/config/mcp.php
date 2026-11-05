@@ -11,6 +11,7 @@ use AnzuSystems\CommonBundle\Log\Repository\AuditLogRepository;
 use AnzuSystems\CommonBundle\Log\Repository\JournalLogRepository;
 use AnzuSystems\CommonBundle\Mcp\Controller\McpController;
 use AnzuSystems\CommonBundle\Mcp\Event\Listener\McpHostRouteListener;
+use AnzuSystems\CommonBundle\Mcp\Factory\McpPreviewHashFactory;
 use AnzuSystems\CommonBundle\Mcp\Handler\FilterToolsListRequestHandler;
 use AnzuSystems\CommonBundle\Mcp\Handler\McpToolReferenceHandler;
 use AnzuSystems\CommonBundle\Mcp\Handler\StrictToolArgumentsRequestHandler;
@@ -19,6 +20,7 @@ use AnzuSystems\CommonBundle\Mcp\Log\McpLogger;
 use AnzuSystems\CommonBundle\Mcp\Log\McpLogRepository;
 use AnzuSystems\CommonBundle\Mcp\Log\McpToolCallLogger;
 use AnzuSystems\CommonBundle\Mcp\McpRateLimiter;
+use AnzuSystems\CommonBundle\Mcp\McpToolDefinitions;
 use AnzuSystems\CommonBundle\Mcp\McpWriteRateLimiter;
 use AnzuSystems\CommonBundle\Mcp\Resolver\McpContextIdResolver;
 use AnzuSystems\CommonBundle\Mcp\Resolver\McpDateWindowResolver;
@@ -26,6 +28,7 @@ use AnzuSystems\CommonBundle\Mcp\Resolver\McpHostResolver;
 use AnzuSystems\CommonBundle\Mcp\Resolver\McpPageWindowResolver;
 use AnzuSystems\CommonBundle\Mcp\Resolver\McpToolErrorResolver;
 use AnzuSystems\CommonBundle\Mcp\Security\McpDeleteGuard;
+use AnzuSystems\CommonBundle\Mcp\Security\McpInputEnricherInterface;
 use AnzuSystems\CommonBundle\Mcp\Security\McpToolAccessChecker;
 use AnzuSystems\CommonBundle\Mcp\Security\McpToolScopeProviderInterface;
 use AnzuSystems\CommonBundle\Mcp\Security\McpWriteConfirmation;
@@ -60,13 +63,14 @@ return static function (ContainerConfigurator $configurator): void {
         ->tag('monolog.logger', ['channel' => 'mcp'])
     ;
 
+    $services->set(McpToolDefinitions::class)
+        ->arg('$definitions', [])
+    ;
+
     $services->set(McpToolAccessChecker::class)
-        ->arg('$toolPermissions', null)
+        ->arg('$toolDefinitions', service(McpToolDefinitions::class))
         ->arg('$security', service('security.helper'))
-        ->arg('$readOnlyToolNames', [])
         ->arg('$toolScopeProvider', service(McpToolScopeProviderInterface::class)->nullOnInvalid())
-        ->arg('$toolCategories', [])
-        ->arg('$writeToolNamesByPreview', [])
     ;
 
     $services->set(FilterToolsListRequestHandler::class)
@@ -96,6 +100,8 @@ return static function (ContainerConfigurator $configurator): void {
     $services->set(McpWriteToolGuard::class)
         ->arg('$toolAccessChecker', service(McpToolAccessChecker::class))
         ->arg('$requestStack', service('request_stack'))
+        ->arg('$writeConfirmation', service(McpWriteConfirmation::class))
+        ->arg('$writeRateLimiter', service(McpWriteRateLimiter::class))
     ;
 
     $services->set(McpDeleteGuard::class)
@@ -110,6 +116,11 @@ return static function (ContainerConfigurator $configurator): void {
         ->arg('$translator', service(TranslatorInterface::class))
         ->arg('$currentUserProvider', service(CurrentAnzuUserProvider::class))
         ->arg('$fallbackLocale', null)
+    ;
+
+    $services->set(McpPreviewHashFactory::class)
+        ->arg('$serializer', service(Serializer::class))
+        ->arg('$secret', param('kernel.secret'))
     ;
 
     $services->set(McpToolErrorResolver::class)
@@ -168,7 +179,7 @@ return static function (ContainerConfigurator $configurator): void {
 
     $services->set(McpWriteRateLimiter::class)
         ->arg('$rateLimiters', null)
-        ->arg('$toolRateLimiters', [])
+        ->arg('$toolDefinitions', service(McpToolDefinitions::class))
         ->arg('$currentUserProvider', service(CurrentAnzuUserProvider::class))
     ;
 
@@ -176,15 +187,15 @@ return static function (ContainerConfigurator $configurator): void {
         ->arg('$inner', null)
         ->arg('$toolAccessChecker', service(McpToolAccessChecker::class))
         ->arg('$writeToolGuard', service(McpWriteToolGuard::class))
-        ->arg('$writeConfirmation', service(McpWriteConfirmation::class))
+        ->arg('$toolDefinitions', service(McpToolDefinitions::class))
+        ->arg('$previewHashFactory', service(McpPreviewHashFactory::class))
         ->arg('$registry', null)
         ->arg('$toolErrorResolver', service(McpToolErrorResolver::class))
         ->arg('$toolCallLogger', service(McpToolCallLogger::class))
         ->arg('$validator', service(ValidatorInterface::class))
         ->arg('$serializer', service(Serializer::class))
         ->arg('$requestStack', service('request_stack'))
-        ->arg('$writeRateLimiter', service(McpWriteRateLimiter::class))
-        ->arg('$toolSignatures', [])
+        ->arg('$inputEnricher', service(McpInputEnricherInterface::class)->nullOnInvalid())
     ;
 
     $services->set(SearchAppLogsTool::class)
