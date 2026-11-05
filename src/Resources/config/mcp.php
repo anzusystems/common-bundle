@@ -58,9 +58,9 @@ return static function (ContainerConfigurator $configurator): void {
 
     $services->set(StrictToolArgumentsRequestHandler::class)
         ->arg('$registry', null)
-        ->arg('$logger', service('logger'))
+        ->arg('$toolAccessChecker', service(McpToolAccessChecker::class))
+        ->arg('$toolCallLogger', service(McpToolCallLogger::class))
         ->tag('mcp.request_handler')
-        ->tag('monolog.logger', ['channel' => 'mcp'])
     ;
 
     $services->set(McpToolDefinitions::class)

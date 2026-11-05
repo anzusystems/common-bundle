@@ -6,14 +6,9 @@ namespace AnzuSystems\CommonBundle\Mcp\Exception;
 
 final class McpDateWindowInputException extends McpToolInputException
 {
-    public static function createInvertedDateWindow(): self
+    public static function createInverted(string $fromName, string $untilName): self
     {
-        return new self('publishedUntil must not be before publishedFrom.');
-    }
-
-    public static function createInvertedLogWindow(): self
-    {
-        return new self('until must not be before from.');
+        return new self(sprintf('%s must not be before %s.', $untilName, $fromName));
     }
 
     public static function createInvalidDate(string $paramName, string $value): self

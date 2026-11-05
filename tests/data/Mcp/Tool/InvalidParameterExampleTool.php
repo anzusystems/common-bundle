@@ -8,6 +8,7 @@ use AnzuSystems\CommonBundle\Mcp\Attribute\AsMcpTool;
 use AnzuSystems\CommonBundle\Mcp\Model\McpLogsByContextResult;
 use AnzuSystems\CommonBundle\Mcp\Model\Request\SearchAppLogsRequest;
 use AnzuSystems\CommonBundle\Mcp\Model\Response\McpLogsByContextResponse;
+use Doctrine\Common\Collections\ArrayCollection;
 
 #[AsMcpTool(
     name: InvalidParameterExampleTool::NAME,
@@ -21,6 +22,6 @@ final readonly class InvalidParameterExampleTool
 
     public function __invoke(SearchAppLogsRequest $request, int $siteId): McpLogsByContextResponse
     {
-        return new McpLogsByContextResponse(new McpLogsByContextResult([], [], []));
+        return new McpLogsByContextResponse(new McpLogsByContextResult(new ArrayCollection(), new ArrayCollection(), new ArrayCollection()));
     }
 }

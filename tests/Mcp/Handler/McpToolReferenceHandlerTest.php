@@ -43,6 +43,7 @@ use AnzuSystems\CommonBundle\Tests\Mcp\McpSerializerFactory;
 use AnzuSystems\Contracts\AnzuApp;
 use AnzuSystems\Contracts\Entity\AnzuUser;
 use Closure;
+use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\ORM\OptimisticLockException;
 use Mcp\Capability\Registry;
 use Mcp\Capability\Registry\ReferenceHandler;
@@ -1238,7 +1239,7 @@ final class McpToolReferenceHandlerTest extends TestCase
 
     private static function createResponse(): McpLogsByContextResponse
     {
-        return new McpLogsByContextResponse(new McpLogsByContextResult([], [], []));
+        return new McpLogsByContextResponse(new McpLogsByContextResult(new ArrayCollection(), new ArrayCollection(), new ArrayCollection()));
     }
 
     private function initAppReadOnlyMode(bool $readOnlyMode): void

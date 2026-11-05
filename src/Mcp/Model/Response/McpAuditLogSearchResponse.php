@@ -5,11 +5,15 @@ declare(strict_types=1);
 namespace AnzuSystems\CommonBundle\Mcp\Model\Response;
 
 use AnzuSystems\CommonBundle\Mcp\Attribute\McpField;
-use AnzuSystems\CommonBundle\Serializer\Handler\Handlers\RawArrayHandler;
+use AnzuSystems\CommonBundle\Mcp\Model\Decorator\McpAuditLogDecorator;
 use AnzuSystems\SerializerBundle\Attributes\Serialize;
+use Doctrine\Common\Collections\Collection;
 
 final class McpAuditLogSearchResponse
 {
+    /**
+     * @use McpLogSearchResponseTrait<McpAuditLogDecorator>
+     */
     use McpLogSearchResponseTrait;
 
     private const string HINT_CONTEXT_ID = 'Pass a record\'s contextId to get_logs_by_context to see the application '
@@ -17,11 +21,11 @@ final class McpAuditLogSearchResponse
         . 'this platform.';
 
     /**
-     * @var list<array<string, mixed>>
+     * @var Collection<int, McpAuditLogDecorator>
      */
-    #[McpField(description: 'Newest first: one record per request with method, path, acting userId, resource name and ids, http status, request body (content), response, error and exception details and a contextId. Long fields are truncated.')]
-    #[Serialize(handler: RawArrayHandler::class)]
-    public array $auditLogs {
+    #[McpField(description: 'Newest first: one record per request.')]
+    #[Serialize(type: McpAuditLogDecorator::class)]
+    public Collection $auditLogs {
         get => $this->result->logs;
     }
 }

@@ -95,9 +95,11 @@ infrastructure after a bundle upgrade.
   like, see "Write confirmation" below.
 * `McpDeleteGuard` — the rule of deleting an entity through MCP, see "Delete tools" below.
 * `McpToolCallLogger` and `McpToolErrorResolver` — the call log and the `tool_error_exceptions` map of the handler.
-* `StrictToolArgumentsRequestHandler` — rejects tool calls with unknown arguments.
-* `McpToolAccessChecker` + `FilterToolsListRequestHandler` — per-tool permissions mapped to host permissions (see
-  below); the call-side check lives in `McpToolReferenceHandler`.
+* `StrictToolArgumentsRequestHandler` — answers a call of a granted tool with unknown arguments by a tool error that lists
+  the allowed ones and logs it. It runs before the SDK validates the arguments against the schema; a tool the user may not
+  call is left to that validation, whose error does not list them.
+* `McpToolAccessChecker` + `FilterToolsListRequestHandler` — the permission of each tool (see below); the call-side
+  check lives in `McpToolReferenceHandler`.
 * `SearchAppLogsTool`, `SearchAuditLogsTool`, `GetLogsByContextTool` — diagnostic tools over the shared log
   collections, correlated by `contextId`.
 
@@ -320,7 +322,7 @@ anzu_systems_common:
         log_tools_permission: cms_log_read
 ```
 
-`McpCompilerPass` builds the map of `McpToolAccessChecker` from the attributes, in the order of the tool services. An
+`McpToolDefinitionsCompilerPass` builds `McpToolDefinitions` from the attributes, in the order of the tool services. An
 enabled `mcp` section without `log_tools_permission` fails at compile time.
 
 * `tools/call` of a tool the current user may not use returns a tool error result (`isError: true` with
@@ -330,7 +332,7 @@ enabled `mcp` section without `log_tools_permission` fails at compile time.
 * `tools/list` returns only the tools the current user may call — the filter runs after registry pagination, so a
   page may come back with fewer tools (even none) while `nextCursor` is still set; clients follow the cursor as usual.
 
-`McpCompilerPass` resolves the name of every `mcp.tool` service method carrying `#[McpTool]` (see "Write tools" below)
+`McpToolDefinitionsCompilerPass` resolves the name of every `mcp.tool` service method carrying `#[McpTool]` (see "Write tools" below)
 and fails the container compilation with a `LogicException` when
 * one tool name is registered by more than one tool (two classes or methods resolving to the same name) — the SDK
   registry keeps only the last tool registered under a name, and the read/write classification would be ambiguous;
@@ -359,7 +361,7 @@ A write tool declared by `#[AsMcpTool]` must have a preview, see "Preview tools"
 
 A tool is a read tool only when its `#[McpTool]` declares `annotations: new ToolAnnotations(readOnlyHint: true)`
 (`#[AsMcpTool(readOnly: true)]`);
-every other tool (`readOnlyHint` false or missing) is a write tool. `McpCompilerPass` reads the attribute of every
+every other tool (`readOnlyHint` false or missing) is a write tool. `McpToolDefinitionsCompilerPass` reads the attribute of every
 `mcp.tool` service at compile time (on the tagged method, or on the class for `__invoke`, as McpBundle does) and passes
 the result to `McpToolDefinitions`, one `McpToolDefinition` per tool, which `McpToolAccessChecker`, `McpWriteRateLimiter`
 and `McpToolReferenceHandler` read. So the classification needs no built MCP server and a tool name it does not know is a
@@ -369,7 +371,7 @@ write tool. A tool without an explicit `name` is matched by the name the SDK der
 A write tool additionally has to be in the write tools of the request's scope (*Token scope* below), so it is hidden
 from `tools/list` and denied on `tools/call` without it. Without a scope every write tool is denied, for super admins
 too. `McpToolAccessChecker::getWriteToolNames()` lists the tools with a permission that are write tools, in
-map order, and `getPermittedWriteToolNames()` narrows them to the tools whose permission the current user holds. A call
+the order of the tools, and `getPermittedWriteToolNames()` narrows them to the tools whose permission the current user holds. A call
 denied only for the scope answers `Access denied — the write tool "<tool>" is not granted to this token. Create a new personal access token with this write tool.` Annotate
 every read tool, or it disappears for clients without the write grant:
 
@@ -420,7 +422,7 @@ adds a sentence about the limit to the description of the tool, naming the tools
 repeat it.
 
 A preview has no permission of its own: `McpToolAccessChecker` grants it exactly when it grants its write tool —
-the write tools of the scope and the mapped permission of the write tool — in `tools/list` and on
+the write tools of the scope and the permission of the write tool — in `tools/list` and on
 `tools/call`; otherwise the call gets the usual tool access error. `getToolNames()`, `getWriteToolNames()`,
 `getPermittedToolNames()` and `getPermittedWriteToolNames()` read the tools with a permission, so they never list a
 preview. As a read tool it skips the write grant check of its own, read-only mode, the one write per request and the
@@ -527,9 +529,9 @@ A host says what a request may use by registering a service under the id `McpToo
 - `writeToolNames`: the write tools the request may use.
 
 Without such a service, or when it returns `null`, read tools are not narrowed and write tools are denied. The scope only
-narrows: a tool in the scope still needs its mapped permission. A tool outside the scope is hidden from `tools/list` and
+narrows: a tool in the scope still needs its permission. A tool outside the scope is hidden from `tools/list` and
 denied on `tools/call`. `McpToolAccessChecker::getPermittedToolNames()` lists every tool whose
-permission the current user holds, in map order, without the scope, so a host can offer them for a new token. A preview
+permission the current user holds, in the order of the tools, without the scope, so a host can offer them for a new token. A preview
 follows the scope of its write tool, so a token never names it.
 
 ## Tool errors
@@ -553,19 +555,19 @@ A message tells the model what to do next, so it is prose, not an error code.
 
 ## Date windows
 
-`McpDateWindowResolver` caps both the article window (`resolveArticleWindow()`) and the log window
-(`resolveLogWindow()`) at `DATE_RANGE_MAX_DAYS` (31). The cap is applied silently to the effective window, so
+`McpDateWindowResolver` caps both a date range (`resolveDateRange()`, which takes the names of its two arguments for its
+errors) and the log window (`resolveLogWindow()`) at `DATE_RANGE_MAX_DAYS` (31). The cap is applied silently to the effective window, so
 `McpDateWindow::$truncated` reports whether the caller asked for more than it got:
 
-* `resolveArticleWindow()` — `true` when the resolved `until` is earlier than the requested one, or (when `publishedUntil`
-  was omitted) earlier than now, i.e. whenever the range was cut short at `publishedFrom + 31 days`.
+* `resolveDateRange()` — `true` when the resolved `until` is earlier than the requested one, or (when it was omitted)
+  earlier than now, i.e. whenever the range was cut short at `from + 31 days`.
 * `resolveLogWindow()` — `true` when `from` was moved forward to `until - 31 days`.
 
 `McpPageWindowResolver` does the same for pagination: `resolve($page, $limit, $limitMax)` clamps the page at
 `PAGE_MAX` (200) and the limit at the caller's maximum, and the returned `McpPageWindow` reports `$clamped` plus
 the offset and the number of rows still reachable through pagination.
 
-Tools must surface both. The single convention is `McpToolReferenceHandler::WARNINGS_KEY` (`warnings`): a `list<string>` of
+Tools must surface both. The single convention is the field `warnings`: a `list<string>` of
 plain-language sentences saying what was narrowed and what to do about it, always present (`[]` when nothing was).
 `McpAppLogSearchResponse` / `McpAuditLogSearchResponse` build the log tool response envelope that way from the
 `McpLogSearchResult` — rows, the effective `from`/`until`, the effective `limit`, the tool hint, and the `warnings`

@@ -8,7 +8,6 @@ use AnzuSystems\CommonBundle\Mcp\Attribute\AsMcpTool;
 use AnzuSystems\CommonBundle\Mcp\Factory\McpOutputDescriptionFactory;
 use AnzuSystems\CommonBundle\Mcp\Factory\McpSchemaFactory;
 use AnzuSystems\CommonBundle\Mcp\Resolver\McpToolSignatureResolver;
-use LogicException;
 use ReflectionClass;
 use Symfony\Component\DependencyInjection\Compiler\CompilerPassInterface;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
@@ -20,6 +19,8 @@ use Symfony\Component\DependencyInjection\ContainerBuilder;
  */
 final class McpToolSchemaCompilerPass implements CompilerPassInterface
 {
+    use McpServerNameTrait;
+
     public const int PRIORITY = -10;
 
     private const string ADD_TOOL_METHOD = 'addTool';
@@ -36,11 +37,7 @@ final class McpToolSchemaCompilerPass implements CompilerPassInterface
         if (false === $container->hasParameter(McpCompilerPass::SERVER_NAME_PARAM)) {
             return;
         }
-        $serverName = $container->getParameter(McpCompilerPass::SERVER_NAME_PARAM);
-        if (false === is_string($serverName)) {
-            throw new LogicException(sprintf('The "%s" parameter must be the mcp server name.', McpCompilerPass::SERVER_NAME_PARAM));
-        }
-        $builderId = sprintf(McpCompilerPass::BUILDER_ID_FORMAT, $serverName);
+        $builderId = $this->resolveBuilderId($this->resolveServerName($container));
         if (false === $container->hasDefinition($builderId)) {
             return;
         }

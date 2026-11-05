@@ -5,11 +5,15 @@ declare(strict_types=1);
 namespace AnzuSystems\CommonBundle\Mcp\Model\Response;
 
 use AnzuSystems\CommonBundle\Mcp\Attribute\McpField;
+use AnzuSystems\CommonBundle\Mcp\Model\Decorator\AbstractMcpLogDecorator;
 use AnzuSystems\CommonBundle\Mcp\Model\McpLogSearchResult;
 use AnzuSystems\CommonBundle\Mcp\Resolver\McpDateWindowResolver;
 use AnzuSystems\SerializerBundle\Attributes\Serialize;
 use DateTimeInterface;
 
+/**
+ * @template T of AbstractMcpLogDecorator
+ */
 trait McpLogSearchResponseTrait
 {
     private const string WINDOW_TRUNCATED_WARNING = 'The requested window was longer than the %d-day cap and was '
@@ -58,6 +62,9 @@ trait McpLogSearchResponseTrait
         }
     }
 
+    /**
+     * @param McpLogSearchResult<T> $result
+     */
     public function __construct(
         private readonly McpLogSearchResult $result,
     ) {

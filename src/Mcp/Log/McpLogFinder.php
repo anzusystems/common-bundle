@@ -6,6 +6,10 @@ namespace AnzuSystems\CommonBundle\Mcp\Log;
 
 use AnzuSystems\CommonBundle\Log\Repository\AuditLogRepository;
 use AnzuSystems\CommonBundle\Log\Repository\JournalLogRepository;
+use AnzuSystems\CommonBundle\Mcp\Model\Decorator\AbstractMcpLogDecorator;
+use AnzuSystems\CommonBundle\Mcp\Model\Decorator\McpAppLogDecorator;
+use AnzuSystems\CommonBundle\Mcp\Model\Decorator\McpAuditLogDecorator;
+use AnzuSystems\CommonBundle\Mcp\Model\Decorator\McpToolCallLogDecorator;
 use AnzuSystems\CommonBundle\Mcp\Model\McpLogsByContextResult;
 use AnzuSystems\CommonBundle\Mcp\Model\McpLogSearchResult;
 use AnzuSystems\CommonBundle\Mcp\Model\Request\GetLogsByContextRequest;
@@ -15,20 +19,17 @@ use AnzuSystems\CommonBundle\Mcp\Resolver\McpContextIdResolver;
 use AnzuSystems\CommonBundle\Mcp\Resolver\McpDateWindowResolver;
 use AnzuSystems\Contracts\AnzuApp;
 use DateTimeImmutable;
-use DateTimeInterface;
-use MongoDB\BSON\UTCDateTime;
+use Doctrine\Common\Collections\ArrayCollection;
+use Doctrine\Common\Collections\Collection;
 
 final readonly class McpLogFinder
 {
     public const int LIMIT_DEFAULT = 20;
     public const int LIMIT_MAX = 50;
     public const int LIMIT_MIN = 1;
-    public const int FIELD_TRUNCATE_LENGTH = 2_000;
-    public const string TRUNCATED_SUFFIX = '…(truncated)';
 
     private const int BY_CONTEXT_SCAN_DAYS = McpDateWindowResolver::LOG_WINDOW_MAX_DAYS;
     private const int LOOKAHEAD = 1;
-    private const string EMPTY_STRING = '';
 
     public function __construct(
         private AuditLogRepository $auditLogRepository,
@@ -55,7 +56,7 @@ final readonly class McpLogFinder
         );
 
         return new McpLogSearchResult(
-            array_map($this->mapAuditLog(...), array_slice($documents, 0, $limit)),
+            $this->decorate(array_slice($documents, 0, $limit), McpAuditLogDecorator::class),
             $window,
             $limit,
             count($documents) > $limit,
@@ -76,7 +77,7 @@ final readonly class McpLogFinder
         );
 
         return new McpLogSearchResult(
-            array_map($this->mapAppLog(...), array_slice($documents, 0, $limit)),
+            $this->decorate(array_slice($documents, 0, $limit), McpAppLogDecorator::class),
             $window,
             $limit,
             count($documents) > $limit,
@@ -89,9 +90,9 @@ final readonly class McpLogFinder
         $from = $this->createByContextFrom();
 
         return new McpLogsByContextResult(
-            array_map($this->mapAuditLog(...), $this->auditLogRepository->findLatestByContextId($contextId, $from, self::LIMIT_MAX)),
-            array_map($this->mapAppLog(...), $this->journalLogRepository->findLatestByContextId($contextId, $from, self::LIMIT_MAX)),
-            array_map($this->mapMcpLog(...), $this->mcpLogRepository->findLatestByContextId($contextId, $from, self::LIMIT_MAX)),
+            $this->decorate($this->auditLogRepository->findLatestByContextId($contextId, $from, self::LIMIT_MAX), McpAuditLogDecorator::class),
+            $this->decorate($this->journalLogRepository->findLatestByContextId($contextId, $from, self::LIMIT_MAX), McpAppLogDecorator::class),
+            $this->decorate($this->mcpLogRepository->findLatestByContextId($contextId, $from, self::LIMIT_MAX), McpToolCallLogDecorator::class),
         );
     }
 
@@ -106,114 +107,18 @@ final readonly class McpLogFinder
     }
 
     /**
-     * @param array<string, mixed> $document
+     * @template T of AbstractMcpLogDecorator
      *
-     * @return array<string, mixed>
-     */
-    private function mapAuditLog(array $document): array
-    {
-        $context = $this->toArrayValue($document['context'] ?? []);
-
-        return [
-            'datetime' => $this->formatDateTime($document['datetime'] ?? null),
-            'method' => $this->toStringValue($context['method'] ?? null),
-            'path' => $this->toStringValue($context['path'] ?? null),
-            'resourceName' => $this->toStringValue($context['resourceName'] ?? null),
-            'resourceIds' => array_values($this->toArrayValue($context['resourceIds'] ?? [])),
-            'httpStatus' => $this->toIntValue($context['httpStatus'] ?? null),
-            'error' => $this->truncate($this->toStringValue($context['error'] ?? null)),
-            'exception' => $this->truncate($this->toStringValue($context['exception'] ?? null)),
-            'contextId' => $this->toStringValue($context['contextId'] ?? null),
-            'userId' => $this->toIntValue($context['userId'] ?? null),
-            'content' => $this->truncate($this->toStringValue($context['content'] ?? null)),
-            'response' => $this->truncate($this->toStringValue($context['response'] ?? null)),
-        ];
-    }
-
-    /**
-     * @param array<string, mixed> $document
+     * @param list<array<string, mixed>> $documents
+     * @param class-string<T> $decoratorClass
      *
-     * @return array<string, mixed>
+     * @return Collection<int, T>
      */
-    private function mapAppLog(array $document): array
+    private function decorate(array $documents, string $decoratorClass): Collection
     {
-        $context = $this->toArrayValue($document['context'] ?? []);
-
-        return [
-            'datetime' => $this->formatDateTime($document['datetime'] ?? null),
-            'levelName' => $this->toStringValue($document[JournalLogRepository::FIELD_LEVEL_NAME] ?? null),
-            'message' => $this->truncate($this->toStringValue($document['message'] ?? null)),
-            'contextId' => $this->toStringValue($context['contextId'] ?? null),
-            'userId' => $this->toIntValue($context['userId'] ?? null),
-            'path' => $this->toStringValue($context['path'] ?? null),
-        ];
-    }
-
-    /**
-     * @param array<string, mixed> $document
-     *
-     * @return array<string, mixed>
-     */
-    private function mapMcpLog(array $document): array
-    {
-        return [
-            'datetime' => $this->formatDateTime($document['datetime'] ?? null),
-            'levelName' => $this->toStringValue($document['levelName'] ?? null),
-            'tool' => $this->toStringValue($document['tool'] ?? null),
-            'params' => $this->toArrayValue($document['params'] ?? []),
-            'userId' => $this->toIntValue($document['userId'] ?? null),
-            'contextId' => $this->toStringValue($document['contextId'] ?? null),
-            'durationMs' => $this->toIntValue($document['durationMs'] ?? null),
-            'error' => $this->truncate($this->toStringValue($document['error'] ?? null)),
-        ];
-    }
-
-    private function truncate(string $value): string
-    {
-        if (mb_strlen($value) <= self::FIELD_TRUNCATE_LENGTH) {
-            return $value;
-        }
-
-        return mb_substr($value, 0, self::FIELD_TRUNCATE_LENGTH) . self::TRUNCATED_SUFFIX;
-    }
-
-    private function formatDateTime(mixed $datetime): string
-    {
-        if ($datetime instanceof UTCDateTime) {
-            return $datetime->toDateTime()
-                ->format(DateTimeInterface::ATOM);
-        }
-
-        return self::EMPTY_STRING;
-    }
-
-    private function toStringValue(mixed $value): string
-    {
-        if (is_string($value)) {
-            return $value;
-        }
-
-        return self::EMPTY_STRING;
-    }
-
-    private function toIntValue(mixed $value): int
-    {
-        if (is_int($value)) {
-            return $value;
-        }
-
-        return 0;
-    }
-
-    /**
-     * @return array<array-key, mixed>
-     */
-    private function toArrayValue(mixed $value): array
-    {
-        if (is_array($value)) {
-            return $value;
-        }
-
-        return [];
+        return new ArrayCollection(array_map(
+            static fn (array $document): AbstractMcpLogDecorator => new $decoratorClass($document),
+            $documents,
+        ));
     }
 }

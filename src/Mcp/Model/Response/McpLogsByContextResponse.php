@@ -5,9 +5,12 @@ declare(strict_types=1);
 namespace AnzuSystems\CommonBundle\Mcp\Model\Response;
 
 use AnzuSystems\CommonBundle\Mcp\Attribute\McpField;
+use AnzuSystems\CommonBundle\Mcp\Model\Decorator\McpAppLogDecorator;
+use AnzuSystems\CommonBundle\Mcp\Model\Decorator\McpAuditLogDecorator;
+use AnzuSystems\CommonBundle\Mcp\Model\Decorator\McpToolCallLogDecorator;
 use AnzuSystems\CommonBundle\Mcp\Model\McpLogsByContextResult;
-use AnzuSystems\CommonBundle\Serializer\Handler\Handlers\RawArrayHandler;
 use AnzuSystems\SerializerBundle\Attributes\Serialize;
+use Doctrine\Common\Collections\Collection;
 
 final class McpLogsByContextResponse
 {
@@ -15,29 +18,29 @@ final class McpLogsByContextResponse
         . 'platform; look it up in the logs of the other services to follow the request end to end.';
 
     /**
-     * @var list<array<string, mixed>>
+     * @var Collection<int, McpAuditLogDecorator>
      */
     #[McpField(description: 'The API requests, newest first.')]
-    #[Serialize(handler: RawArrayHandler::class)]
-    public array $auditLogs {
+    #[Serialize(type: McpAuditLogDecorator::class)]
+    public Collection $auditLogs {
         get => $this->result->auditLogs;
     }
 
     /**
-     * @var list<array<string, mixed>>
+     * @var Collection<int, McpAppLogDecorator>
      */
     #[McpField(description: 'Application records produced while handling them, newest first.')]
-    #[Serialize(handler: RawArrayHandler::class)]
-    public array $appLogs {
+    #[Serialize(type: McpAppLogDecorator::class)]
+    public Collection $appLogs {
         get => $this->result->appLogs;
     }
 
     /**
-     * @var list<array<string, mixed>>
+     * @var Collection<int, McpToolCallLogDecorator>
      */
     #[McpField(description: 'MCP tool calls with this contextId, newest first.')]
-    #[Serialize(handler: RawArrayHandler::class)]
-    public array $mcpToolCalls {
+    #[Serialize(type: McpToolCallLogDecorator::class)]
+    public Collection $mcpToolCalls {
         get => $this->result->mcpToolCalls;
     }
 

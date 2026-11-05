@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace AnzuSystems\CommonBundle\Tests\Mcp\Resolver;
 
 use AnzuSystems\CommonBundle\Mcp\Exception\McpToolInputException;
+use AnzuSystems\CommonBundle\Mcp\Model\McpDateWindow;
 use AnzuSystems\CommonBundle\Mcp\Resolver\McpDateWindowResolver;
 use PHPUnit\Framework\TestCase;
 
@@ -52,7 +53,7 @@ final class McpDateWindowResolverTest extends TestCase
 
     public function testArticleWindowKeepsExplicitRangeWithinCap(): void
     {
-        $window = $this->resolver->resolveArticleWindow('2026-07-01T00:00:00+00:00', '2026-07-10T00:00:00+00:00');
+        $window = $this->resolveDateRange('2026-07-01T00:00:00+00:00', '2026-07-10T00:00:00+00:00');
 
         self::assertSame('2026-07-01T00:00:00+00:00', $window->from->format(DATE_ATOM));
         self::assertSame('2026-07-10T00:00:00+00:00', $window->until->format(DATE_ATOM));
@@ -61,7 +62,7 @@ final class McpDateWindowResolverTest extends TestCase
 
     public function testArticleWindowUntilIsCappedToMaxDaysAfterFrom(): void
     {
-        $window = $this->resolver->resolveArticleWindow('2026-01-01T00:00:00+00:00', '2026-06-01T00:00:00+00:00');
+        $window = $this->resolveDateRange('2026-01-01T00:00:00+00:00', '2026-06-01T00:00:00+00:00');
 
         self::assertSame('2026-02-01T00:00:00+00:00', $window->until->format(DATE_ATOM));
         self::assertTrue($window->truncated);
@@ -69,7 +70,7 @@ final class McpDateWindowResolverTest extends TestCase
 
     public function testArticleWindowWithoutDatesIsNotTruncated(): void
     {
-        $window = $this->resolver->resolveArticleWindow(null, null);
+        $window = $this->resolveDateRange(null, null);
         $length = $window->from->diff($window->until);
 
         self::assertFalse($window->truncated);
@@ -78,7 +79,7 @@ final class McpDateWindowResolverTest extends TestCase
 
     public function testOpenEndedArticleWindowOlderThanCapIsTruncated(): void
     {
-        $window = $this->resolver->resolveArticleWindow('2020-01-01T00:00:00+00:00', null);
+        $window = $this->resolveDateRange('2020-01-01T00:00:00+00:00', null);
 
         self::assertSame('2020-02-01T00:00:00+00:00', $window->until->format(DATE_ATOM));
         self::assertTrue($window->truncated);
@@ -86,7 +87,7 @@ final class McpDateWindowResolverTest extends TestCase
 
     public function testArticleWindowNormalizesOffsetToUtc(): void
     {
-        $window = $this->resolver->resolveArticleWindow('2026-10-07T00:00:00+02:00', '2026-10-07T23:59:59+02:00');
+        $window = $this->resolveDateRange('2026-10-07T00:00:00+02:00', '2026-10-07T23:59:59+02:00');
 
         self::assertSame('2026-10-06T22:00:00+00:00', $window->from->format(DATE_ATOM));
         self::assertSame('2026-10-07T21:59:59+00:00', $window->until->format(DATE_ATOM));
@@ -110,7 +111,7 @@ final class McpDateWindowResolverTest extends TestCase
     {
         $this->expectException(McpToolInputException::class);
 
-        $this->resolver->resolveArticleWindow('2026-07-10T00:00:00+00:00', '2026-07-01T00:00:00+00:00');
+        $this->resolveDateRange('2026-07-10T00:00:00+00:00', '2026-07-01T00:00:00+00:00');
     }
 
     public function testEnsureNotInvertedThrows(): void
@@ -118,8 +119,15 @@ final class McpDateWindowResolverTest extends TestCase
         $this->expectException(McpToolInputException::class);
 
         $this->resolver->ensureNotInverted(
-            $this->resolver->parseDateTime('from', '2026-07-10T00:00:00+00:00'),
-            $this->resolver->parseDateTime('until', '2026-07-01T00:00:00+00:00'),
+            fromName: 'from',
+            from: $this->resolver->parseDateTime('from', '2026-07-10T00:00:00+00:00'),
+            untilName: 'until',
+            until: $this->resolver->parseDateTime('until', '2026-07-01T00:00:00+00:00'),
         );
+    }
+
+    private function resolveDateRange(?string $from, ?string $until): McpDateWindow
+    {
+        return $this->resolver->resolveDateRange(fromName: 'publishedFrom', from: $from, untilName: 'publishedUntil', until: $until);
     }
 }

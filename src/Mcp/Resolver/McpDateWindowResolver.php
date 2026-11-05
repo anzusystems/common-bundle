@@ -18,31 +18,32 @@ final readonly class McpDateWindowResolver
     public const string DATE_TIME_OFFSET_DESCRIPTION = 'Any UTC offset is honoured; a value without an offset is read as UTC.';
 
     private const int LOG_WINDOW_DEFAULT_DAYS = 1;
+    private const string LOG_FROM_NAME = 'from';
+    private const string LOG_UNTIL_NAME = 'until';
     private const string UTC_TIMEZONE = 'UTC';
 
-    public function resolveArticleWindow(?string $publishedFrom, ?string $publishedUntil): McpDateWindow
+    public function resolveDateRange(string $fromName, ?string $from, string $untilName, ?string $until): McpDateWindow
     {
-        $from = $this->parseDateTime('publishedFrom', $publishedFrom);
-        $until = $this->parseDateTime('publishedUntil', $publishedUntil);
+        $parsedFrom = $this->parseDateTime($fromName, $from);
+        $parsedUntil = $this->parseDateTime($untilName, $until);
+        $this->ensureNotInverted(fromName: $fromName, from: $parsedFrom, untilName: $untilName, until: $parsedUntil);
         $now = AnzuApp::date();
-        $clampedFrom = $this->clampFrom($from, $until, $now);
-        $clampedUntil = $this->clampUntil($clampedFrom, $until);
+        $clampedFrom = $this->clampFrom($parsedFrom, $parsedUntil, $now);
+        $clampedUntil = $this->clampUntil($clampedFrom, $parsedUntil);
 
         return new McpDateWindow(
             $clampedFrom,
             $clampedUntil,
-            truncated: $this->isUntilTruncated($from, $until, $clampedUntil, $now),
+            truncated: $this->isUntilTruncated($parsedFrom, $parsedUntil, $clampedUntil, $now),
         );
     }
 
     public function resolveLogWindow(?string $from, ?string $until): McpDateWindow
     {
-        $parsedFrom = $this->parseDateTime('from', $from);
-        $resolvedUntil = $this->parseDateTime('until', $until) ?? AnzuApp::date();
+        $parsedFrom = $this->parseDateTime(self::LOG_FROM_NAME, $from);
+        $resolvedUntil = $this->parseDateTime(self::LOG_UNTIL_NAME, $until) ?? AnzuApp::date();
         $resolvedFrom = $parsedFrom ?? $resolvedUntil->modify(sprintf('-%d day', self::LOG_WINDOW_DEFAULT_DAYS));
-        if ($resolvedUntil < $resolvedFrom) {
-            throw McpDateWindowInputException::createInvertedLogWindow();
-        }
+        $this->ensureNotInverted(fromName: self::LOG_FROM_NAME, from: $resolvedFrom, untilName: self::LOG_UNTIL_NAME, until: $resolvedUntil);
         $clampedFrom = $this->clampLogFrom($resolvedFrom, $resolvedUntil);
 
         return new McpDateWindow(
@@ -68,10 +69,10 @@ final readonly class McpDateWindowResolver
         }
     }
 
-    public function ensureNotInverted(?DateTimeImmutable $from, ?DateTimeImmutable $until): void
+    public function ensureNotInverted(string $fromName, ?DateTimeImmutable $from, string $untilName, ?DateTimeImmutable $until): void
     {
         if ($from instanceof DateTimeImmutable && $until instanceof DateTimeImmutable && $until < $from) {
-            throw McpDateWindowInputException::createInvertedDateWindow();
+            throw McpDateWindowInputException::createInverted($fromName, $untilName);
         }
     }
 
@@ -121,9 +122,6 @@ final readonly class McpDateWindowResolver
         $maxUntil = $clampedFrom->modify(sprintf('+%d days', self::DATE_RANGE_MAX_DAYS));
         if (null === $until || $until > $maxUntil) {
             return $maxUntil;
-        }
-        if ($until < $clampedFrom) {
-            throw McpDateWindowInputException::createInvertedDateWindow();
         }
 
         return $until;

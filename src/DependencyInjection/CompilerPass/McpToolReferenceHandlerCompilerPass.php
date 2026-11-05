@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace AnzuSystems\CommonBundle\DependencyInjection\CompilerPass;
 
 use AnzuSystems\CommonBundle\Mcp\Attribute\AsMcpTool;
+use AnzuSystems\CommonBundle\Mcp\Exception\McpConfigurationException;
 use AnzuSystems\CommonBundle\Mcp\Handler\McpToolReferenceHandler;
-use LogicException;
 use Mcp\Capability\Registry\ReferenceHandler;
 use ReflectionClass;
 use Symfony\Component\DependencyInjection\Compiler\CompilerPassInterface;
@@ -20,6 +20,8 @@ use Symfony\Component\DependencyInjection\Reference;
  */
 final class McpToolReferenceHandlerCompilerPass implements CompilerPassInterface
 {
+    use McpServerNameTrait;
+
     public const int PRIORITY = -10;
     public const string APP_REFERENCE_HANDLER_ID_FORMAT = 'mcp.server.%s.app.reference_handler';
     public const string APP_TOOL_TEMPLATES_PARAM = 'mcp.servers.app_tool_templates';
@@ -35,11 +37,8 @@ final class McpToolReferenceHandlerCompilerPass implements CompilerPassInterface
         if (false === $container->hasDefinition(McpToolReferenceHandler::class)) {
             return;
         }
-        $serverName = $container->getParameter(McpCompilerPass::SERVER_NAME_PARAM);
-        if (false === is_string($serverName)) {
-            throw new LogicException(sprintf('The "%s" parameter must be the mcp server name.', McpCompilerPass::SERVER_NAME_PARAM));
-        }
-        $builderId = sprintf(McpCompilerPass::BUILDER_ID_FORMAT, $serverName);
+        $serverName = $this->resolveServerName($container);
+        $builderId = $this->resolveBuilderId($serverName);
         if (false === $container->hasDefinition($builderId)) {
             return;
         }
@@ -57,11 +56,7 @@ final class McpToolReferenceHandlerCompilerPass implements CompilerPassInterface
         }
 
         if ($builder->hasMethodCall(self::SET_REFERENCE_HANDLER_METHOD)) {
-            throw new LogicException(sprintf(
-                'The mcp server "%s" already has a reference handler, so %s cannot wrap the SDK one.',
-                $serverName,
-                McpToolReferenceHandler::class,
-            ));
+            throw McpConfigurationException::createForeignReferenceHandler($serverName);
         }
         $handler->replaceArgument(
             self::INNER_ARGUMENT,
@@ -98,12 +93,7 @@ final class McpToolReferenceHandlerCompilerPass implements CompilerPassInterface
                 continue;
             }
 
-            throw new LogicException(sprintf(
-                'The MCP tool "%s" declares #[AsMcpTool] and the MCP App template of "%s": %s returns a CallToolResult, but the template needs an array, so drop one of them.',
-                $class,
-                $toolKey,
-                McpToolReferenceHandler::class,
-            ));
+            throw McpConfigurationException::createAppTemplateOnAsMcpTool($class, $toolKey);
         }
     }
 }

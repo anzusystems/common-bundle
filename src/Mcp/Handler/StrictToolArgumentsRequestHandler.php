@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace AnzuSystems\CommonBundle\Mcp\Handler;
 
-use Mcp\Capability\Formatter\ToolResultFormatter;
+use AnzuSystems\CommonBundle\Mcp\Exception\McpToolAccessRejectedException;
+use AnzuSystems\CommonBundle\Mcp\Log\McpToolCallLogger;
+use AnzuSystems\CommonBundle\Mcp\Security\McpToolAccessChecker;
 use Mcp\Capability\Registry\ToolReference;
 use Mcp\Capability\RegistryInterface;
 use Mcp\Exception\ToolNotFoundException;
@@ -15,16 +17,21 @@ use Mcp\Schema\Request\CallToolRequest;
 use Mcp\Schema\Result\CallToolResult;
 use Mcp\Server\Handler\Request\RequestHandlerInterface;
 use Mcp\Server\Session\SessionInterface;
-use Psr\Log\LoggerInterface;
 
 /**
+ * Runs before the SDK validates the arguments against the schema of the tool, which would answer a JSON-RPC error without
+ * the allowed arguments and without a call log.
+ *
  * @implements RequestHandlerInterface<CallToolResult>
  */
 final readonly class StrictToolArgumentsRequestHandler implements RequestHandlerInterface
 {
+    private const int NO_DURATION_MS = 0;
+
     public function __construct(
         private RegistryInterface $registry,
-        private LoggerInterface $logger,
+        private McpToolAccessChecker $toolAccessChecker,
+        private McpToolCallLogger $toolCallLogger,
     ) {
     }
 
@@ -40,26 +47,24 @@ final readonly class StrictToolArgumentsRequestHandler implements RequestHandler
             return Error::forInternalError('Unsupported request.', $request->getId());
         }
 
-        $unknownArguments = $this->findUnknownArguments($request);
-        $message = sprintf(
-            'Unknown argument%s "%s". Allowed arguments: %s.',
-            1 === count($unknownArguments) ? '' : 's',
-            implode('", "', $unknownArguments),
-            implode(', ', $this->getAllowedArguments($this->registry->getTool($request->name))),
+        $message = McpToolAccessRejectedException::createUnknownArguments(
+            $this->findUnknownArguments($request),
+            $this->getAllowedArguments($this->registry->getTool($request->name)),
+        )->getMessage();
+        $this->toolCallLogger->logCall(
+            toolName: $request->name,
+            params: $request->arguments,
+            error: $message,
+            durationMs: self::NO_DURATION_MS,
+            session: $session,
         );
-        $this->logger->info('Mcp tool call rejected.', [
-            'tool' => $request->name,
-            'unknownArguments' => $unknownArguments,
-        ]);
-        $payload = [McpToolReferenceHandler::ERROR_KEY => $message];
 
-        return new Response(
-            $request->getId(),
-            new CallToolResult(new ToolResultFormatter()->format($payload), isError: true, structuredContent: $payload),
-        );
+        return new Response($request->getId(), McpToolReferenceHandler::createErrorResult($message));
     }
 
     /**
+     * A tool the user may not call is left to the schema check of the SDK, whose error does not list the arguments.
+     *
      * @return list<string>
      */
     private function findUnknownArguments(CallToolRequest $request): array
@@ -67,6 +72,9 @@ final readonly class StrictToolArgumentsRequestHandler implements RequestHandler
         try {
             $reference = $this->registry->getTool($request->name);
         } catch (ToolNotFoundException) {
+            return [];
+        }
+        if (false === $this->toolAccessChecker->isToolGranted($request->name)) {
             return [];
         }
 

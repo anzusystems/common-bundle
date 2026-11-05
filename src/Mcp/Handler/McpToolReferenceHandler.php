@@ -40,7 +40,6 @@ use UnexpectedValueException;
 final readonly class McpToolReferenceHandler implements ReferenceHandlerInterface
 {
     public const string ERROR_KEY = 'error';
-    public const string WARNINGS_KEY = 'warnings';
     public const string ERROR_RESULT_MESSAGE = 'The tool returned an error result.';
     public const string UNHANDLED_ERROR_FORMAT = 'Unhandled %s';
 
@@ -65,6 +64,18 @@ final readonly class McpToolReferenceHandler implements ReferenceHandlerInterfac
         private RequestStack $requestStack,
         private ?McpInputEnricherInterface $inputEnricher = null,
     ) {
+    }
+
+    public static function createErrorResult(string $error): CallToolResult
+    {
+        $payload = [self::ERROR_KEY => $error];
+
+        return new CallToolResult(
+            new ToolResultFormatter()
+                ->format($payload),
+            isError: true,
+            structuredContent: $payload,
+        );
     }
 
     /**
@@ -127,7 +138,7 @@ final readonly class McpToolReferenceHandler implements ReferenceHandlerInterfac
                 throw $exception;
             }
 
-            return $this->createErrorResult($error);
+            return self::createErrorResult($error);
         } finally {
             $this->logResult(
                 toolName: $toolName,
@@ -396,18 +407,6 @@ final readonly class McpToolReferenceHandler implements ReferenceHandlerInterfac
         return new CallToolResult(
             new ToolResultFormatter()
                 ->format($payload),
-            structuredContent: $payload,
-        );
-    }
-
-    private function createErrorResult(string $error): CallToolResult
-    {
-        $payload = [self::ERROR_KEY => $error];
-
-        return new CallToolResult(
-            new ToolResultFormatter()
-                ->format($payload),
-            isError: true,
             structuredContent: $payload,
         );
     }
