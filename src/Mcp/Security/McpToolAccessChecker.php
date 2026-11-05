@@ -9,8 +9,6 @@ use Symfony\Bundle\SecurityBundle\Security;
 
 final readonly class McpToolAccessChecker
 {
-    public const string WRITE_PERMISSION = 'mcp_tool_write';
-
     /**
      * @param array<string, string> $toolPermissions
      * @param list<string> $readOnlyToolNames
@@ -34,13 +32,13 @@ final readonly class McpToolAccessChecker
 
     public function isToolPermissionGranted(string $toolName): bool
     {
-        // A preview is granted exactly with its write tool, write grant included, so a token never sees it alone.
+        // A preview is granted exactly with its write tool, so a token never sees it alone.
         $writeToolName = $this->writeToolNamesByPreview[$toolName] ?? null;
         if (is_string($writeToolName)) {
             return $this->isToolGranted($writeToolName);
         }
 
-        return $this->isInToolScope($toolName) && $this->isPermissionGranted($toolName);
+        return $this->isInReadScope($toolName) && $this->isPermissionGranted($toolName);
     }
 
     public function isWriteGranted(string $toolName): bool
@@ -49,7 +47,12 @@ final readonly class McpToolAccessChecker
             return true;
         }
 
-        return $this->security->isGranted(self::WRITE_PERMISSION, $toolName);
+        return in_array(
+            needle: $toolName,
+            haystack: $this->toolScopeProvider?->provideToolScope()
+                ->writeToolNames ?? [],
+            strict: true,
+        );
     }
 
     /**
@@ -111,14 +114,17 @@ final readonly class McpToolAccessChecker
         return false === in_array(needle: $toolName, haystack: $this->readOnlyToolNames, strict: true);
     }
 
-    private function isInToolScope(string $toolName): bool
+    private function isInReadScope(string $toolName): bool
     {
-        $allowedToolNames = $this->toolScopeProvider?->provideAllowedToolNames();
-        if (null === $allowedToolNames) {
+        if ($this->isWriteTool($toolName)) {
+            return true;
+        }
+        $readToolNames = $this->toolScopeProvider?->provideToolScope()?->readToolNames;
+        if (null === $readToolNames) {
             return true;
         }
 
-        return in_array(needle: $toolName, haystack: $allowedToolNames, strict: true);
+        return in_array(needle: $toolName, haystack: $readToolNames, strict: true);
     }
 
     private function isPermissionGranted(string $toolName): bool

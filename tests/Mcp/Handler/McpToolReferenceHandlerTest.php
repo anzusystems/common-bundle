@@ -17,12 +17,14 @@ use AnzuSystems\CommonBundle\Mcp\Model\Response\McpLogsByContextResponse;
 use AnzuSystems\CommonBundle\Mcp\Resolver\McpToolErrorResolver;
 use AnzuSystems\CommonBundle\Mcp\Resolver\McpToolSignatureResolver;
 use AnzuSystems\CommonBundle\Mcp\Security\McpToolAccessChecker;
+use AnzuSystems\CommonBundle\Mcp\Security\McpToolScope;
 use AnzuSystems\CommonBundle\Mcp\Security\McpWriteConfirmation;
 use AnzuSystems\CommonBundle\Mcp\Security\McpWriteToolGuard;
 use AnzuSystems\CommonBundle\Tests\Data\Entity\User;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Model\Request\ExampleWritePreviewRequest;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Model\Request\ExampleWriteRequest;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Model\Response\ExampleWritePreviewResponse;
+use AnzuSystems\CommonBundle\Tests\Data\Mcp\Security\StaticMcpToolScopeProvider;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Tool\ExampleContextTool;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Tool\ExampleErrorResultTool;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Tool\ExampleSearchTool;
@@ -1248,10 +1250,7 @@ final class McpToolReferenceHandlerTest extends TestCase
 
         $security = $this->createMock(Security::class);
         $security->method('isGranted')
-            ->willReturnCallback(static fn (mixed $attribute): bool => match ($attribute) {
-                McpToolAccessChecker::WRITE_PERMISSION => $writeGranted,
-                default => $toolGranted,
-            });
+            ->willReturn($toolGranted);
 
         $toolPermissions = array_fill_keys(self::TOOL_NAMES, self::TOOL_PERMISSION);
         $readOnlyToolNames = $readOnlyTool ? self::TOOL_NAMES : [];
@@ -1276,6 +1275,9 @@ final class McpToolReferenceHandlerTest extends TestCase
             toolPermissions: $toolPermissions,
             security: $security,
             readOnlyToolNames: $readOnlyToolNames,
+            toolScopeProvider: new StaticMcpToolScopeProvider(
+                new McpToolScope(writeToolNames: $writeGranted ? array_keys($toolPermissions) : []),
+            ),
             writeToolNamesByPreview: $writeToolNamesByPreview,
         );
 

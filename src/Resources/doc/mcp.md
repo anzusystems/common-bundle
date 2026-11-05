@@ -335,17 +335,11 @@ the read tool names to `McpToolAccessChecker`, so the classification needs no bu
 not know is a write tool. A tool without an explicit `name` is matched by the name the SDK derives
 (`ElementMetadataResolver::resolveName()`: the class short name for `__invoke`, the method name otherwise).
 
-A write tool additionally requires `McpToolAccessChecker::WRITE_PERMISSION` (`mcp_tool_write`) through
-`Security::isGranted()` with the tool name as the subject, so it is hidden from `tools/list` and denied on
-`tools/call` unless a host voter grants that attribute for that tool — `anzusystems/auth-bundle` provides one granting
-the write tools listed on the personal access token. `McpToolAccessChecker::getWriteToolNames()` lists the tools
-mapped in `tool_permissions` that are write tools, in map order, and `getPermittedWriteToolNames()` narrows them to the
-tools whose permission the current user holds. A call denied only for the missing write grant answers
-`Access denied — the write tool "<tool>" is not granted to this request.` Host voters built on the bundle's
-`AbstractVoter` let super admins through on the mapped tool permissions, but not on `mcp_tool_write`, which only a
-voter supporting that attribute grants — a super admin whose token does not grant a write tool is denied it too.
-"Without a voter the attribute is denied" holds only with Symfony's default access decision strategy (`affirmative`)
-and `allow_if_all_abstain: false`; a host that changes either needs a voter that denies `mcp_tool_write`. Annotate
+A write tool additionally has to be in the write tools of the request's scope (*Token scope* below), so it is hidden
+from `tools/list` and denied on `tools/call` without it. Without a scope every write tool is denied, for super admins
+too. `McpToolAccessChecker::getWriteToolNames()` lists the tools mapped in `tool_permissions` that are write tools, in
+map order, and `getPermittedWriteToolNames()` narrows them to the tools whose permission the current user holds. A call
+denied only for the scope answers `Access denied — the write tool "<tool>" is not granted to this token. Create a new personal access token with this write tool.` Annotate
 every read tool, or it disappears for clients without the write grant:
 
 ```php
@@ -373,7 +367,7 @@ A preview is a read tool that shows what a write tool would save and changes not
 ```
 
 A preview has no entry in `tool_permissions`: `McpToolAccessChecker` grants it exactly when it grants its write tool —
-the token scope, the mapped permission and the `mcp_tool_write` grant of the write tool — in `tools/list` and on
+the write tools of the scope and the mapped permission of the write tool — in `tools/list` and on
 `tools/call`; otherwise the call gets the usual tool access error. `getToolNames()`, `getWriteToolNames()`,
 `getPermittedToolNames()` and `getPermittedWriteToolNames()` read the keys of `tool_permissions`, so they never list a
 preview. As a read tool it skips the write grant check of its own, read-only mode, the one write per request and the
@@ -473,14 +467,17 @@ before `remove()`, because Doctrine clears the id after the flush.
 
 ### Token scope
 
-A host can narrow the tools of a request, e.g. to the tools listed on a personal access token, by registering a
-service under the id `McpToolScopeProviderInterface` (`anzusystems/auth-bundle` provides one).
-`provideAllowedToolNames()` returns the tool names the request may use, or `null` for no narrowing; without such a
-service every permitted tool stays available. The scope only narrows: a tool in the scope still needs its mapped
-permission and, for a write tool, the write grant. A tool outside the scope is hidden from `tools/list` and denied on
-`tools/call` with the usual access error. `McpToolAccessChecker::getPermittedToolNames()` lists every tool mapped in
-`tool_permissions` whose permission the current user holds, in map order, without the scope, so a host can offer them
-for a new token. A preview follows the scope of its write tool, so a token never names it.
+A host says what a request may use by registering a service under the id `McpToolScopeProviderInterface`
+(`anzusystems/auth-bundle` provides one for personal access tokens). `provideToolScope()` returns a `McpToolScope`:
+
+- `readToolNames`: the read tools the request may use, `null` keeps every read tool.
+- `writeToolNames`: the write tools the request may use.
+
+Without such a service, or when it returns `null`, read tools are not narrowed and write tools are denied. The scope only
+narrows: a tool in the scope still needs its mapped permission. A tool outside the scope is hidden from `tools/list` and
+denied on `tools/call`. `McpToolAccessChecker::getPermittedToolNames()` lists every tool mapped in `tool_permissions` whose
+permission the current user holds, in map order, without the scope, so a host can offer them for a new token. A preview
+follows the scope of its write tool, so a token never names it.
 
 ## Date windows
 

@@ -7,8 +7,10 @@ namespace AnzuSystems\CommonBundle\Tests\Mcp\Security;
 use AnzuSystems\CommonBundle\Log\Helper\AuditLogResourceHelper;
 use AnzuSystems\CommonBundle\Mcp\Exception\McpToolCallRejectedException;
 use AnzuSystems\CommonBundle\Mcp\Security\McpToolAccessChecker;
+use AnzuSystems\CommonBundle\Mcp\Security\McpToolScope;
 use AnzuSystems\CommonBundle\Mcp\Security\McpWriteToolGuard;
 use AnzuSystems\CommonBundle\Tests\Data\Entity\User;
+use AnzuSystems\CommonBundle\Tests\Data\Mcp\Security\StaticMcpToolScopeProvider;
 use AnzuSystems\Contracts\AnzuApp;
 use PHPUnit\Framework\TestCase;
 use Symfony\Bundle\SecurityBundle\Security;
@@ -141,10 +143,7 @@ final class McpWriteToolGuardTest extends TestCase
     {
         $security = $this->createMock(Security::class);
         $security->method('isGranted')
-            ->willReturnCallback(static fn (mixed $attribute): bool => match ($attribute) {
-                McpToolAccessChecker::WRITE_PERMISSION => $writeGranted,
-                default => true,
-            });
+            ->willReturn(true);
         $requestStack = new RequestStack();
         if ($request instanceof Request) {
             $requestStack->push($request);
@@ -158,6 +157,9 @@ final class McpWriteToolGuardTest extends TestCase
                 ],
                 security: $security,
                 readOnlyToolNames: [self::READ_TOOL_NAME],
+                toolScopeProvider: new StaticMcpToolScopeProvider(
+                    new McpToolScope(writeToolNames: $writeGranted ? [self::WRITE_TOOL_NAME] : []),
+                ),
             ),
             requestStack: $requestStack,
         );

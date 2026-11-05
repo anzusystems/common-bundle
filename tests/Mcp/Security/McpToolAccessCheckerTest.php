@@ -5,7 +5,9 @@ declare(strict_types=1);
 namespace AnzuSystems\CommonBundle\Tests\Mcp\Security;
 
 use AnzuSystems\CommonBundle\Mcp\Security\McpToolAccessChecker;
+use AnzuSystems\CommonBundle\Mcp\Security\McpToolScope;
 use AnzuSystems\CommonBundle\Mcp\Security\McpToolScopeProviderInterface;
+use AnzuSystems\CommonBundle\Tests\Data\Mcp\Security\StaticMcpToolScopeProvider;
 use LogicException;
 use PHPUnit\Framework\TestCase;
 use Symfony\Bundle\SecurityBundle\Security;
@@ -129,16 +131,49 @@ final class McpToolAccessCheckerTest extends TestCase
         ];
     }
 
-    public function testToolScopeDeniesWriteToolGrantedByTheToken(): void
+    public function testWriteToolIsNotNarrowedByTheReadToolNames(): void
     {
         $checker = $this->createChecker(
             readOnlyToolNames: [self::SECOND_GRANTED_TOOL],
             grantedWriteTools: [self::GRANTED_TOOL],
-            toolScopeProvider: self::createToolScopeProvider([self::SECOND_GRANTED_TOOL]),
+            toolScopeProvider: self::createToolScopeProvider([self::SECOND_GRANTED_TOOL], [self::GRANTED_TOOL]),
         );
 
-        self::assertFalse($checker->isToolPermissionGranted(self::GRANTED_TOOL));
+        self::assertTrue($checker->isToolGranted(self::GRANTED_TOOL));
+    }
+
+    /**
+     * @dataProvider noToolScopeProvider
+     */
+    public function testRequestWithoutScopeKeepsReadToolsAndDeniesWriteTools(
+        ?McpToolScopeProviderInterface $toolScopeProvider,
+    ): void {
+        $security = $this->createStub(Security::class);
+        $security->method('isGranted')
+            ->willReturn(true);
+        $checker = new McpToolAccessChecker(
+            toolPermissions: [
+                self::GRANTED_TOOL => self::GRANTED_PERMISSION,
+                self::SECOND_GRANTED_TOOL => self::GRANTED_PERMISSION,
+            ],
+            security: $security,
+            readOnlyToolNames: [self::SECOND_GRANTED_TOOL],
+            toolScopeProvider: $toolScopeProvider,
+        );
+
+        self::assertTrue($checker->isToolGranted(self::SECOND_GRANTED_TOOL));
         self::assertFalse($checker->isToolGranted(self::GRANTED_TOOL));
+    }
+
+    /**
+     * @return array<string, array{McpToolScopeProviderInterface|null}>
+     */
+    public static function noToolScopeProvider(): array
+    {
+        return [
+            'no provider' => [null],
+            'provider without a scope' => [new StaticMcpToolScopeProvider(null)],
+        ];
     }
 
     public function testPermittedToolNamesIgnoreToolScope(): void
@@ -192,7 +227,7 @@ final class McpToolAccessCheckerTest extends TestCase
                 self::createToolScopeProvider([self::SECOND_GRANTED_TOOL]),
                 false,
             ],
-            'preview in the token scope without its write tool is denied' => [
+            'preview in the read scope without its write tool is denied' => [
                 self::GRANTED_TOOL,
                 [self::GRANTED_TOOL],
                 self::createToolScopeProvider([self::PREVIEW_TOOL]),
@@ -247,24 +282,14 @@ final class McpToolAccessCheckerTest extends TestCase
     }
 
     /**
-     * @param list<string>|null $allowedToolNames
+     * @param list<string>|null $readToolNames
+     * @param list<string> $writeToolNames
      */
-    private static function createToolScopeProvider(?array $allowedToolNames): McpToolScopeProviderInterface
-    {
-        return new readonly class($allowedToolNames) implements McpToolScopeProviderInterface {
-            /**
-             * @param list<string>|null $allowedToolNames
-             */
-            public function __construct(
-                private ?array $allowedToolNames,
-            ) {
-            }
-
-            public function provideAllowedToolNames(): ?array
-            {
-                return $this->allowedToolNames;
-            }
-        };
+    private static function createToolScopeProvider(
+        ?array $readToolNames,
+        array $writeToolNames = [],
+    ): McpToolScopeProviderInterface {
+        return new StaticMcpToolScopeProvider(new McpToolScope($readToolNames, $writeToolNames));
     }
 
     /**
@@ -280,13 +305,9 @@ final class McpToolAccessCheckerTest extends TestCase
         array $toolCategories = [],
         array $writeToolNamesByPreview = [],
     ): McpToolAccessChecker {
-        $security = $this->createMock(Security::class);
+        $security = $this->createStub(Security::class);
         $security->method('isGranted')
-            ->willReturnCallback(static fn (mixed $attribute, mixed $subject = null): bool => match ($attribute) {
-                self::GRANTED_PERMISSION => true,
-                McpToolAccessChecker::WRITE_PERMISSION => in_array(needle: $subject, haystack: $grantedWriteTools, strict: true),
-                default => false,
-            });
+            ->willReturnCallback(static fn (mixed $attribute): bool => self::GRANTED_PERMISSION === $attribute);
 
         return new McpToolAccessChecker(
             toolPermissions: [
@@ -296,7 +317,7 @@ final class McpToolAccessCheckerTest extends TestCase
             ],
             security: $security,
             readOnlyToolNames: $readOnlyToolNames,
-            toolScopeProvider: $toolScopeProvider,
+            toolScopeProvider: $toolScopeProvider ?? self::createToolScopeProvider(null, $grantedWriteTools),
             toolCategories: $toolCategories,
             writeToolNamesByPreview: $writeToolNamesByPreview,
         );

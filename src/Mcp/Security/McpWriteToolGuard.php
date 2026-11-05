@@ -16,7 +16,7 @@ use Symfony\Component\HttpFoundation\RequestStack;
  */
 final readonly class McpWriteToolGuard
 {
-    public const string WRITE_TOOL_NOT_GRANTED_MESSAGE = 'Access denied — the write tool "%s" is not granted to this request.';
+    public const string WRITE_TOOL_NOT_GRANTED_MESSAGE = 'Access denied — the write tool "%s" is not granted to this token. Create a new personal access token with this write tool.';
     public const string READ_ONLY_MODE_MESSAGE = 'The system is in read-only mode, changes are temporarily disabled — retry later.';
     public const string WRITE_TOOL_DONE_MESSAGE = 'A write tool already ran in this request — send the call of "%s" in a separate request.';
 

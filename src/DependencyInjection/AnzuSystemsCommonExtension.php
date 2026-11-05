@@ -297,6 +297,8 @@ final class AnzuSystemsCommonExtension extends Extension implements PrependExten
             ->replaceArgument('$appRedis', new Reference($settings['app_redis']))
             ->replaceArgument('$unlockedCommands', $settings['unlocked_commands']);
 
+        $container->setParameter('anzu_systems_common.user_entity_class', $settings['user_entity_class']);
+
         $container
             ->getDefinition(CurrentAnzuUserProvider::class)
             ->replaceArgument('$userEntityClass', $settings['user_entity_class']);

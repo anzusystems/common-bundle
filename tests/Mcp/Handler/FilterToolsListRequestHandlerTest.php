@@ -6,6 +6,8 @@ namespace AnzuSystems\CommonBundle\Tests\Mcp\Handler;
 
 use AnzuSystems\CommonBundle\Mcp\Handler\FilterToolsListRequestHandler;
 use AnzuSystems\CommonBundle\Mcp\Security\McpToolAccessChecker;
+use AnzuSystems\CommonBundle\Mcp\Security\McpToolScope;
+use AnzuSystems\CommonBundle\Tests\Data\Mcp\Security\StaticMcpToolScopeProvider;
 use Mcp\Capability\RegistryInterface;
 use Mcp\Schema\JsonRpc\Response;
 use Mcp\Schema\Page;
@@ -72,10 +74,7 @@ final class FilterToolsListRequestHandlerTest extends TestCase
 
         $security = $this->createMock(Security::class);
         $security->method('isGranted')
-            ->willReturnCallback(static fn (mixed $attribute, mixed $subject = null): bool => match ($attribute) {
-                McpToolAccessChecker::WRITE_PERMISSION => self::GRANTED_WRITE_TOOL_NAME === $subject,
-                default => self::GRANTED_PERMISSION === $attribute,
-            });
+            ->willReturnCallback(static fn (mixed $attribute): bool => self::GRANTED_PERMISSION === $attribute);
         $toolAccessChecker = new McpToolAccessChecker(
             toolPermissions: [
                 self::GRANTED_TOOL_NAME => self::GRANTED_PERMISSION,
@@ -90,6 +89,9 @@ final class FilterToolsListRequestHandlerTest extends TestCase
                 self::GRANTED_PREVIEW_TOOL_NAME,
                 self::NOT_GRANTED_PREVIEW_TOOL_NAME,
             ],
+            toolScopeProvider: new StaticMcpToolScopeProvider(
+                new McpToolScope(writeToolNames: [self::GRANTED_WRITE_TOOL_NAME]),
+            ),
             writeToolNamesByPreview: [
                 self::GRANTED_PREVIEW_TOOL_NAME => self::GRANTED_WRITE_TOOL_NAME,
                 self::NOT_GRANTED_PREVIEW_TOOL_NAME => self::NOT_GRANTED_WRITE_TOOL_NAME,
