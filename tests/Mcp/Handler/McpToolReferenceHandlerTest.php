@@ -12,6 +12,7 @@ use AnzuSystems\CommonBundle\Mcp\Exception\McpWriteRejectedException;
 use AnzuSystems\CommonBundle\Mcp\Handler\McpToolReferenceHandler;
 use AnzuSystems\CommonBundle\Mcp\Log\McpLogger;
 use AnzuSystems\CommonBundle\Mcp\Log\McpToolCallLogger;
+use AnzuSystems\CommonBundle\Mcp\McpWriteRateLimiter;
 use AnzuSystems\CommonBundle\Mcp\Model\McpLogsByContextResult;
 use AnzuSystems\CommonBundle\Mcp\Model\Response\McpLogsByContextResponse;
 use AnzuSystems\CommonBundle\Mcp\Resolver\McpToolErrorResolver;
@@ -586,7 +587,7 @@ final class McpToolReferenceHandlerTest extends TestCase
         self::assertArrayHasKey('durationMs', $this->logRecords[0]['context']);
     }
 
-    public function testAcceptedConfirmationWritesWithoutRunningThePreview(): void
+    public function testAcceptedConfirmationChecksThePreviewAgainAndWrites(): void
     {
         $handler = $this->createWriteHandler();
 
@@ -597,7 +598,7 @@ final class McpToolReferenceHandlerTest extends TestCase
         self::assertInstanceOf(CallToolResult::class, $result);
         self::assertFalse($result->isError);
         self::assertSame(1, $this->writeRuns);
-        self::assertSame(0, $this->previewRuns);
+        self::assertSame(1, $this->previewRuns);
         self::assertSame(McpLogger::LEVEL_NAME_INFO, $this->insertedDocuments[0]['levelName']);
     }
 
@@ -759,6 +760,16 @@ final class McpToolReferenceHandlerTest extends TestCase
         self::assertSame(0, $this->writeRuns);
     }
 
+    public function testOtherPreviewHashIsRefusedWithoutElicitationToo(): void
+    {
+        $handler = $this->createWriteHandler(previewHash: self::OTHER_PREVIEW_HASH);
+
+        $result = $this->callWriteTool($handler, $this->createModernArguments(capabilities: new ClientCapabilities()));
+
+        $this->assertToolError(McpWriteRejectedException::createPreviewStale(ExampleWritePreviewTool::NAME)->getMessage(), $result);
+        self::assertSame(0, $this->writeRuns);
+    }
+
     public function testNullPreviewHashRunsTheWriteWithoutAsking(): void
     {
         $requestStack = new RequestStack();
@@ -836,7 +847,7 @@ final class McpToolReferenceHandlerTest extends TestCase
         self::assertInstanceOf(CallToolResult::class, $result);
         self::assertFalse($result->isError);
         self::assertSame(1, $this->writeRuns);
-        self::assertSame(0, $this->previewRuns);
+        self::assertSame(1, $this->previewRuns);
     }
 
     /**
@@ -866,7 +877,7 @@ final class McpToolReferenceHandlerTest extends TestCase
         self::assertInstanceOf(CallToolResult::class, $result);
         self::assertFalse($result->isError);
         self::assertSame(1, $this->writeRuns);
-        self::assertSame(0, $this->previewRuns);
+        self::assertSame(1, $this->previewRuns);
     }
 
     public function testReadToolIsNotAsked(): void
@@ -1291,6 +1302,7 @@ final class McpToolReferenceHandlerTest extends TestCase
                 requestStack: $requestStack,
             ),
             requestStack: $requestStack,
+            writeRateLimiter: new McpWriteRateLimiter(new ServiceLocator([]), [], $currentUserProvider),
             writeConfirmation: new McpWriteConfirmation(
                 translator: $this->createTranslator(),
                 currentUserProvider: $currentUserProvider,

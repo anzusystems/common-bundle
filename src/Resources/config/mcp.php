@@ -19,6 +19,7 @@ use AnzuSystems\CommonBundle\Mcp\Log\McpLogger;
 use AnzuSystems\CommonBundle\Mcp\Log\McpLogRepository;
 use AnzuSystems\CommonBundle\Mcp\Log\McpToolCallLogger;
 use AnzuSystems\CommonBundle\Mcp\McpRateLimiter;
+use AnzuSystems\CommonBundle\Mcp\McpWriteRateLimiter;
 use AnzuSystems\CommonBundle\Mcp\Resolver\McpContextIdResolver;
 use AnzuSystems\CommonBundle\Mcp\Resolver\McpDateWindowResolver;
 use AnzuSystems\CommonBundle\Mcp\Resolver\McpHostResolver;
@@ -165,6 +166,12 @@ return static function (ContainerConfigurator $configurator): void {
         ->tag('console.command')
     ;
 
+    $services->set(McpWriteRateLimiter::class)
+        ->arg('$rateLimiters', null)
+        ->arg('$toolRateLimiters', [])
+        ->arg('$currentUserProvider', service(CurrentAnzuUserProvider::class))
+    ;
+
     $services->set(McpToolReferenceHandler::class)
         ->arg('$inner', null)
         ->arg('$toolAccessChecker', service(McpToolAccessChecker::class))
@@ -176,6 +183,7 @@ return static function (ContainerConfigurator $configurator): void {
         ->arg('$validator', service(ValidatorInterface::class))
         ->arg('$serializer', service(Serializer::class))
         ->arg('$requestStack', service('request_stack'))
+        ->arg('$writeRateLimiter', service(McpWriteRateLimiter::class))
         ->arg('$toolSignatures', [])
     ;
 

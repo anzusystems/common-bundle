@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace AnzuSystems\CommonBundle\Mcp\Security;
 
 use AnzuSystems\CommonBundle\Domain\User\CurrentAnzuUserProvider;
-use AnzuSystems\CommonBundle\Helper\StringHelper;
 use AnzuSystems\CommonBundle\Mcp\Exception\McpWriteRejectedException;
 use AnzuSystems\CommonBundle\Mcp\Model\McpPreviewHashAwareInterface;
 use AnzuSystems\CommonBundle\Mcp\Model\McpWritePreviewInterface;
@@ -53,17 +52,9 @@ final readonly class McpWriteConfirmation
     }
 
     public function createInputRequiredResult(
-        string $previewToolName,
         McpPreviewHashAwareInterface $input,
         McpWritePreviewInterface $preview,
-    ): ?InputRequiredResult {
-        $previewHash = $preview->previewHash;
-        if (null === $previewHash) {
-            return null;
-        }
-        if (StringHelper::isNotSame($previewHash, $input->previewHash)) {
-            throw McpWriteRejectedException::createPreviewStale($previewToolName);
-        }
+    ): InputRequiredResult {
         $locale = $this->resolveLocale();
         $message = $preview->confirmationMessage;
 

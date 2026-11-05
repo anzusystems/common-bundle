@@ -5,11 +5,14 @@ declare(strict_types=1);
 namespace AnzuSystems\CommonBundle\Mcp\Handler;
 
 use AnzuSystems\CommonBundle\Exception\ValidationException;
+use AnzuSystems\CommonBundle\Helper\StringHelper;
 use AnzuSystems\CommonBundle\Log\Helper\AuditLogResourceHelper;
 use AnzuSystems\CommonBundle\Mcp\Exception\McpToolAccessRejectedException;
 use AnzuSystems\CommonBundle\Mcp\Exception\McpToolCallRejectedException;
 use AnzuSystems\CommonBundle\Mcp\Exception\McpToolInputException;
+use AnzuSystems\CommonBundle\Mcp\Exception\McpWriteRejectedException;
 use AnzuSystems\CommonBundle\Mcp\Log\McpToolCallLogger;
+use AnzuSystems\CommonBundle\Mcp\McpWriteRateLimiter;
 use AnzuSystems\CommonBundle\Mcp\Model\McpPreviewHashAwareInterface;
 use AnzuSystems\CommonBundle\Mcp\Model\McpToolSignature;
 use AnzuSystems\CommonBundle\Mcp\Model\McpWritePreviewInterface;
@@ -69,6 +72,7 @@ final readonly class McpToolReferenceHandler implements ReferenceHandlerInterfac
         private ValidatorInterface $validator,
         private Serializer $serializer,
         private RequestStack $requestStack,
+        private McpWriteRateLimiter $writeRateLimiter,
         private array $toolSignatures = [],
     ) {
     }
@@ -114,7 +118,7 @@ final readonly class McpToolReferenceHandler implements ReferenceHandlerInterfac
             $params = is_object($input) ? $this->toArray($input) : [];
             $this->assertCallable($toolName, $input);
 
-            $confirmationRequest = $this->askWriteConfirmation(toolName: $toolName, input: $input, arguments: $arguments);
+            $confirmationRequest = $this->guardWrite(toolName: $toolName, input: $input, arguments: $arguments);
             if ($confirmationRequest instanceof InputRequiredResult) {
                 return $confirmationRequest;
             }
@@ -147,33 +151,45 @@ final readonly class McpToolReferenceHandler implements ReferenceHandlerInterfac
     }
 
     /**
+     * A write runs only with the previewHash its preview returns right now. A preview without a hash has nothing to write
+     * (no change, or a reason the tool itself reports), so the tool runs and takes no token.
+     *
      * @param array<string, mixed> $arguments
      */
-    private function askWriteConfirmation(string $toolName, ?object $input, array $arguments): ?InputRequiredResult
+    private function guardWrite(string $toolName, ?object $input, array $arguments): ?InputRequiredResult
     {
         if (false === $this->toolAccessChecker->isWriteTool($toolName)) {
             return null;
         }
         $context = new RequestContext($arguments[self::SESSION_ARGUMENT], $arguments[self::REQUEST_ARGUMENT]);
-        if (false === $this->writeConfirmation->isSupportedBy($context)) {
+        $isConfirmable = $this->writeConfirmation->isSupportedBy($context);
+        $previewToolName = $this->toolAccessChecker->getPreviewToolName($toolName);
+        if (null === $previewToolName && false === $isConfirmable) {
             return null;
         }
         if (false === $input instanceof McpPreviewHashAwareInterface) {
             throw new UnexpectedValueException(sprintf('The input of the MCP write tool "%s" is "%s" instead of %s.', $toolName, get_debug_type($input), McpPreviewHashAwareInterface::class));
         }
-        if ($this->writeConfirmation->isAnswered($context, $input)) {
+        $isAnswered = $isConfirmable && $this->writeConfirmation->isAnswered($context, $input);
+        if ($isAnswered) {
             $this->writeConfirmation->assertConfirmed(toolName: $toolName, context: $context, input: $input);
-
+        }
+        if (null === $previewToolName) {
+            throw new UnexpectedValueException(sprintf('The MCP write tool "%s" has no preview.', $toolName));
+        }
+        $preview = $this->runPreview(previewToolName: $previewToolName, input: $input, arguments: $arguments);
+        if (null === $preview->previewHash) {
             return null;
         }
-        $previewToolName = $this->toolAccessChecker->getPreviewToolName($toolName)
-            ?? throw new UnexpectedValueException(sprintf('The MCP write tool "%s" has no preview.', $toolName));
+        if (StringHelper::isNotSame($preview->previewHash, $input->previewHash)) {
+            throw McpWriteRejectedException::createPreviewStale($previewToolName);
+        }
+        if ($isConfirmable && false === $isAnswered) {
+            return $this->writeConfirmation->createInputRequiredResult(input: $input, preview: $preview);
+        }
+        $this->writeRateLimiter->consume($toolName);
 
-        return $this->writeConfirmation->createInputRequiredResult(
-            previewToolName: $previewToolName,
-            input: $input,
-            preview: $this->runPreview(previewToolName: $previewToolName, input: $input, arguments: $arguments),
-        );
+        return null;
     }
 
     /**

@@ -377,6 +377,15 @@ A preview is a read tool that shows what a write tool would save and changes not
 )]
 ```
 
+Before every write tool with a preview, `McpToolReferenceHandler` runs the preview with the same input and compares its
+`previewHash` with the one the call sent. A different hash answers `McpWriteRejectedException::createPreviewStale()`, a
+preview without a hash has nothing to write, so the tool runs and reports its own result. A host tool only calculates the
+hash in its preview and has no check of its own.
+
+`#[AsMcpTool(rateLimiter: 'quiz_write')]` names a limiter of `framework.rate_limiter`, the budget of writes per user on top
+of `McpRateLimiter`. A write that passed its preview takes one token before the tool runs, tools naming one limiter share
+it and the error names them. A call without a change or refused by its preview takes none.
+
 A preview has no permission of its own: `McpToolAccessChecker` grants it exactly when it grants its write tool —
 the write tools of the scope and the mapped permission of the write tool — in `tools/list` and on
 `tools/call`; otherwise the call gets the usual tool access error. `getToolNames()`, `getWriteToolNames()`,

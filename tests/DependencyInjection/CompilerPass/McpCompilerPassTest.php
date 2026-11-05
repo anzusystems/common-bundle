@@ -7,6 +7,7 @@ namespace AnzuSystems\CommonBundle\Tests\DependencyInjection\CompilerPass;
 use AnzuSystems\CommonBundle\DependencyInjection\CompilerPass\McpCompilerPass;
 use AnzuSystems\CommonBundle\Mcp\Attribute\AsMcpTool;
 use AnzuSystems\CommonBundle\Mcp\Controller\McpController;
+use AnzuSystems\CommonBundle\Mcp\McpWriteRateLimiter;
 use AnzuSystems\CommonBundle\Mcp\Model\McpPreviewHashAwareInterface;
 use AnzuSystems\CommonBundle\Mcp\Model\McpWritePreviewInterface;
 use AnzuSystems\CommonBundle\Mcp\Security\McpToolAccessChecker;
@@ -27,6 +28,9 @@ use AnzuSystems\CommonBundle\Tests\Data\Mcp\Tool\NoHashInputExampleTool;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Tool\OtherCategoryExamplePreviewTool;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Tool\OtherInputExamplePreviewTool;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Tool\PermissionExamplePreviewTool;
+use AnzuSystems\CommonBundle\Tests\Data\Mcp\Tool\RateLimitedExamplePreviewTool;
+use AnzuSystems\CommonBundle\Tests\Data\Mcp\Tool\RateLimitedExampleTool;
+use AnzuSystems\CommonBundle\Tests\Data\Mcp\Tool\RateLimitedReadExampleTool;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Tool\ReadToolPreviewExampleTool;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Tool\SecondExamplePreviewTool;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Tool\WritablePreviewExampleTool;
@@ -48,6 +52,7 @@ final class McpCompilerPassTest extends TestCase
     private const string WRITE_TOOL_NAMES_BY_PREVIEW_ARGUMENT = '$writeToolNamesByPreview';
     private const string TOOL_PERMISSIONS_ARGUMENT = '$toolPermissions';
     private const string TOOL_PERMISSION = 'cms_example_read';
+    private const string RATE_LIMITER_ID = 'limiter.example_write';
     private const string TOOL_TAG_METHOD = 'method';
     private const string READ_TOOL_METHOD = 'listExamples';
     private const string WRITE_TOOL_METHOD = 'createExample';
@@ -143,6 +148,21 @@ final class McpCompilerPassTest extends TestCase
         );
     }
 
+    public function testToolRateLimitersReachTheWriteRateLimiter(): void
+    {
+        $container = $this->createMcpContainer();
+        $container->register(self::RATE_LIMITER_ID);
+        $this->registerTools($container, [RateLimitedExampleTool::class, RateLimitedExamplePreviewTool::class]);
+
+        new McpCompilerPass()
+            ->process($container);
+
+        self::assertSame(
+            [RateLimitedExampleTool::NAME => RateLimitedExampleTool::RATE_LIMITER],
+            $container->getDefinition(McpWriteRateLimiter::class)->getArgument('$toolRateLimiters'),
+        );
+    }
+
     /**
      * @dataProvider invalidToolMetadataProvider
      *
@@ -199,6 +219,14 @@ final class McpCompilerPassTest extends TestCase
             'tool without a permission' => [
                 [ExampleSearchTool::class],
                 sprintf(McpCompilerPass::TOOL_WITHOUT_PERMISSION_MESSAGE, ExampleSearchTool::NAME),
+            ],
+            'unknown rate limiter' => [
+                [RateLimitedExampleTool::class, RateLimitedExamplePreviewTool::class],
+                sprintf(McpCompilerPass::UNKNOWN_RATE_LIMITER_MESSAGE, RateLimitedExampleTool::NAME, RateLimitedExampleTool::RATE_LIMITER),
+            ],
+            'rate limiter of a read tool' => [
+                [RateLimitedReadExampleTool::class],
+                sprintf(McpCompilerPass::READ_TOOL_RATE_LIMITER_MESSAGE, RateLimitedReadExampleTool::NAME),
             ],
             'preview in another category than its write tool' => [
                 [ExampleWithoutInputTool::class, OtherCategoryExamplePreviewTool::class],
@@ -342,6 +370,9 @@ final class McpCompilerPassTest extends TestCase
         $container = new ContainerBuilder();
         $container->setParameter(McpCompilerPass::SERVER_NAME_PARAM, [self::SERVER_NAME]);
         $container->register(McpController::class);
+        $container->register(McpWriteRateLimiter::class)
+            ->setArgument('$rateLimiters', null)
+            ->setArgument('$toolRateLimiters', []);
 
         $this->expectException(LogicException::class);
 
@@ -366,6 +397,9 @@ final class McpCompilerPassTest extends TestCase
         $container->setParameter(McpCompilerPass::SERVER_NAME_PARAM, self::SERVER_NAME);
         $container->setParameter(AsMcpTool::LOG_TOOLS_PERMISSION_PARAM, self::TOOL_PERMISSION);
         $container->register(McpController::class);
+        $container->register(McpWriteRateLimiter::class)
+            ->setArgument('$rateLimiters', null)
+            ->setArgument('$toolRateLimiters', []);
         $container->register(McpToolAccessChecker::class)
             ->setArgument(self::TOOL_PERMISSIONS_ARGUMENT, [])
             ->setArgument(self::READ_ONLY_TOOL_NAMES_ARGUMENT, [])

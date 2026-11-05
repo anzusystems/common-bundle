@@ -17,6 +17,7 @@ use Mcp\Schema\ToolAnnotations;
  * The category groups the tool for a token form; a preview (previewOf) is read only, takes the permission of its write tool
  * and is granted exactly with it. Any other tool names the permission of the host it needs, a log tool of this bundle
  * takes it from mcp.log_tools_permission, because a bundle does not know the permissions of its host.
+ * rateLimiter names a Symfony rate limiter of a write tool: every write that passes its preview takes one token.
  */
 #[Attribute(Attribute::TARGET_CLASS)]
 final class AsMcpTool extends McpTool
@@ -38,6 +39,7 @@ final class AsMcpTool extends McpTool
         array $descriptionValues = [],
         public readonly ?string $previewOf = null,
         public readonly ?string $permission = null,
+        public readonly ?string $rateLimiter = null,
     ) {
         parent::__construct(
             name: $name,

@@ -7,6 +7,7 @@ namespace AnzuSystems\CommonBundle\DependencyInjection\CompilerPass;
 use AnzuSystems\CommonBundle\Helper\StringHelper;
 use AnzuSystems\CommonBundle\Mcp\Attribute\AsMcpTool;
 use AnzuSystems\CommonBundle\Mcp\Controller\McpController;
+use AnzuSystems\CommonBundle\Mcp\McpWriteRateLimiter;
 use AnzuSystems\CommonBundle\Mcp\Model\McpPreviewHashAwareInterface;
 use AnzuSystems\CommonBundle\Mcp\Model\McpToolSignature;
 use AnzuSystems\CommonBundle\Mcp\Model\McpWritePreviewInterface;
@@ -21,8 +22,10 @@ use ReflectionAttribute;
 use ReflectionMethod;
 use Symfony\Component\Config\Resource\FileResource;
 use Symfony\Component\DependencyInjection\Compiler\CompilerPassInterface;
+use Symfony\Component\DependencyInjection\Compiler\ServiceLocatorTagPass;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\DependencyInjection\Definition;
+use Symfony\Component\DependencyInjection\Reference;
 use Symfony\Component\Filesystem\Filesystem;
 
 final class McpCompilerPass implements CompilerPassInterface
@@ -38,6 +41,8 @@ final class McpCompilerPass implements CompilerPassInterface
     public const string WRITABLE_PREVIEW_MESSAGE = 'The MCP tool "%s" previews "%s", so it must be readOnly.';
     public const string SECOND_PREVIEW_MESSAGE = 'The MCP tool "%s" is previewed by more than one tool (%s), a write tool has one preview at most.';
     public const string MAPPED_PREVIEW_MESSAGE = 'The MCP tool "%s" takes the permission of "%s", remove its own permission.';
+    public const string UNKNOWN_RATE_LIMITER_MESSAGE = 'The MCP tool "%s" names the unknown rate limiter "%s": declare it in framework.rate_limiter.';
+    public const string READ_TOOL_RATE_LIMITER_MESSAGE = 'The MCP tool "%s" is a read tool, so it cannot name a rate limiter.';
     public const string TOOL_WITHOUT_PERMISSION_MESSAGE = 'The MCP tool "%s" has no permission: declare it with #[AsMcpTool(permission: …)].';
     public const string PREVIEW_IN_OTHER_CATEGORY_MESSAGE = 'The MCP tool "%1$s" previews "%2$s", so it must be in the category "%3$s" of "%2$s".';
     public const string WRITE_TOOL_WITHOUT_PREVIEW_MESSAGE = 'The MCP write tool "%1$s" has no preview: declare a read tool with #[AsMcpTool(previewOf: "%1$s")].';
@@ -52,6 +57,7 @@ final class McpCompilerPass implements CompilerPassInterface
     private const string TOOL_METHOD_FORMAT = '%s::%s';
     private const string TOOL_METHOD_SEPARATOR = '::';
     private const string TOOL_PERMISSIONS_ARGUMENT = '$toolPermissions';
+    private const string RATE_LIMITER_ID_FORMAT = 'limiter.%s';
     private const string READ_ONLY_TOOL_NAMES_ARGUMENT = '$readOnlyToolNames';
     private const string TOOL_CATEGORIES_ARGUMENT = '$toolCategories';
     private const string WRITE_TOOL_NAMES_BY_PREVIEW_ARGUMENT = '$writeToolNamesByPreview';
@@ -105,6 +111,7 @@ final class McpCompilerPass implements CompilerPassInterface
             writeToolNamesByPreview: $writeToolNamesByPreview,
         );
         $this->assertToolsHavePermission($toolsByName, $toolPermissions);
+        $this->configureWriteRateLimiter($container, $toolsByName, $readOnlyToolNames);
     }
 
     private function setInstructionsFromFile(ContainerBuilder $container, string $serverName): void
@@ -284,6 +291,35 @@ final class McpCompilerPass implements CompilerPassInterface
         }
 
         return $toolPermissions;
+    }
+
+    /**
+     * @param array<string, array<string, McpTool>> $toolsByName
+     * @param list<string> $readOnlyToolNames
+     */
+    private function configureWriteRateLimiter(ContainerBuilder $container, array $toolsByName, array $readOnlyToolNames): void
+    {
+        $toolRateLimiters = [];
+        $rateLimiters = [];
+        foreach ($toolsByName as $toolName => $tools) {
+            $tool = array_first($tools);
+            if (false === $tool instanceof AsMcpTool || null === $tool->rateLimiter) {
+                continue;
+            }
+            if (in_array(needle: $toolName, haystack: $readOnlyToolNames, strict: true)) {
+                throw new LogicException(sprintf(self::READ_TOOL_RATE_LIMITER_MESSAGE, $toolName));
+            }
+            $rateLimiterId = sprintf(self::RATE_LIMITER_ID_FORMAT, $tool->rateLimiter);
+            if (false === $container->has($rateLimiterId)) {
+                throw new LogicException(sprintf(self::UNKNOWN_RATE_LIMITER_MESSAGE, $toolName, $tool->rateLimiter));
+            }
+            $toolRateLimiters[$toolName] = $tool->rateLimiter;
+            $rateLimiters[$tool->rateLimiter] = new Reference($rateLimiterId);
+        }
+        $container
+            ->getDefinition(McpWriteRateLimiter::class)
+            ->replaceArgument('$rateLimiters', ServiceLocatorTagPass::register($container, $rateLimiters))
+            ->replaceArgument('$toolRateLimiters', $toolRateLimiters);
     }
 
     /**
