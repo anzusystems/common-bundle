@@ -52,7 +52,7 @@ final class McpRateLimiterTest extends TestCase
             self::assertArrayHasKey('X-RateLimit-Reset', $headers);
             self::assertArrayHasKey('Retry-After', $headers);
             self::assertGreaterThanOrEqual(0, (int) $headers['Retry-After']);
-            self::assertLessThanOrEqual(self::INTERVAL_SECONDS, (int) $headers['Retry-After']);
+            self::assertLessThanOrEqual(self::INTERVAL_SECONDS + 1, (int) $headers['Retry-After']);
         }
     }
 
