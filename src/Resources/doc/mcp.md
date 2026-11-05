@@ -489,9 +489,9 @@ anywhere else:
 ```php
 final class McpQuizToolInputException extends McpToolInputException
 {
-    public static function createNotFound(int $quizId): self
+    public static function createNotDescribable(int $quizId): self
     {
-        return new self(sprintf('Quiz "%d" not found, resolve quiz ids via list_quizzes.', $quizId));
+        return new self(sprintf('Quiz "%d" uses image answers, which MCP cannot keep: tell the user to edit it in the admin.', $quizId));
     }
 }
 ```
@@ -554,6 +554,9 @@ public ?int $siteId = null;
 fails with `Unknown id "5" — no such record exists. Resolve it via list_sites instead of guessing the id.`, unknown ids
 of a list with one violation naming each of them once. An entity with a composite identifier is a `LogicException`.
 The validator is registered also without the `mcp` section.
+
+A tool can then take the entity with `EntityManager::getReference()` and needs no `find()` and `null` check. A row
+deleted between the check and the first read throws `EntityNotFoundException`, so a host adds it to `tool_error_exceptions`.
 
 ## MCP host and pod
 
