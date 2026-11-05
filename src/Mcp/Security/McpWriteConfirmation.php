@@ -6,7 +6,7 @@ namespace AnzuSystems\CommonBundle\Mcp\Security;
 
 use AnzuSystems\CommonBundle\Domain\User\CurrentAnzuUserProvider;
 use AnzuSystems\CommonBundle\Helper\StringHelper;
-use AnzuSystems\CommonBundle\Mcp\Exception\McpToolCallRejectedException;
+use AnzuSystems\CommonBundle\Mcp\Exception\McpWriteRejectedException;
 use AnzuSystems\CommonBundle\Mcp\Model\McpPreviewHashAwareInterface;
 use AnzuSystems\CommonBundle\Mcp\Model\McpWritePreviewInterface;
 use Mcp\Schema\Elicitation\BooleanSchemaDefinition;
@@ -26,8 +26,6 @@ final readonly class McpWriteConfirmation
     public const string CONFIRM_FIELD = 'confirm';
     public const string FIELD_TITLE_KEY = 'writeConfirmation.confirm';
     public const string TRANSLATION_DOMAIN = 'mcp';
-    public const string REFUSED_MESSAGE = 'The confirmation of "%s" was refused or could not be shown to the user, so nothing changed. Tell the user and do not call it again unless they ask for it.';
-    public const string PREVIEW_HASH_STALE_MESSAGE = 'The arguments or the saved data differ from what %1$s returned this previewHash for: call %1$s again, show the user the result and pass the new previewHash.';
 
     public function __construct(
         private TranslatorInterface $translator,
@@ -50,7 +48,7 @@ final readonly class McpWriteConfirmation
     {
         $answer = $context->getInputContext()?->elicitResult($this->createKey($input));
         if (null === $answer || false === $answer->isAccepted() || true !== ($answer->content[self::CONFIRM_FIELD] ?? null)) {
-            throw new McpToolCallRejectedException(sprintf(self::REFUSED_MESSAGE, $toolName));
+            throw McpWriteRejectedException::createConfirmationRefused($toolName);
         }
     }
 
@@ -64,7 +62,7 @@ final readonly class McpWriteConfirmation
             return null;
         }
         if (StringHelper::isNotSame($previewHash, $input->previewHash)) {
-            throw new McpToolCallRejectedException(sprintf(self::PREVIEW_HASH_STALE_MESSAGE, $previewToolName));
+            throw McpWriteRejectedException::createPreviewStale($previewToolName);
         }
         $locale = $this->resolveLocale();
         $message = $preview->confirmationMessage;

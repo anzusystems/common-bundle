@@ -7,8 +7,8 @@ namespace AnzuSystems\CommonBundle\Tests\Mcp\Handler;
 use AnzuSystems\CommonBundle\Domain\User\CurrentAnzuUserProvider;
 use AnzuSystems\CommonBundle\Exception\ValidationException;
 use AnzuSystems\CommonBundle\Log\Helper\AuditLogResourceHelper;
-use AnzuSystems\CommonBundle\Mcp\Exception\McpToolCallRejectedException;
-use AnzuSystems\CommonBundle\Mcp\Exception\McpToolInputException;
+use AnzuSystems\CommonBundle\Mcp\Exception\McpToolAccessRejectedException;
+use AnzuSystems\CommonBundle\Mcp\Exception\McpWriteRejectedException;
 use AnzuSystems\CommonBundle\Mcp\Handler\McpToolReferenceHandler;
 use AnzuSystems\CommonBundle\Mcp\Log\McpLogger;
 use AnzuSystems\CommonBundle\Mcp\Log\McpToolCallLogger;
@@ -21,6 +21,8 @@ use AnzuSystems\CommonBundle\Mcp\Security\McpToolScope;
 use AnzuSystems\CommonBundle\Mcp\Security\McpWriteConfirmation;
 use AnzuSystems\CommonBundle\Mcp\Security\McpWriteToolGuard;
 use AnzuSystems\CommonBundle\Tests\Data\Entity\User;
+use AnzuSystems\CommonBundle\Tests\Data\Mcp\Exception\ExampleToolCallRejectedException;
+use AnzuSystems\CommonBundle\Tests\Data\Mcp\Exception\ExampleToolInputException;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Model\Request\ExampleWritePreviewRequest;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Model\Request\ExampleWriteRequest;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Model\Response\ExampleWritePreviewResponse;
@@ -222,7 +224,7 @@ final class McpToolReferenceHandlerTest extends TestCase
     public function testInputExceptionIsReturnedAsToolErrorAndToolWithoutInputLogsEmptyParams(): void
     {
         $handler = $this->createHandlerWithoutInputTool(
-            static fn (): McpLogsByContextResponse => throw new McpToolInputException(self::INPUT_ERROR_MESSAGE),
+            static fn (): McpLogsByContextResponse => throw ExampleToolInputException::createExample(self::INPUT_ERROR_MESSAGE),
         );
 
         $result = $this->callToolWithoutInput($handler);
@@ -265,12 +267,12 @@ final class McpToolReferenceHandlerTest extends TestCase
             'missing tool permission' => [
                 false,
                 true,
-                sprintf(McpToolReferenceHandler::TOOL_ACCESS_DENIED_MESSAGE, ExampleWithoutInputTool::NAME),
+                McpToolAccessRejectedException::createNotGranted(ExampleWithoutInputTool::NAME)->getMessage(),
             ],
             'write tool not granted to the request' => [
                 true,
                 false,
-                sprintf(McpWriteToolGuard::WRITE_TOOL_NOT_GRANTED_MESSAGE, ExampleWithoutInputTool::NAME),
+                McpWriteRejectedException::createNotGranted(ExampleWithoutInputTool::NAME)->getMessage(),
             ],
         ];
     }
@@ -315,7 +317,7 @@ final class McpToolReferenceHandlerTest extends TestCase
             'missing write grant denies the preview like a tool the token may not use' => [
                 false,
                 0,
-                sprintf(McpToolReferenceHandler::TOOL_ACCESS_DENIED_MESSAGE, ExampleWithoutInputTool::NAME),
+                McpToolAccessRejectedException::createNotGranted(ExampleWithoutInputTool::NAME)->getMessage(),
             ],
         ];
     }
@@ -352,7 +354,7 @@ final class McpToolReferenceHandlerTest extends TestCase
         return [
             'write grant before validation' => [
                 false,
-                sprintf(McpWriteToolGuard::WRITE_TOOL_NOT_GRANTED_MESSAGE, ExampleSearchTool::NAME),
+                McpWriteRejectedException::createNotGranted(ExampleSearchTool::NAME)->getMessage(),
             ],
             'validation before read-only mode' => [
                 true,
@@ -411,7 +413,7 @@ final class McpToolReferenceHandlerTest extends TestCase
         }
 
         self::assertTrue($result->isError);
-        self::assertSame(McpWriteToolGuard::READ_ONLY_MODE_MESSAGE, $result->structuredContent[McpToolReferenceHandler::ERROR_KEY]);
+        self::assertSame(McpWriteRejectedException::createReadOnlyMode()->getMessage(), $result->structuredContent[McpToolReferenceHandler::ERROR_KEY]);
     }
 
     /**
@@ -499,7 +501,7 @@ final class McpToolReferenceHandlerTest extends TestCase
         self::assertSame(1, $handled);
         self::assertTrue($result->isError);
         self::assertSame(
-            sprintf(McpWriteToolGuard::WRITE_TOOL_DONE_MESSAGE, ExampleWithoutInputTool::NAME),
+            McpWriteRejectedException::createAlreadyWritten(ExampleWithoutInputTool::NAME)->getMessage(),
             $result->structuredContent[McpToolReferenceHandler::ERROR_KEY],
         );
         self::assertTrue($request->attributes->has(AuditLogResourceHelper::RESOURCE_EXCLUDE_ATTR_NAME));
@@ -612,7 +614,7 @@ final class McpToolReferenceHandlerTest extends TestCase
             inputResponses: [self::CONFIRM_KEY => $answer],
         ));
 
-        $expectedError = sprintf(McpWriteConfirmation::REFUSED_MESSAGE, ExampleWriteTool::NAME);
+        $expectedError = McpWriteRejectedException::createConfirmationRefused(ExampleWriteTool::NAME)->getMessage();
         $this->assertToolError($expectedError, $result);
         self::assertSame(0, $this->writeRuns);
         self::assertSame(0, $this->previewRuns);
@@ -710,8 +712,8 @@ final class McpToolReferenceHandlerTest extends TestCase
     public static function previewExceptionProvider(): array
     {
         return [
-            'rejected call' => [new McpToolCallRejectedException(self::INPUT_ERROR_MESSAGE), [], self::INPUT_ERROR_MESSAGE],
-            'invalid input' => [new McpToolInputException(self::INPUT_ERROR_MESSAGE), [], self::INPUT_ERROR_MESSAGE],
+            'rejected call' => [ExampleToolCallRejectedException::createExample(self::INPUT_ERROR_MESSAGE), [], self::INPUT_ERROR_MESSAGE],
+            'invalid input' => [ExampleToolInputException::createExample(self::INPUT_ERROR_MESSAGE), [], self::INPUT_ERROR_MESSAGE],
             'validation exception' => [
                 new ValidationException()
                     ->addFormattedError(self::TITLE_FIELD, ValidationException::ERROR_FIELD_EMPTY),
@@ -752,7 +754,7 @@ final class McpToolReferenceHandlerTest extends TestCase
 
         $result = $this->callWriteTool($handler, $this->createModernArguments());
 
-        $this->assertToolError(sprintf(McpWriteConfirmation::PREVIEW_HASH_STALE_MESSAGE, ExampleWritePreviewTool::NAME), $result);
+        $this->assertToolError(McpWriteRejectedException::createPreviewStale(ExampleWritePreviewTool::NAME)->getMessage(), $result);
         self::assertSame(1, $this->previewRuns);
         self::assertSame(0, $this->writeRuns);
     }
@@ -772,7 +774,7 @@ final class McpToolReferenceHandlerTest extends TestCase
         self::assertSame(1, $this->writeRuns);
         self::assertInstanceOf(CallToolResult::class, $secondResult);
         self::assertSame(
-            sprintf(McpWriteToolGuard::WRITE_TOOL_DONE_MESSAGE, ExampleWriteTool::NAME),
+            McpWriteRejectedException::createAlreadyWritten(ExampleWriteTool::NAME)->getMessage(),
             $secondResult->structuredContent[McpToolReferenceHandler::ERROR_KEY],
         );
     }
@@ -810,15 +812,15 @@ final class McpToolReferenceHandlerTest extends TestCase
                 false,
                 true,
                 false,
-                sprintf(McpToolReferenceHandler::TOOL_ACCESS_DENIED_MESSAGE, ExampleWriteTool::NAME),
+                McpToolAccessRejectedException::createNotGranted(ExampleWriteTool::NAME)->getMessage(),
             ],
             'write tool not granted to the request' => [
                 true,
                 false,
                 false,
-                sprintf(McpWriteToolGuard::WRITE_TOOL_NOT_GRANTED_MESSAGE, ExampleWriteTool::NAME),
+                McpWriteRejectedException::createNotGranted(ExampleWriteTool::NAME)->getMessage(),
             ],
-            'read-only mode' => [true, true, true, McpWriteToolGuard::READ_ONLY_MODE_MESSAGE],
+            'read-only mode' => [true, true, true, McpWriteRejectedException::createReadOnlyMode()->getMessage()],
         ];
     }
 

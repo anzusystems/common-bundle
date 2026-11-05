@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace AnzuSystems\CommonBundle\Tests\Mcp\Security;
 
 use AnzuSystems\CommonBundle\Domain\User\CurrentAnzuUserProvider;
+use AnzuSystems\CommonBundle\Mcp\Exception\McpDeleteRejectedException;
 use AnzuSystems\CommonBundle\Mcp\Exception\McpToolCallRejectedException;
 use AnzuSystems\CommonBundle\Mcp\Security\McpDeleteGuard;
 use AnzuSystems\CommonBundle\Tests\Data\Entity\User;
@@ -86,16 +87,15 @@ final class McpDeleteGuardTest extends TestCase
         $entity = $this->createEntity(createdAt: $createdAt, createdById: self::OTHER_USER_ID);
 
         $this->expectException(McpToolCallRejectedException::class);
-        $this->expectExceptionMessage(sprintf(
-            McpDeleteGuard::REFUSED_MESSAGE,
+        $this->expectExceptionMessage(McpDeleteRejectedException::createRefused(
             self::RESOURCE_NAME,
             self::ENTITY_ID,
-            implode(' ', [
+            [
                 $this->createTooOldRefusal($createdAt),
                 McpDeleteGuard::NOT_CREATOR_MESSAGE,
                 sprintf(McpDeleteGuard::IN_USE_MESSAGE, self::FIRST_DEPENDENCY),
-            ]),
-        ));
+            ],
+        )->getMessage());
 
         $this->createGuard([self::FIRST_DEPENDENCY])->assertDeletable($entity);
     }

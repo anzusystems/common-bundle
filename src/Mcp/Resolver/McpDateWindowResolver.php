@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace AnzuSystems\CommonBundle\Mcp\Resolver;
 
-use AnzuSystems\CommonBundle\Mcp\Exception\McpToolInputException;
+use AnzuSystems\CommonBundle\Mcp\Exception\McpDateWindowInputException;
 use AnzuSystems\CommonBundle\Mcp\Model\McpDateWindow;
 use AnzuSystems\Contracts\AnzuApp;
 use DateTimeImmutable;
@@ -18,8 +18,6 @@ final readonly class McpDateWindowResolver
     public const string DATE_TIME_OFFSET_DESCRIPTION = 'Any UTC offset is honoured; a value without an offset is read as UTC.';
 
     private const int LOG_WINDOW_DEFAULT_DAYS = 1;
-    private const string ERROR_INVERTED_DATE_WINDOW = 'publishedUntil must not be before publishedFrom.';
-    private const string ERROR_INVERTED_LOG_WINDOW = 'until must not be before from.';
     private const string UTC_TIMEZONE = 'UTC';
 
     public function resolveArticleWindow(?string $publishedFrom, ?string $publishedUntil): McpDateWindow
@@ -43,7 +41,7 @@ final readonly class McpDateWindowResolver
         $resolvedUntil = $this->parseDateTime('until', $until) ?? AnzuApp::date();
         $resolvedFrom = $parsedFrom ?? $resolvedUntil->modify(sprintf('-%d day', self::LOG_WINDOW_DEFAULT_DAYS));
         if ($resolvedUntil < $resolvedFrom) {
-            throw new McpToolInputException(self::ERROR_INVERTED_LOG_WINDOW);
+            throw McpDateWindowInputException::createInvertedLogWindow();
         }
         $clampedFrom = $this->clampLogFrom($resolvedFrom, $resolvedUntil);
 
@@ -66,16 +64,14 @@ final readonly class McpDateWindowResolver
             return new DateTimeImmutable($value, $utc)
                 ->setTimezone($utc);
         } catch (Exception) {
-            throw new McpToolInputException(
-                sprintf('Invalid %s value "%s", provide an ISO 8601 date-time, e.g. "2026-07-09T06:00:00+02:00".', $paramName, $value),
-            );
+            throw McpDateWindowInputException::createInvalidDate($paramName, $value);
         }
     }
 
     public function ensureNotInverted(?DateTimeImmutable $from, ?DateTimeImmutable $until): void
     {
         if ($from instanceof DateTimeImmutable && $until instanceof DateTimeImmutable && $until < $from) {
-            throw new McpToolInputException(self::ERROR_INVERTED_DATE_WINDOW);
+            throw McpDateWindowInputException::createInvertedDateWindow();
         }
     }
 
@@ -127,7 +123,7 @@ final readonly class McpDateWindowResolver
             return $maxUntil;
         }
         if ($until < $clampedFrom) {
-            throw new McpToolInputException(self::ERROR_INVERTED_DATE_WINDOW);
+            throw McpDateWindowInputException::createInvertedDateWindow();
         }
 
         return $until;

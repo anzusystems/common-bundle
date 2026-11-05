@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace AnzuSystems\CommonBundle\Mcp\Resolver;
 
 use AnzuSystems\CommonBundle\Helper\StringHelper;
-use AnzuSystems\CommonBundle\Mcp\Exception\McpToolInputException;
+use AnzuSystems\CommonBundle\Mcp\Exception\McpContextIdInputException;
 use Symfony\Component\Uid\Uuid;
 
 final readonly class McpContextIdResolver
@@ -17,9 +17,7 @@ final readonly class McpContextIdResolver
             return Uuid::fromString($contextId)->toRfc4122();
         }
 
-        throw new McpToolInputException(
-            sprintf('Invalid contextId "%s", provide a UUID taken from a log record.', $contextId),
-        );
+        throw McpContextIdInputException::createInvalid($contextId);
     }
 
     public function resolveOptional(?string $contextId): ?string

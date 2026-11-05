@@ -387,10 +387,10 @@ and the validation of the input, so a call without the right to write asks nothi
    * an exception of the preview is the result of the call, the same tool error the write would give, and nothing is
      written;
    * `previewHash: null` runs the write without a question, because such a write saves nothing;
-   * another `previewHash` than in the arguments is a tool error (`McpWriteConfirmation::PREVIEW_HASH_STALE_MESSAGE`);
+   * another `previewHash` than in the arguments is a tool error (`McpWriteRejectedException::createPreviewStale()`);
    * the same `previewHash` ends the call with `input_required`, under the key `confirm_<previewHash>`.
 2. The client repeats the call with `inputResponses`. With `accept` and `confirm: true` the write runs, without the
-   preview. Any other answer under that key is a tool error (`McpWriteConfirmation::REFUSED_MESSAGE`), and nothing is
+   preview. Any other answer under that key is a tool error (`McpWriteRejectedException::createConfirmationRefused()`), and nothing is
    asked again: `decline`, `cancel`, an unticked box and an answer that cannot be read. An answer under another key asks
    again.
 
@@ -478,6 +478,25 @@ narrows: a tool in the scope still needs its mapped permission. A tool outside t
 denied on `tools/call`. `McpToolAccessChecker::getPermittedToolNames()` lists every tool mapped in `tool_permissions` whose
 permission the current user holds, in map order, without the scope, so a host can offer them for a new token. A preview
 follows the scope of its write tool, so a token never names it.
+
+## Tool errors
+
+`McpToolInputException` (an argument the client can correct) and `McpToolCallRejectedException` (a call a guard refused)
+are abstract, and the handler turns any subclass into a tool error with its message. A host adds one subclass per domain
+and builds each message in a static `create*()` method. The constructor is protected, so a message cannot be thrown from
+anywhere else:
+
+```php
+final class McpQuizToolInputException extends McpToolInputException
+{
+    public static function createNotFound(int $quizId): self
+    {
+        return new self(sprintf('Quiz "%d" not found, resolve quiz ids via list_quizzes.', $quizId));
+    }
+}
+```
+
+A message tells the model what to do next, so it is prose, not an error code.
 
 ## Date windows
 

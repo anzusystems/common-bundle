@@ -6,6 +6,7 @@ namespace AnzuSystems\CommonBundle\Tests\Mcp\Security;
 
 use AnzuSystems\CommonBundle\Log\Helper\AuditLogResourceHelper;
 use AnzuSystems\CommonBundle\Mcp\Exception\McpToolCallRejectedException;
+use AnzuSystems\CommonBundle\Mcp\Exception\McpWriteRejectedException;
 use AnzuSystems\CommonBundle\Mcp\Security\McpToolAccessChecker;
 use AnzuSystems\CommonBundle\Mcp\Security\McpToolScope;
 use AnzuSystems\CommonBundle\Mcp\Security\McpWriteToolGuard;
@@ -37,7 +38,7 @@ final class McpWriteToolGuardTest extends TestCase
             $guard->assertWriteGranted($toolName);
         } catch (McpToolCallRejectedException $exception) {
             $rejected = true;
-            self::assertSame(sprintf(McpWriteToolGuard::WRITE_TOOL_NOT_GRANTED_MESSAGE, $toolName), $exception->getMessage());
+            self::assertSame(McpWriteRejectedException::createNotGranted($toolName)->getMessage(), $exception->getMessage());
         }
 
         self::assertSame($expectedRejected, $rejected);
@@ -60,7 +61,7 @@ final class McpWriteToolGuardTest extends TestCase
         $guard = $this->createGuard();
 
         $this->expectException(McpToolCallRejectedException::class);
-        $this->expectExceptionMessage(McpWriteToolGuard::READ_ONLY_MODE_MESSAGE);
+        $this->expectExceptionMessage(McpWriteRejectedException::createReadOnlyMode()->getMessage());
 
         $this->initAppReadOnlyMode(true);
         try {
@@ -77,7 +78,7 @@ final class McpWriteToolGuardTest extends TestCase
         $guard->markWritten();
 
         $this->expectException(McpToolCallRejectedException::class);
-        $this->expectExceptionMessage(sprintf(McpWriteToolGuard::WRITE_TOOL_DONE_MESSAGE, self::WRITE_TOOL_NAME));
+        $this->expectExceptionMessage(McpWriteRejectedException::createAlreadyWritten(self::WRITE_TOOL_NAME)->getMessage());
 
         $guard->assertWritable(self::WRITE_TOOL_NAME);
     }

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace AnzuSystems\CommonBundle\Mcp\Handler;
 
 use AnzuSystems\CommonBundle\Exception\ValidationException;
+use AnzuSystems\CommonBundle\Mcp\Exception\McpToolAccessRejectedException;
 use AnzuSystems\CommonBundle\Mcp\Exception\McpToolCallRejectedException;
 use AnzuSystems\CommonBundle\Mcp\Exception\McpToolInputException;
 use AnzuSystems\CommonBundle\Mcp\Log\McpToolCallLogger;
@@ -36,7 +37,6 @@ final readonly class McpToolReferenceHandler implements ReferenceHandlerInterfac
 {
     public const string ERROR_KEY = 'error';
     public const string WARNINGS_KEY = 'warnings';
-    public const string TOOL_ACCESS_DENIED_MESSAGE = 'Access denied — the current MCP user is not allowed to use the tool "%s".';
     public const string ACCESS_DENIED_MESSAGE = 'Access denied — the current MCP user is not allowed to access the requested resource.';
     public const string INVALID_ARGUMENTS_PREFIX = 'Invalid arguments: ';
     public const string ERROR_RESULT_MESSAGE = 'The tool returned an error result.';
@@ -235,7 +235,7 @@ final readonly class McpToolReferenceHandler implements ReferenceHandlerInterfac
     private function assertCallable(string $toolName, ?object $input): void
     {
         if (false === $this->toolAccessChecker->isToolPermissionGranted($toolName)) {
-            throw new McpToolCallRejectedException(sprintf(self::TOOL_ACCESS_DENIED_MESSAGE, $toolName));
+            throw McpToolAccessRejectedException::createNotGranted($toolName);
         }
         $isWriteTool = $this->toolAccessChecker->isWriteTool($toolName);
         if ($isWriteTool) {
@@ -303,7 +303,7 @@ final readonly class McpToolReferenceHandler implements ReferenceHandlerInterfac
             $messages[] = sprintf(self::VIOLATION_FORMAT, $violation->getPropertyPath(), $violation->getMessage());
         }
 
-        throw new McpToolCallRejectedException($this->formatInvalidArguments($messages));
+        throw McpToolAccessRejectedException::createInvalidArguments($this->formatInvalidArguments($messages));
     }
 
     private function resolveErrorMessage(string $toolName, Throwable $exception): ?string

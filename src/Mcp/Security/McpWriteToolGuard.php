@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace AnzuSystems\CommonBundle\Mcp\Security;
 
 use AnzuSystems\CommonBundle\Log\Helper\AuditLogResourceHelper;
-use AnzuSystems\CommonBundle\Mcp\Exception\McpToolCallRejectedException;
+use AnzuSystems\CommonBundle\Mcp\Exception\McpWriteRejectedException;
 use AnzuSystems\Contracts\AnzuApp;
 use AnzuSystems\Contracts\Entity\Interfaces\BaseIdentifiableInterface;
 use Symfony\Component\HttpFoundation\RequestStack;
@@ -16,10 +16,6 @@ use Symfony\Component\HttpFoundation\RequestStack;
  */
 final readonly class McpWriteToolGuard
 {
-    public const string WRITE_TOOL_NOT_GRANTED_MESSAGE = 'Access denied — the write tool "%s" is not granted to this token. Create a new personal access token with this write tool.';
-    public const string READ_ONLY_MODE_MESSAGE = 'The system is in read-only mode, changes are temporarily disabled — retry later.';
-    public const string WRITE_TOOL_DONE_MESSAGE = 'A write tool already ran in this request — send the call of "%s" in a separate request.';
-
     private const string WRITE_TOOL_DONE_ATTR = '_mcp_write_tool_done';
 
     public function __construct(
@@ -34,16 +30,16 @@ final readonly class McpWriteToolGuard
             return;
         }
 
-        throw new McpToolCallRejectedException(sprintf(self::WRITE_TOOL_NOT_GRANTED_MESSAGE, $toolName));
+        throw McpWriteRejectedException::createNotGranted($toolName);
     }
 
     public function assertWritable(string $toolName): void
     {
         if (AnzuApp::isReadOnlyMode()) {
-            throw new McpToolCallRejectedException(self::READ_ONLY_MODE_MESSAGE);
+            throw McpWriteRejectedException::createReadOnlyMode();
         }
         if (true === $this->requestStack->getMainRequest()?->attributes->has(self::WRITE_TOOL_DONE_ATTR)) {
-            throw new McpToolCallRejectedException(sprintf(self::WRITE_TOOL_DONE_MESSAGE, $toolName));
+            throw McpWriteRejectedException::createAlreadyWritten($toolName);
         }
     }
 
