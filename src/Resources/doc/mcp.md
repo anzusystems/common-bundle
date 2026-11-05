@@ -33,6 +33,7 @@ infrastructure after a bundle upgrade.
            allowed_hosts: '%env(csv:ANZU_MCP_ALLOWED_HOSTS)%'
            pod: '%env(bool:ANZU_MCP_POD)%'
            confirmation_fallback_locale: 'sk'
+           log_tools_permission: cms_log_read
            tool_error_exceptions:
                App\Exception\SomeBackendException: 'Backend is temporarily unavailable, retry the call.'
            rate_limiter:
@@ -130,7 +131,7 @@ its `__invoke()` takes the request DTO and returns the response.
         Filter {{ list_published_articles }} by the returned ids.
         TXT,
     category: McpToolCategory::KEYWORDS,
-    values: ['list_published_articles' => ListPublishedArticlesTool::NAME],
+    descriptionValues: ['list_published_articles' => ListPublishedArticlesTool::NAME],
     readOnly: true,
 )]
 final readonly class ListKeywordsTool
@@ -164,12 +165,12 @@ final readonly class ListKeywordsTool
   `destructive` (default `true`, as in the MCP specification) and `idempotent` (default `false`) describe a write tool
   only.
 * `category` (required) names the group the tool belongs to, e.g. in the tool list of a token form. It is camelCase
-  (`^[a-z][a-zA-Z0-9]*$`), so a client can build a translation key from it; a host orders its categories by their first
-  tool in `mcp.tool_permissions`. The bundle log tools are in `AsMcpTool::CATEGORY_DIAGNOSTICS` (`diagnostics`).
+  (`^[a-z][a-zA-Z0-9]*$`), so a client can build a translation key from it; categories come in the order of their first
+  tool in `McpToolAccessChecker::getToolNames()`. The bundle log tools are in `AsMcpTool::CATEGORY_DIAGNOSTICS` (`diagnostics`).
   `McpToolAccessChecker::getToolCategory()` returns the category of a tool and throws a `LogicException` for a tool
   without one.
 * `previewOf` makes the tool the preview of a write tool, see "Preview tools" below.
-* `values` replace the `{{ name }}` placeholders of the description, like the parameters of a validation message;
+* `descriptionValues` replace the `{{ name }}` placeholders of the description, like the parameters of a validation message;
   point to another tool through its `NAME` constant, so a renamed or removed tool breaks the build instead of the
   text. A placeholder without a value, or a value without a placeholder, fails the container compilation.
 * The input class is the request DTO: `McpToolSchemaCompilerPass` makes the tool's input schema from its
@@ -183,7 +184,7 @@ final readonly class ListKeywordsTool
   compilation with a `LogicException` naming the member.
 * The return class is the response: the pass appends a `Returns:` list of its `#[Serialize]` properties to the
   description, because clients hand the model the description and the input schema, not necessarily an output schema.
-* `#[McpField(description: …, values: […])]` describes a DTO property, a response property or a case of a backed
+* `#[McpField(description: …, descriptionValues: […])]` describes a DTO property, a response property or a case of a backed
   enum; the described cases of an enum field are listed after the field's own description, the default one marked.
   Keep validation messages generic: the schema rejects most invalid calls before the validator runs, and the
   handler prefixes every violation with its property path.
@@ -275,21 +276,33 @@ array handling re-indexes nested maps).
 
 ## Tool permissions
 
-Every tool is mapped to an existing permission of the host application in `mcp.tool_permissions` (tool name →
-permission name; the map must not be empty — the bundle fails at compile time otherwise, because an empty map hides
-every tool and denies every call); `McpToolAccessChecker` resolves it through the host's standard permission model
-(`Security::isGranted()` → the host voters, super admin bypass). A tool that is not mapped is denied — there is no
-implicit access.
+Every tool names an existing permission of the host application; `McpToolAccessChecker` resolves it through the host's
+standard permission model (`Security::isGranted()` → the host voters, super admin bypass). There is no implicit access:
+a tool declared by `#[AsMcpTool]` without a permission fails the container compilation.
+
+A host tool declares it in the attribute:
+
+```php
+#[AsMcpTool(
+    name: ListSitesTool::NAME,
+    description: 'Lists the sites.',
+    category: McpToolCategory::SITES,
+    permission: Permission::CMS_SITE_READ,
+    readOnly: true,
+)]
+```
+
+A log tool of this bundle (`search_app_logs`, `search_audit_logs`, `get_logs_by_context`) cannot know the permissions of
+its host, so the host names the one permission they share:
 
 ```yaml
 anzu_systems_common:
     mcp:
-        tool_permissions:
-            search_app_logs: cms_log_read
-            search_audit_logs: cms_log_read
-            get_logs_by_context: cms_log_read
-            list_sites: cms_site_read
+        log_tools_permission: cms_log_read
 ```
+
+`McpCompilerPass` builds the map of `McpToolAccessChecker` from the attributes, in the order of the tool services. An
+enabled `mcp` section without `log_tools_permission` fails at compile time.
 
 * `tools/call` of a tool the current user may not use returns a tool error result (`isError: true` with
   `{"error": "Access denied — …"}`) from `McpToolReferenceHandler` before the tool runs, and the denied call is
@@ -304,14 +317,13 @@ and fails the container compilation with a `LogicException` when
   registry keeps only the last tool registered under a name, and the read/write classification would be ambiguous;
 * a tool name is not 1 to 64 letters, digits, dots, underscores, hyphens or slashes (the SDK `NameValidator`) — the
   SDK would register it and only log a warning;
-* a `tool_permissions` key matches no registered tool (e.g. a typo) — such a mapping would grant nothing;
-* a tool in `tool_permissions` is not declared by `#[AsMcpTool]`, so it has no category;
 * a `category` is not camelCase (`^[a-z][a-zA-Z0-9]*$`);
 * `previewOf` names an unknown tool, or one that is not a write tool declared by `#[AsMcpTool]` (e.g. another
   preview);
 * a preview is not `readOnly`;
 * a write tool has more than one preview;
-* a preview is mapped in `tool_permissions`;
+* a preview has its own permission;
+* a tool declared by `#[AsMcpTool]` that is not a preview has no permission (`TOOL_WITHOUT_PERMISSION_MESSAGE`);
 * a preview is in another category than its write tool;
 * a write tool declared by `#[AsMcpTool]` has no preview (`WRITE_TOOL_WITHOUT_PREVIEW_MESSAGE`);
 * the response class of a preview does not implement `McpWritePreviewInterface`
@@ -320,8 +332,7 @@ and fails the container compilation with a `LogicException` when
   of its preview (`WRITE_INPUT_NOT_PREVIEW_INPUT_MESSAGE`).
 
 A tool that is not declared by `#[McpTool]` on a tagged `mcp.tool` service (e.g. one registered by an McpBundle app)
-is unknown to these checks and cannot be mapped in `tool_permissions`. A tool mapped there is declared by
-`#[AsMcpTool]` with a category.
+is unknown to these checks. It has no permission and neither has a plain `#[McpTool]`, so both are denied.
 
 ### Write tools
 
@@ -337,7 +348,7 @@ not know is a write tool. A tool without an explicit `name` is matched by the na
 
 A write tool additionally has to be in the write tools of the request's scope (*Token scope* below), so it is hidden
 from `tools/list` and denied on `tools/call` without it. Without a scope every write tool is denied, for super admins
-too. `McpToolAccessChecker::getWriteToolNames()` lists the tools mapped in `tool_permissions` that are write tools, in
+too. `McpToolAccessChecker::getWriteToolNames()` lists the tools with a permission that are write tools, in
 map order, and `getPermittedWriteToolNames()` narrows them to the tools whose permission the current user holds. A call
 denied only for the scope answers `Access denied — the write tool "<tool>" is not granted to this token. Create a new personal access token with this write tool.` Annotate
 every read tool, or it disappears for clients without the write grant:
@@ -366,10 +377,10 @@ A preview is a read tool that shows what a write tool would save and changes not
 )]
 ```
 
-A preview has no entry in `tool_permissions`: `McpToolAccessChecker` grants it exactly when it grants its write tool —
+A preview has no permission of its own: `McpToolAccessChecker` grants it exactly when it grants its write tool —
 the write tools of the scope and the mapped permission of the write tool — in `tools/list` and on
 `tools/call`; otherwise the call gets the usual tool access error. `getToolNames()`, `getWriteToolNames()`,
-`getPermittedToolNames()` and `getPermittedWriteToolNames()` read the keys of `tool_permissions`, so they never list a
+`getPermittedToolNames()` and `getPermittedWriteToolNames()` read the tools with a permission, so they never list a
 preview. As a read tool it skips the write grant check of its own, read-only mode, the one write per request and the
 audit log.
 
@@ -475,7 +486,7 @@ A host says what a request may use by registering a service under the id `McpToo
 
 Without such a service, or when it returns `null`, read tools are not narrowed and write tools are denied. The scope only
 narrows: a tool in the scope still needs its mapped permission. A tool outside the scope is hidden from `tools/list` and
-denied on `tools/call`. `McpToolAccessChecker::getPermittedToolNames()` lists every tool mapped in `tool_permissions` whose
+denied on `tools/call`. `McpToolAccessChecker::getPermittedToolNames()` lists every tool whose
 permission the current user holds, in map order, without the scope, so a host can offer them for a new token. A preview
 follows the scope of its write tool, so a token never names it.
 

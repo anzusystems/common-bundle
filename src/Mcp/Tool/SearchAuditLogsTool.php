@@ -16,8 +16,9 @@ use AnzuSystems\CommonBundle\Mcp\Model\Response\McpAuditLogSearchResponse;
         When a user reports a failed action (e.g. a record that could not be saved), search with their userId and a time window around the incident, then pass the contextId of the failing record to {{ get_logs_by_context }} to see the application errors behind it.
         TXT
     ,
+    descriptionValues: ['get_logs_by_context' => GetLogsByContextTool::NAME],
     category: AsMcpTool::CATEGORY_DIAGNOSTICS,
-    values: ['get_logs_by_context' => GetLogsByContextTool::NAME],
+    permission: AsMcpTool::PERMISSION_LOG_TOOLS,
     readOnly: true,
 )]
 final readonly class SearchAuditLogsTool

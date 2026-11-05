@@ -11,6 +11,7 @@ use AnzuSystems\CommonBundle\Mcp\McpRateLimiter;
 use AnzuSystems\CommonBundle\Mcp\Security\McpDeleteDependencyProviderInterface;
 use AnzuSystems\CommonBundle\Mcp\Security\McpDeleteGuard;
 use AnzuSystems\CommonBundle\Mcp\Security\McpWriteConfirmation;
+use LogicException;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\DependencyInjection\Argument\ServiceLocatorArgument;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
@@ -99,6 +100,14 @@ final class AnzuSystemsCommonExtensionTest extends TestCase
         ];
     }
 
+    public function testMcpWithoutTheLogToolsPermissionFailsAtCompileTime(): void
+    {
+        $this->expectException(LogicException::class);
+        $this->expectExceptionMessage('log_tools_permission');
+
+        $this->buildContainer(mcp: ['log_tools_permission' => null]);
+    }
+
     public function testToolReferenceHandlerGetsTheRegistryOfTheServer(): void
     {
         $container = $this->buildContainer();
@@ -152,9 +161,7 @@ final class AnzuSystemsCommonExtensionTest extends TestCase
                 'enabled' => true,
                 'server_name' => 'core_cms',
                 'allowed_hosts' => ['mcp.localhost'],
-                'tool_permissions' => [
-                    'search_app_logs' => 'mcp_tool_searchAppLogs',
-                ],
+                'log_tools_permission' => 'mcp_tool_searchAppLogs',
                 'rate_limiter' => $rateLimiter,
             ],
         ];

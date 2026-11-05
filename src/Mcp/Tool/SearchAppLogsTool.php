@@ -16,11 +16,12 @@ use AnzuSystems\CommonBundle\Mcp\Model\Response\McpAppLogSearchResponse;
         Find the failed request with {{ search_audit_logs }} first, then look up the application errors behind it here by contextId or with {{ get_logs_by_context }}.
         TXT
     ,
-    category: AsMcpTool::CATEGORY_DIAGNOSTICS,
-    values: [
+    descriptionValues: [
         'get_logs_by_context' => GetLogsByContextTool::NAME,
         'search_audit_logs' => SearchAuditLogsTool::NAME,
     ],
+    category: AsMcpTool::CATEGORY_DIAGNOSTICS,
+    permission: AsMcpTool::PERMISSION_LOG_TOOLS,
     readOnly: true,
 )]
 final readonly class SearchAppLogsTool

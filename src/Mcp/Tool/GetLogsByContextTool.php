@@ -17,6 +17,7 @@ use AnzuSystems\CommonBundle\Mcp\Model\Response\McpLogsByContextResponse;
         TXT
     ,
     category: AsMcpTool::CATEGORY_DIAGNOSTICS,
+    permission: AsMcpTool::PERMISSION_LOG_TOOLS,
     readOnly: true,
 )]
 final readonly class GetLogsByContextTool

@@ -43,7 +43,7 @@ final class SearchAuditLogsRequest
             {{ dateTimeOffset }}
             TXT
         ,
-        values: [
+        descriptionValues: [
             'dateTimeOffset' => McpDateWindowResolver::DATE_TIME_OFFSET_DESCRIPTION,
             'logWindowMaxDays' => McpDateWindowResolver::LOG_WINDOW_MAX_DAYS,
         ],
@@ -54,7 +54,7 @@ final class SearchAuditLogsRequest
     #[Assert\GreaterThanOrEqual(value: McpLogFinder::LIMIT_MIN)]
     #[McpField(
         description: 'Maximum number of records, capped at {{ limitMax }}.',
-        values: ['limitMax' => McpLogFinder::LIMIT_MAX],
+        descriptionValues: ['limitMax' => McpLogFinder::LIMIT_MAX],
     )]
     #[Serialize]
     public int $limit = McpLogFinder::LIMIT_DEFAULT;

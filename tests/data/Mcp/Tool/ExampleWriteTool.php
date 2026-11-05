@@ -13,6 +13,7 @@ use Closure;
     name: ExampleWriteTool::NAME,
     description: 'Writes an example.',
     category: ExampleToolCategory::EXAMPLES,
+    permission: 'example_write',
 )]
 final readonly class ExampleWriteTool
 {

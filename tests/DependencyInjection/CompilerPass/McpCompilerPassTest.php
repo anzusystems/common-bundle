@@ -12,6 +12,7 @@ use AnzuSystems\CommonBundle\Mcp\Model\McpWritePreviewInterface;
 use AnzuSystems\CommonBundle\Mcp\Security\McpToolAccessChecker;
 use AnzuSystems\CommonBundle\Mcp\Tool\SearchAppLogsTool;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Tool\ConflictingExampleTool;
+use AnzuSystems\CommonBundle\Tests\Data\Mcp\Tool\ExamplePermissionTool;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Tool\ExamplePreviewTool;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Tool\ExampleSearchTool;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Tool\ExampleTool;
@@ -25,6 +26,7 @@ use AnzuSystems\CommonBundle\Tests\Data\Mcp\Tool\NoHashInputExamplePreviewTool;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Tool\NoHashInputExampleTool;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Tool\OtherCategoryExamplePreviewTool;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Tool\OtherInputExamplePreviewTool;
+use AnzuSystems\CommonBundle\Tests\Data\Mcp\Tool\PermissionExamplePreviewTool;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Tool\ReadToolPreviewExampleTool;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Tool\SecondExamplePreviewTool;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Tool\WritablePreviewExampleTool;
@@ -46,7 +48,6 @@ final class McpCompilerPassTest extends TestCase
     private const string WRITE_TOOL_NAMES_BY_PREVIEW_ARGUMENT = '$writeToolNamesByPreview';
     private const string TOOL_PERMISSIONS_ARGUMENT = '$toolPermissions';
     private const string TOOL_PERMISSION = 'cms_example_read';
-    private const string UNKNOWN_TOOL_NAME = 'unknown_tool';
     private const string TOOL_TAG_METHOD = 'method';
     private const string READ_TOOL_METHOD = 'listExamples';
     private const string WRITE_TOOL_METHOD = 'createExample';
@@ -78,9 +79,7 @@ final class McpCompilerPassTest extends TestCase
 
     public function testCollectsOnlyReadOnlyToolNamesForTheAccessChecker(): void
     {
-        $container = $this->createMcpContainer([
-            SearchAppLogsTool::NAME => self::TOOL_PERMISSION,
-        ]);
+        $container = $this->createMcpContainer();
         $container->register(SearchAppLogsTool::class)
             ->addTag(McpCompilerPass::TOOL_TAG);
         $container->register(ExampleTool::class)
@@ -98,10 +97,7 @@ final class McpCompilerPassTest extends TestCase
 
     public function testCollectsToolCategoriesAndPreviewsForTheAccessChecker(): void
     {
-        $container = $this->createMcpContainer([
-            SearchAppLogsTool::NAME => self::TOOL_PERMISSION,
-            ExampleWriteTool::NAME => self::TOOL_PERMISSION,
-        ]);
+        $container = $this->createMcpContainer();
         $this->registerTools($container, [
             SearchAppLogsTool::class,
             ExampleWriteTool::class,
@@ -130,33 +126,33 @@ final class McpCompilerPassTest extends TestCase
         );
     }
 
-    public function testMappedToolWithoutAsMcpToolFailsAtCompileTime(): void
+    public function testToolPermissionsComeFromTheAttributesAndTheLogToolsParameter(): void
     {
-        $container = $this->createMcpContainer([
-            self::WRITE_TOOL_METHOD => self::TOOL_PERMISSION,
-        ]);
-        $container->register(ExampleTool::class)
-            ->addTag(McpCompilerPass::TOOL_TAG, [self::TOOL_TAG_METHOD => self::WRITE_TOOL_METHOD]);
-
-        $this->expectException(LogicException::class);
-        $this->expectExceptionMessage(sprintf(McpCompilerPass::TOOL_WITHOUT_CATEGORY_MESSAGE, self::WRITE_TOOL_METHOD));
+        $container = $this->createMcpContainer();
+        $this->registerTools($container, [SearchAppLogsTool::class, ExamplePermissionTool::class]);
 
         new McpCompilerPass()
             ->process($container);
+
+        self::assertSame(
+            [
+                SearchAppLogsTool::NAME => self::TOOL_PERMISSION,
+                ExamplePermissionTool::NAME => ExamplePermissionTool::PERMISSION,
+            ],
+            $container->getDefinition(McpToolAccessChecker::class)->getArgument(self::TOOL_PERMISSIONS_ARGUMENT),
+        );
     }
 
     /**
      * @dataProvider invalidToolMetadataProvider
      *
      * @param list<class-string> $toolClasses
-     * @param array<string, string> $toolPermissions
      */
     public function testInvalidToolMetadataFailsAtCompileTime(
         array $toolClasses,
-        array $toolPermissions,
         string $expectedMessage,
     ): void {
-        $container = $this->createMcpContainer($toolPermissions);
+        $container = $this->createMcpContainer();
         $this->registerTools($container, $toolClasses);
 
         $this->expectException(LogicException::class);
@@ -167,51 +163,45 @@ final class McpCompilerPassTest extends TestCase
     }
 
     /**
-     * @return array<string, array{list<class-string>, array<string, string>, string}>
+     * @return array<string, array{list<class-string>, string}>
      */
     public static function invalidToolMetadataProvider(): array
     {
         return [
             'category that is not camelCase' => [
                 [InvalidCategoryExampleTool::class],
-                [],
                 sprintf(McpCompilerPass::INVALID_CATEGORY_MESSAGE, 'example.tools', InvalidCategoryExampleTool::NAME),
             ],
             'preview of an unknown tool' => [
                 [ExamplePreviewTool::class],
-                [],
                 sprintf(McpCompilerPass::PREVIEW_OF_UNKNOWN_TOOL_MESSAGE, ExamplePreviewTool::NAME, ExampleWithoutInputTool::NAME),
             ],
             'preview of a read tool' => [
                 [ExampleSearchTool::class, ReadToolPreviewExampleTool::class],
-                [],
                 sprintf(McpCompilerPass::PREVIEW_OF_READ_TOOL_MESSAGE, ReadToolPreviewExampleTool::NAME, ExampleSearchTool::NAME),
             ],
             'preview that is not read only' => [
                 [ExampleWithoutInputTool::class, WritablePreviewExampleTool::class],
-                [],
                 sprintf(McpCompilerPass::WRITABLE_PREVIEW_MESSAGE, WritablePreviewExampleTool::NAME, ExampleWithoutInputTool::NAME),
             ],
             'second preview of one write tool' => [
                 [ExampleWithoutInputTool::class, ExamplePreviewTool::class, SecondExamplePreviewTool::class],
-                [],
                 sprintf(
                     McpCompilerPass::SECOND_PREVIEW_MESSAGE,
                     ExampleWithoutInputTool::NAME,
                     implode(', ', [ExamplePreviewTool::NAME, SecondExamplePreviewTool::NAME]),
                 ),
             ],
-            'preview mapped in the tool permissions' => [
-                [ExampleWithoutInputTool::class, ExamplePreviewTool::class],
-                [
-                    ExampleWithoutInputTool::NAME => self::TOOL_PERMISSION,
-                    ExamplePreviewTool::NAME => self::TOOL_PERMISSION,
-                ],
-                sprintf(McpCompilerPass::MAPPED_PREVIEW_MESSAGE, ExamplePreviewTool::NAME, ExampleWithoutInputTool::NAME),
+            'preview with its own permission' => [
+                [ExampleWithoutInputTool::class, PermissionExamplePreviewTool::class],
+                sprintf(McpCompilerPass::MAPPED_PREVIEW_MESSAGE, PermissionExamplePreviewTool::NAME, ExampleWithoutInputTool::NAME),
+            ],
+            'tool without a permission' => [
+                [ExampleSearchTool::class],
+                sprintf(McpCompilerPass::TOOL_WITHOUT_PERMISSION_MESSAGE, ExampleSearchTool::NAME),
             ],
             'preview in another category than its write tool' => [
                 [ExampleWithoutInputTool::class, OtherCategoryExamplePreviewTool::class],
-                [],
                 sprintf(
                     McpCompilerPass::PREVIEW_IN_OTHER_CATEGORY_MESSAGE,
                     OtherCategoryExamplePreviewTool::NAME,
@@ -221,12 +211,10 @@ final class McpCompilerPassTest extends TestCase
             ],
             'write tool without a preview' => [
                 [ExampleWriteTool::class],
-                [],
                 sprintf(McpCompilerPass::WRITE_TOOL_WITHOUT_PREVIEW_MESSAGE, ExampleWriteTool::NAME),
             ],
             'preview response without the confirmation message' => [
                 [ExampleWithoutInputTool::class, ExamplePreviewTool::class],
-                [],
                 sprintf(
                     McpCompilerPass::PREVIEW_RESPONSE_WITHOUT_CONFIRMATION_MESSAGE,
                     ExamplePreviewTool::NAME,
@@ -236,7 +224,6 @@ final class McpCompilerPassTest extends TestCase
             ],
             'write input without the preview hash' => [
                 [NoHashInputExampleTool::class, NoHashInputExamplePreviewTool::class],
-                [],
                 sprintf(
                     McpCompilerPass::WRITE_INPUT_NOT_PREVIEW_INPUT_MESSAGE,
                     NoHashInputExampleTool::NAME,
@@ -246,7 +233,6 @@ final class McpCompilerPassTest extends TestCase
             ],
             'write input that does not extend the preview input' => [
                 [ExampleWriteTool::class, OtherInputExamplePreviewTool::class],
-                [],
                 sprintf(
                     McpCompilerPass::WRITE_INPUT_NOT_PREVIEW_INPUT_MESSAGE,
                     ExampleWriteTool::NAME,
@@ -351,22 +337,6 @@ final class McpCompilerPassTest extends TestCase
             ->process($container);
     }
 
-    public function testToolPermissionOfAnUnknownToolFailsAtCompileTime(): void
-    {
-        $container = $this->createMcpContainer([
-            self::READ_TOOL_METHOD => self::TOOL_PERMISSION,
-            self::UNKNOWN_TOOL_NAME => self::TOOL_PERMISSION,
-        ]);
-        $container->register(ExampleTool::class)
-            ->addTag(McpCompilerPass::TOOL_TAG, [self::TOOL_TAG_METHOD => self::READ_TOOL_METHOD]);
-
-        $this->expectException(LogicException::class);
-        $this->expectExceptionMessage(sprintf('maps unknown MCP tools: "%s".', self::UNKNOWN_TOOL_NAME));
-
-        new McpCompilerPass()
-            ->process($container);
-    }
-
     public function testServerNameThatIsNotAStringFailsAtCompileTime(): void
     {
         $container = new ContainerBuilder();
@@ -390,16 +360,14 @@ final class McpCompilerPassTest extends TestCase
         }
     }
 
-    /**
-     * @param array<string, string> $toolPermissions
-     */
-    private function createMcpContainer(array $toolPermissions = []): ContainerBuilder
+    private function createMcpContainer(): ContainerBuilder
     {
         $container = new ContainerBuilder();
         $container->setParameter(McpCompilerPass::SERVER_NAME_PARAM, self::SERVER_NAME);
+        $container->setParameter(AsMcpTool::LOG_TOOLS_PERMISSION_PARAM, self::TOOL_PERMISSION);
         $container->register(McpController::class);
         $container->register(McpToolAccessChecker::class)
-            ->setArgument(self::TOOL_PERMISSIONS_ARGUMENT, $toolPermissions)
+            ->setArgument(self::TOOL_PERMISSIONS_ARGUMENT, [])
             ->setArgument(self::READ_ONLY_TOOL_NAMES_ARGUMENT, [])
             ->setArgument(self::TOOL_CATEGORIES_ARGUMENT, [])
             ->setArgument(self::WRITE_TOOL_NAMES_BY_PREVIEW_ARGUMENT, []);

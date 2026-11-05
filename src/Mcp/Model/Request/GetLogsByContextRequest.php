@@ -16,7 +16,7 @@ final class GetLogsByContextRequest
             Only logs of the last {{ logWindowMaxDays }} days are searched.
             TXT
         ,
-        values: ['logWindowMaxDays' => McpDateWindowResolver::LOG_WINDOW_MAX_DAYS],
+        descriptionValues: ['logWindowMaxDays' => McpDateWindowResolver::LOG_WINDOW_MAX_DAYS],
     )]
     #[Serialize]
     public string $contextId;

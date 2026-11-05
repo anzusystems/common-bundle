@@ -70,6 +70,7 @@ use AnzuSystems\CommonBundle\Log\Factory\LogContextFactory;
 use AnzuSystems\CommonBundle\Log\LogFacade;
 use AnzuSystems\CommonBundle\Log\Repository\AuditLogRepository;
 use AnzuSystems\CommonBundle\Log\Repository\JournalLogRepository;
+use AnzuSystems\CommonBundle\Mcp\Attribute\AsMcpTool;
 use AnzuSystems\CommonBundle\Mcp\Controller\McpController;
 use AnzuSystems\CommonBundle\Mcp\Event\Listener\McpHostRouteListener;
 use AnzuSystems\CommonBundle\Mcp\Handler\FilterToolsListRequestHandler;
@@ -79,7 +80,6 @@ use AnzuSystems\CommonBundle\Mcp\McpRateLimiter;
 use AnzuSystems\CommonBundle\Mcp\Resolver\McpHostResolver;
 use AnzuSystems\CommonBundle\Mcp\Resolver\McpToolErrorResolver;
 use AnzuSystems\CommonBundle\Mcp\Security\McpDeleteDependencyProviderInterface;
-use AnzuSystems\CommonBundle\Mcp\Security\McpToolAccessChecker;
 use AnzuSystems\CommonBundle\Mcp\Security\McpWriteConfirmation;
 use AnzuSystems\CommonBundle\Messenger\Message\AuditLogMessage;
 use AnzuSystems\CommonBundle\Messenger\Message\JournalLogMessage;
@@ -631,8 +631,9 @@ final class AnzuSystemsCommonExtension extends Extension implements PrependExten
         if ([] === $mcp['allowed_hosts']) {
             throw new LogicException('The "mcp" config section requires non-empty "allowed_hosts", otherwise every request is rejected with 403.');
         }
-        if ([] === $mcp['tool_permissions']) {
-            throw new LogicException('The "mcp" config section requires non-empty "tool_permissions", otherwise every tool is hidden and every tool call is denied.');
+
+        if (null === $mcp['log_tools_permission']) {
+            throw new LogicException('The "mcp" config section requires "log_tools_permission", the permission of the host that may read logs through the log tools.');
         }
 
         $loader->load('mcp.php');
@@ -666,6 +667,7 @@ final class AnzuSystemsCommonExtension extends Extension implements PrependExten
         $container->registerAliasForArgument('anzu_mongo_mcp_log_collection', MongoDB\Collection::class, '$mcpLogCollection');
 
         $container->setParameter(McpCompilerPass::SERVER_NAME_PARAM, $mcp['server_name']);
+        $container->setParameter(AsMcpTool::LOG_TOOLS_PERMISSION_PARAM, $mcp['log_tools_permission']);
         $container->setParameter(McpCompilerPass::INSTRUCTIONS_FILE_PARAM, $mcp['instructions_file']);
 
         $sessionCacheDefinition = new Definition(Psr16Cache::class);
@@ -719,10 +721,6 @@ final class AnzuSystemsCommonExtension extends Extension implements PrependExten
         $container
             ->getDefinition(McpToolErrorResolver::class)
             ->replaceArgument('$toolErrorExceptions', $mcp['tool_error_exceptions']);
-
-        $container
-            ->getDefinition(McpToolAccessChecker::class)
-            ->replaceArgument('$toolPermissions', $mcp['tool_permissions']);
 
         $container
             ->getDefinition(CreateMcpLogCollectionCommand::class)

@@ -32,13 +32,13 @@ final class McpCompilerPass implements CompilerPassInterface
     public const string BUILDER_ID_FORMAT = 'mcp.server.%s.builder';
     public const string SESSION_CACHE_ID = 'anzu_systems_common.mcp.session_cache';
     public const string TOOL_TAG = 'mcp.tool';
-    public const string TOOL_WITHOUT_CATEGORY_MESSAGE = 'The MCP tool "%s" has no category: declare it with #[AsMcpTool(category: …)].';
     public const string INVALID_CATEGORY_MESSAGE = 'The category "%s" of the MCP tool "%s" must be camelCase (' . self::CATEGORY_PATTERN . '), so a client can build a translation key from it.';
     public const string PREVIEW_OF_UNKNOWN_TOOL_MESSAGE = 'The MCP tool "%s" is a preview of the unknown MCP tool "%s".';
     public const string PREVIEW_OF_READ_TOOL_MESSAGE = 'The MCP tool "%s" can only preview a write tool declared by #[AsMcpTool], "%s" is not one.';
     public const string WRITABLE_PREVIEW_MESSAGE = 'The MCP tool "%s" previews "%s", so it must be readOnly.';
     public const string SECOND_PREVIEW_MESSAGE = 'The MCP tool "%s" is previewed by more than one tool (%s), a write tool has one preview at most.';
-    public const string MAPPED_PREVIEW_MESSAGE = 'The MCP tool "%s" takes the permission of "%s", remove it from mcp.tool_permissions.';
+    public const string MAPPED_PREVIEW_MESSAGE = 'The MCP tool "%s" takes the permission of "%s", remove its own permission.';
+    public const string TOOL_WITHOUT_PERMISSION_MESSAGE = 'The MCP tool "%s" has no permission: declare it with #[AsMcpTool(permission: …)].';
     public const string PREVIEW_IN_OTHER_CATEGORY_MESSAGE = 'The MCP tool "%1$s" previews "%2$s", so it must be in the category "%3$s" of "%2$s".';
     public const string WRITE_TOOL_WITHOUT_PREVIEW_MESSAGE = 'The MCP write tool "%1$s" has no preview: declare a read tool with #[AsMcpTool(previewOf: "%1$s")].';
     public const string PREVIEW_RESPONSE_WITHOUT_CONFIRMATION_MESSAGE = 'The MCP tool "%s" previews "%s", so its response class must implement %s.';
@@ -85,10 +85,8 @@ final class McpCompilerPass implements CompilerPassInterface
         $this->assertToolNamesAreUnique($toolsByName);
         $this->assertToolNamesAreValid($toolsByName);
         $accessCheckerDefinition = $container->getDefinition(McpToolAccessChecker::class);
-        $toolPermissions = (array) $accessCheckerDefinition->getArgument(self::TOOL_PERMISSIONS_ARGUMENT);
-        $this->assertToolPermissionsMatchTools($toolPermissions, $toolsByName);
+        $toolPermissions = $this->resolveToolPermissions($container, $toolsByName);
         $toolCategories = $this->resolveToolCategories($toolsByName);
-        $this->assertMappedToolsHaveCategories($toolPermissions, $toolCategories);
         $readOnlyToolNames = $this->resolveReadOnlyToolNames($toolsByName);
         $writeToolNamesByPreview = $this->resolveWriteToolNamesByPreview(
             toolsByName: $toolsByName,
@@ -97,6 +95,7 @@ final class McpCompilerPass implements CompilerPassInterface
             readOnlyToolNames: $readOnlyToolNames,
         );
         $accessCheckerDefinition
+            ->replaceArgument(self::TOOL_PERMISSIONS_ARGUMENT, $toolPermissions)
             ->replaceArgument(self::READ_ONLY_TOOL_NAMES_ARGUMENT, $readOnlyToolNames)
             ->replaceArgument(self::TOOL_CATEGORIES_ARGUMENT, $toolCategories)
             ->replaceArgument(self::WRITE_TOOL_NAMES_BY_PREVIEW_ARGUMENT, $writeToolNamesByPreview);
@@ -105,6 +104,7 @@ final class McpCompilerPass implements CompilerPassInterface
             readOnlyToolNames: $readOnlyToolNames,
             writeToolNamesByPreview: $writeToolNamesByPreview,
         );
+        $this->assertToolsHavePermission($toolsByName, $toolPermissions);
     }
 
     private function setInstructionsFromFile(ContainerBuilder $container, string $serverName): void
@@ -269,20 +269,39 @@ final class McpCompilerPass implements CompilerPassInterface
     }
 
     /**
-     * @param array<string, string> $toolPermissions
      * @param array<string, array<string, McpTool>> $toolsByName
+     *
+     * @return array<string, string>
      */
-    private function assertToolPermissionsMatchTools(array $toolPermissions, array $toolsByName): void
+    private function resolveToolPermissions(ContainerBuilder $container, array $toolsByName): array
     {
-        $unknownToolNames = array_keys(array_diff_key($toolPermissions, $toolsByName));
-        if ([] === $unknownToolNames) {
-            return;
+        $toolPermissions = [];
+        foreach ($toolsByName as $toolName => $tools) {
+            $tool = array_first($tools);
+            if ($tool instanceof AsMcpTool && null !== $tool->permission) {
+                $toolPermissions[$toolName] = (string) $container->getParameterBag()->resolveValue($tool->permission);
+            }
         }
 
-        throw new LogicException(sprintf(
-            'The "mcp.tool_permissions" option maps unknown MCP tools: "%s". Every key must be the name of a registered MCP tool, so check for a typo or make sure the tool is registered as a service.',
-            implode('", "', $unknownToolNames),
-        ));
+        return $toolPermissions;
+    }
+
+    /**
+     * @param array<string, array<string, McpTool>> $toolsByName
+     * @param array<string, string> $toolPermissions
+     */
+    private function assertToolsHavePermission(array $toolsByName, array $toolPermissions): void
+    {
+        foreach ($toolsByName as $toolName => $tools) {
+            $tool = array_first($tools);
+            if (
+                $tool instanceof AsMcpTool
+                && null === $tool->previewOf
+                && false === array_key_exists($toolName, $toolPermissions)
+            ) {
+                throw new LogicException(sprintf(self::TOOL_WITHOUT_PERMISSION_MESSAGE, $toolName));
+            }
+        }
     }
 
     /**
@@ -321,20 +340,6 @@ final class McpCompilerPass implements CompilerPassInterface
         }
 
         return $toolCategories;
-    }
-
-    /**
-     * @param array<string, string> $toolPermissions
-     * @param array<string, string> $toolCategories
-     */
-    private function assertMappedToolsHaveCategories(array $toolPermissions, array $toolCategories): void
-    {
-        $toolNameWithoutCategory = array_key_first(array_diff_key($toolPermissions, $toolCategories));
-        if (null === $toolNameWithoutCategory) {
-            return;
-        }
-
-        throw new LogicException(sprintf(self::TOOL_WITHOUT_CATEGORY_MESSAGE, $toolNameWithoutCategory));
     }
 
     /**
