@@ -188,9 +188,7 @@ final readonly class ListKeywordsTool
   Keep validation messages generic: the schema rejects most invalid calls before the validator runs, and the
   handler prefixes every violation with its property path.
 
-Requests and responses use public properties and property hooks, no getters and setters. The serializer reads and
-writes a public or hooked property directly, so a property with a hook must be `public` (a `private` one fails) and a
-request property cannot be `private(set)` (it is not deserialized). A `set` hook normalizes the input, and a virtual
+Requests and responses use public properties and property hooks, no getters and setters. A `set` hook normalizes the input, and a virtual
 `get` property exposes the result in the response; it has no default, so it is `required` in the output schema like
 the getter it replaces. The fields are listed in declaration order.
 

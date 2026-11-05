@@ -63,7 +63,8 @@ final readonly class McpDateWindowResolver
         try {
             $utc = new DateTimeZone(self::UTC_TIMEZONE);
 
-            return new DateTimeImmutable($value, $utc)->setTimezone($utc);
+            return new DateTimeImmutable($value, $utc)
+                ->setTimezone($utc);
         } catch (Exception) {
             throw new McpToolInputException(
                 sprintf('Invalid %s value "%s", provide an ISO 8601 date-time, e.g. "2026-07-09T06:00:00+02:00".', $paramName, $value),
