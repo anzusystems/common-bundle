@@ -563,22 +563,6 @@ $routes
 `McpHostResolver` is a routing condition service (alias `mcp_host`) for routes that must differ by host:
 `condition: "service('mcp_host').isMcpHost(request)"` or `isNotMcpHost(request)`.
 
-## Query time limit
-
-`McpQueryBuilder` is a Doctrine `QueryBuilder` whose query gets the MySQL optimizer hint
-`/*+ MAX_EXECUTION_TIME(<ms>) */` through `McpMaxExecutionTimeWalker`, so a tool query that runs too long fails instead
-of holding a connection. The host builds it in its MCP repositories:
-
-```php
-public function createQueryBuilder(string $alias, ?string $indexBy = null): QueryBuilder
-{
-    return new McpQueryBuilder(entityManager: $this->getEntityManager(), maxExecutionTimeMs: $this->queryMaxExecutionTimeMs)
-        ->select($alias)
-        ->from($this->getEntityName(), $alias, $indexBy)
-    ;
-}
-```
-
 ## Debugging
 
 McpBundle's own tools work with this setup:
