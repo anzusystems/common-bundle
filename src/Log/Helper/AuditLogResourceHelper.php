@@ -30,17 +30,6 @@ final class AuditLogResourceHelper
         $request->attributes->set(self::RESOURCE_ID_ATTR_NAME, (array) $entity->getId());
     }
 
-    public static function addResourceByEntity(
-        Request $request,
-        BaseIdentifiableInterface $entity,
-    ): void {
-        $request->attributes->set(self::RESOURCE_NAME_ATTR_NAME, $entity::getResourceName());
-        $request->attributes->set(self::RESOURCE_ID_ATTR_NAME, [
-            ...(array) $request->attributes->get(self::RESOURCE_ID_ATTR_NAME, []),
-            $entity->getId(),
-        ]);
-    }
-
     public static function hasResourceId(
         Request $request
     ): bool {

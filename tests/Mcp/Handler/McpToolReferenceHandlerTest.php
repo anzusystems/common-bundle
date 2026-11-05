@@ -461,7 +461,7 @@ final class McpToolReferenceHandlerTest extends TestCase
             'failed write call that recorded a written resource is included in the audit log' => [
                 false,
                 static function (Request $request): void {
-                    AuditLogResourceHelper::addResourceByEntity($request, new User()->setId(self::USER_ID));
+                    AuditLogResourceHelper::setResourceByEntity($request, new User()->setId(self::USER_ID));
 
                     throw new AccessDeniedException();
                 },
@@ -1290,6 +1290,7 @@ final class McpToolReferenceHandlerTest extends TestCase
                 toolAccessChecker: $toolAccessChecker,
                 requestStack: $requestStack,
             ),
+            requestStack: $requestStack,
             writeConfirmation: new McpWriteConfirmation(
                 translator: $this->createTranslator(),
                 currentUserProvider: $currentUserProvider,

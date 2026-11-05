@@ -90,7 +90,7 @@ infrastructure after a bundle upgrade.
   `params`) to the monolog `mcp` channel and to the `mcpLogs` capped collection (see below). It asks the user to confirm
   a write when the client can answer, see "Write confirmation" below. The tool itself stays a plain invokable service
   with only its own dependencies.
-* `McpWriteToolGuard` — the write grant, read-only mode, one write per request and the audit log of write tools.
+* `McpWriteToolGuard` — the write grant, read-only mode and one write per request.
 * `McpWriteConfirmation` — when a write asks the user to confirm, how it reads the answer and what the question looks
   like, see "Write confirmation" below.
 * `McpDeleteGuard` — the rule of deleting an entity through MCP, see "Delete tools" below.
@@ -157,8 +157,8 @@ final readonly class ListKeywordsTool
   the serialization is skipped). `McpToolSchemaCompilerPass` fails the container compilation with a `LogicException`
   for any other signature.
 * A tool without input logs `params` `[]`.
-* A write tool that registers the entity it wrote takes `McpWriteToolGuard` in its constructor and calls
-  `addAuditLogResource($entity)`.
+* A write tool that registers the entity it wrote uses `McpAuditLogAwareTrait` and calls
+  `setAuditResourceByEntity($entity)`, or `setAuditResource($name, $id)` after a delete, because Doctrine clears the id.
 
 * `readOnly`, `destructive` and `idempotent` become the `ToolAnnotations` (`openWorldHint` is always `false`): a tool
   is a write tool unless it says `readOnly: true`, so a forgotten flag hides it from tokens without the write grant;
@@ -250,8 +250,8 @@ to the inner handler unchanged:
    error listing every field error. Before a write tool runs, the main request is included in the audit log again
    (`McpController` excludes every MCP request) and it is excluded again when the call fails, unless a written
    resource is already recorded on it (`AuditLogResourceHelper::hasResourceId()`), e.g. by the failed call itself
-   before it failed; the tool registers the entity it wrote through `McpWriteToolGuard::addAuditLogResource()`, which
-   appends its id to the ids already recorded on the main request (`AuditLogResourceHelper::addResourceByEntity()`); a
+   before it failed; the tool registers the entity it wrote through `McpAuditLogAwareTrait`, which records it on the
+   main request with `AuditLogResourceHelper` like a controller; a
    tool whose call must not be audited (e.g. one returning a secret) calls
    `AuditLogResourceHelper::excludeFromAuditLogs()`, and its successful call stays excluded, because the
    guard refuses every later write call of the request before it could include the request again;
@@ -473,8 +473,8 @@ final readonly class QuizDeleteDependencyProvider implements McpDeleteDependency
 With the `mcp` section the bundle tags an autoconfigured implementation itself. `$entity::class` is the key of the
 provider, and an entity without a provider throws a `LogicException`, never "no dependencies".
 
-The guard does not check the delete permission: the host tool does, on the stored entity. Record the audit resource
-before `remove()`, because Doctrine clears the id after the flush.
+The guard does not check the delete permission: the host tool does, on the stored entity. The tool records the audit
+resource with `setAuditResource()` and the id from its response, because Doctrine clears the id after the flush.
 
 ### Token scope
 

@@ -4,10 +4,8 @@ declare(strict_types=1);
 
 namespace AnzuSystems\CommonBundle\Mcp\Security;
 
-use AnzuSystems\CommonBundle\Log\Helper\AuditLogResourceHelper;
 use AnzuSystems\CommonBundle\Mcp\Exception\McpWriteRejectedException;
 use AnzuSystems\Contracts\AnzuApp;
-use AnzuSystems\Contracts\Entity\Interfaces\BaseIdentifiableInterface;
 use Symfony\Component\HttpFoundation\RequestStack;
 
 /**
@@ -43,36 +41,9 @@ final readonly class McpWriteToolGuard
         }
     }
 
-    public function includeInAuditLogs(): void
-    {
-        $request = $this->requestStack->getMainRequest();
-        if (null === $request) {
-            return;
-        }
-        AuditLogResourceHelper::includeInAuditLogs($request);
-    }
-
     public function markWritten(): void
     {
         $this->requestStack->getMainRequest()?->attributes
             ->set(self::WRITE_TOOL_DONE_ATTR, true);
-    }
-
-    public function excludeFailedWriteFromAuditLogs(): void
-    {
-        $request = $this->requestStack->getMainRequest();
-        if (null === $request || AuditLogResourceHelper::hasResourceId($request)) {
-            return;
-        }
-        AuditLogResourceHelper::excludeFromAuditLogs($request);
-    }
-
-    public function addAuditLogResource(BaseIdentifiableInterface $entity): void
-    {
-        $request = $this->requestStack->getMainRequest();
-        if (null === $request) {
-            return;
-        }
-        AuditLogResourceHelper::addResourceByEntity($request, $entity);
     }
 }

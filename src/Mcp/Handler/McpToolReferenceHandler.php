@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace AnzuSystems\CommonBundle\Mcp\Handler;
 
 use AnzuSystems\CommonBundle\Exception\ValidationException;
+use AnzuSystems\CommonBundle\Log\Helper\AuditLogResourceHelper;
 use AnzuSystems\CommonBundle\Mcp\Exception\McpToolAccessRejectedException;
 use AnzuSystems\CommonBundle\Mcp\Exception\McpToolCallRejectedException;
 use AnzuSystems\CommonBundle\Mcp\Exception\McpToolInputException;
@@ -25,6 +26,8 @@ use Mcp\Capability\RegistryInterface;
 use Mcp\Schema\Result\CallToolResult;
 use Mcp\Schema\Result\InputRequiredResult;
 use Mcp\Server\RequestContext;
+use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\HttpFoundation\RequestStack;
 use Symfony\Component\Security\Core\Exception\AccessDeniedException;
 use Symfony\Component\Validator\Validator\ValidatorInterface;
 use Throwable;
@@ -65,6 +68,7 @@ final readonly class McpToolReferenceHandler implements ReferenceHandlerInterfac
         private McpToolCallLogger $toolCallLogger,
         private ValidatorInterface $validator,
         private Serializer $serializer,
+        private RequestStack $requestStack,
         private array $toolSignatures = [],
     ) {
     }
@@ -257,11 +261,11 @@ final readonly class McpToolReferenceHandler implements ReferenceHandlerInterfac
         if (false === $this->toolAccessChecker->isWriteTool($toolName)) {
             return $this->createResult($toolName, $this->inner->handle($reference, $toolArguments));
         }
-        $this->writeToolGuard->includeInAuditLogs();
+        $this->includeInAuditLogs();
         try {
             $result = $this->inner->handle($reference, $toolArguments);
             if ($result instanceof CallToolResult && $result->isError) {
-                $this->writeToolGuard->excludeFailedWriteFromAuditLogs();
+                $this->excludeFailedWriteFromAuditLogs();
 
                 return $result;
             }
@@ -269,9 +273,25 @@ final readonly class McpToolReferenceHandler implements ReferenceHandlerInterfac
 
             return $this->createResult($toolName, $result);
         } catch (Throwable $exception) {
-            $this->writeToolGuard->excludeFailedWriteFromAuditLogs();
+            $this->excludeFailedWriteFromAuditLogs();
 
             throw $exception;
+        }
+    }
+
+    private function includeInAuditLogs(): void
+    {
+        $request = $this->requestStack->getMainRequest();
+        if ($request instanceof Request) {
+            AuditLogResourceHelper::includeInAuditLogs($request);
+        }
+    }
+
+    private function excludeFailedWriteFromAuditLogs(): void
+    {
+        $request = $this->requestStack->getMainRequest();
+        if ($request instanceof Request && false === AuditLogResourceHelper::hasResourceId($request)) {
+            AuditLogResourceHelper::excludeFromAuditLogs($request);
         }
     }
 

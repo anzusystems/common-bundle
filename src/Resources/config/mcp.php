@@ -175,6 +175,7 @@ return static function (ContainerConfigurator $configurator): void {
         ->arg('$toolCallLogger', service(McpToolCallLogger::class))
         ->arg('$validator', service(ValidatorInterface::class))
         ->arg('$serializer', service(Serializer::class))
+        ->arg('$requestStack', service('request_stack'))
         ->arg('$toolSignatures', [])
     ;
 
