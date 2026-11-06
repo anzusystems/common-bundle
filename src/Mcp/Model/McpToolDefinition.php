@@ -11,7 +11,6 @@ final readonly class McpToolDefinition
 {
     public function __construct(
         public ?string $permission = null,
-        public ?string $inputPermission = null,
         public bool $readOnly = false,
         public ?string $category = null,
         public ?string $previewOf = null,

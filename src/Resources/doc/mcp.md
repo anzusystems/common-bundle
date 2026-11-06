@@ -204,6 +204,7 @@ A list of objects is a `Collection<int, X>` with `#[Serialize(type: X::class)]`:
 * A parameterless constructor sets an input `Collection` to `new ArrayCollection()`. A promoted parameter would be
   required.
 * `McpObjectArrayRule` reports an array of the host's objects in the MCP classes, also with `#[Serialize]`.
+* `McpToolInputPermissionRule` reports an `#[AsMcpTool]` whose request implements an interface of `anzuMcpToolInputPermission.inputPermissions` and whose `__invoke()` does not call `denyAccessUnlessGranted()` with the permission of that interface on the request, outside any branch.
 * `NamedArgumentsRule` reports a call with more than two arguments that are not all named in the namespaces of `anzuNamedArguments.classNamespaces`. A call with a value for a variadic parameter, a spread or no known signature is left alone.
 
 ```php
@@ -299,23 +300,31 @@ A host tool declares it in the attribute:
 ```
 
 `permission` holds for the tool whatever its input, so `tools/list` can check it. A tool whose input names what it reads
-adds `inputPermission`, a permission whose voter gets the input as its subject:
+checks the input itself on the first line of `__invoke()`, like a controller. A tool is a plain service, so the check
+comes from a trait of the host:
 
 ```php
-#[AsMcpTool(
-    name: ListBoxItemHistoryTool::NAME,
-    description: '…',
-    category: McpToolCategory::BOXES,
-    permission: Permission::CMS_BOX_READ,
-    inputPermission: Permission::CMS_BOX_MCP_INNER_ACCESS,
-    readOnly: true,
-)]
+public function __invoke(ListBoxItemHistoryRequest $request): McpBoxItemHistoryResponse
+{
+    $this->denyAccessUnlessGranted(Permission::CMS_BOX_MCP_INNER_ACCESS, $request);
+
+    return $this->boxRepoMcpDecorator->getItemHistoryList($request);
+}
 ```
 
-`McpToolReferenceHandler` checks it after the validation of the input, before the tool runs, and a refusal is the usual
-access error. Then it calls the host service `McpInputEnricherInterface`, which narrows the input to what the user may
-read, e.g. an empty site filter to the allowed sites. The host sets the alias of the interface to its service. A tool with
-`inputPermission` fails the container compilation when it has no input class or the host has no such service.
+`McpToolReferenceHandler` answers the `AccessDeniedException` with the usual access error. Before the tool runs it calls the
+host service `McpInputEnricherInterface` for every input, which narrows it to what the user may read, e.g. an empty site
+filter to the allowed sites. It leaves values sent by the client alone, so the voter still refuses a foreign site. The host
+sets the alias of the interface to its service. Without one an empty filter stays empty.
+
+Nothing in the bundle enforces that check, so the host names its scoped requests for the PHPStan rule:
+
+```neon
+parameters:
+    anzuMcpToolInputPermission:
+        inputPermissions:
+            'App\Mcp\Model\McpBoxIdsAwareInterface': 'App\Security\Permission::CMS_BOX_MCP_INNER_ACCESS'
+```
 
 A log tool of this bundle (`search_app_logs`, `search_audit_logs`, `get_logs_by_context`) cannot know the permissions of
 its host, so the host names the one permission they share:

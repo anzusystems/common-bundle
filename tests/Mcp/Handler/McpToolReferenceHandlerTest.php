@@ -41,7 +41,6 @@ use AnzuSystems\CommonBundle\Tests\Data\Mcp\Tool\ExampleTool;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Tool\ExampleWithoutInputTool;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Tool\ExampleWritePreviewTool;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Tool\ExampleWriteTool;
-use AnzuSystems\CommonBundle\Tests\Data\Mcp\Tool\InputPermissionExampleTool;
 use AnzuSystems\CommonBundle\Tests\Mcp\McpSerializerFactory;
 use AnzuSystems\Contracts\AnzuApp;
 use AnzuSystems\Contracts\Entity\AnzuUser;
@@ -127,7 +126,6 @@ final class McpToolReferenceHandlerTest extends TestCase
         ExampleErrorResultWithoutKeyTool::NAME,
         ExampleResultWriteTool::NAME,
         ExampleWriteTool::NAME,
-        InputPermissionExampleTool::NAME,
     ];
 
     private array $insertedDocuments = [];
@@ -1081,31 +1079,31 @@ final class McpToolReferenceHandlerTest extends TestCase
         self::assertNull($result->structuredContent[self::HASH_FIELD]);
     }
 
-    public function testInputPermissionRefusesTheCallBeforeTheToolRuns(): void
+    public function testRefusedEnrichmentStopsTheCallBeforeTheToolRuns(): void
     {
         $runs = 0;
-        $enricher = $this->createMock(McpInputEnricherInterface::class);
-        $enricher->expects(self::never())->method('enrich');
+        $enricher = $this->createStub(McpInputEnricherInterface::class);
+        $enricher->method('enrich')
+            ->willThrowException(new AccessDeniedException());
         $handler = $this->createHandler(
-            tool: new InputPermissionExampleTool(static function () use (&$runs): McpLogsByContextResponse {
+            tool: new ExampleSearchTool(static function () use (&$runs): McpLogsByContextResponse {
                 ++$runs;
 
                 return self::createResponse();
             }),
-            inputGranted: false,
             inputEnricher: $enricher,
         );
 
         $result = $handler->handle(
-            new ToolReference($this->createSdkTool(InputPermissionExampleTool::NAME), [InputPermissionExampleTool::class, self::INVOKE_METHOD]),
-            $this->createModernArguments(toolName: InputPermissionExampleTool::NAME, toolArguments: []),
+            new ToolReference($this->createSdkTool(ExampleSearchTool::NAME), [ExampleSearchTool::class, self::INVOKE_METHOD]),
+            $this->createModernArguments(toolName: ExampleSearchTool::NAME, toolArguments: []),
         );
 
         $this->assertToolError(McpToolErrorResolver::ACCESS_DENIED_MESSAGE, $result);
         self::assertSame(0, $runs);
     }
 
-    public function testGrantedInputIsEnrichedBeforeTheToolRuns(): void
+    public function testInputIsEnrichedBeforeTheToolRuns(): void
     {
         $enrichedInput = null;
         $toolInput = null;
@@ -1116,7 +1114,7 @@ final class McpToolReferenceHandlerTest extends TestCase
                 $enrichedInput = $input;
             });
         $handler = $this->createHandler(
-            tool: new InputPermissionExampleTool(static function (object $input) use (&$toolInput): McpLogsByContextResponse {
+            tool: new ExampleSearchTool(static function (object $input) use (&$toolInput): McpLogsByContextResponse {
                 $toolInput = $input;
 
                 return self::createResponse();
@@ -1125,26 +1123,26 @@ final class McpToolReferenceHandlerTest extends TestCase
         );
 
         $handler->handle(
-            new ToolReference($this->createSdkTool(InputPermissionExampleTool::NAME), [InputPermissionExampleTool::class, self::INVOKE_METHOD]),
-            $this->createModernArguments(toolName: InputPermissionExampleTool::NAME, toolArguments: []),
+            new ToolReference($this->createSdkTool(ExampleSearchTool::NAME), [ExampleSearchTool::class, self::INVOKE_METHOD]),
+            $this->createModernArguments(toolName: ExampleSearchTool::NAME, toolArguments: []),
         );
 
         self::assertNotNull($toolInput);
         self::assertSame($toolInput, $enrichedInput);
     }
 
-    public function testToolWithoutInputPermissionIsNotEnriched(): void
+    public function testToolWithoutInputIsNotEnriched(): void
     {
         $enricher = $this->createMock(McpInputEnricherInterface::class);
         $enricher->expects(self::never())->method('enrich');
         $handler = $this->createHandler(
-            tool: new ExampleSearchTool(static fn (): McpLogsByContextResponse => self::createResponse()),
+            tool: new ExampleWithoutInputTool(static fn (): McpLogsByContextResponse => self::createResponse()),
             inputEnricher: $enricher,
         );
 
         $handler->handle(
-            new ToolReference($this->createSdkTool(ExampleSearchTool::NAME), [ExampleSearchTool::class, self::INVOKE_METHOD]),
-            $this->createModernArguments(toolName: ExampleSearchTool::NAME, toolArguments: []),
+            new ToolReference($this->createSdkTool(ExampleWithoutInputTool::NAME), [ExampleWithoutInputTool::class, self::INVOKE_METHOD]),
+            $this->createModernArguments(toolName: ExampleWithoutInputTool::NAME, toolArguments: []),
         );
     }
 
@@ -1481,7 +1479,6 @@ final class McpToolReferenceHandlerTest extends TestCase
         RequestStack $requestStack = new RequestStack(),
         ?string $previewOf = null,
         ?object $previewTool = null,
-        bool $inputGranted = true,
         ?McpInputEnricherInterface $inputEnricher = null,
         ?string $userLocale = null,
         ?string $fallbackLocale = null,
@@ -1506,7 +1503,7 @@ final class McpToolReferenceHandlerTest extends TestCase
         $security = $this->createMock(Security::class);
         $security->method('isGranted')
             ->willReturnCallback(
-                static fn (mixed $attribute): bool => InputPermissionExampleTool::INPUT_PERMISSION === $attribute ? $inputGranted : $toolGranted,
+                static fn (): bool => $toolGranted,
             );
 
         $toolPermissions = array_fill_keys(self::TOOL_NAMES, self::TOOL_PERMISSION);
@@ -1535,7 +1532,6 @@ final class McpToolReferenceHandlerTest extends TestCase
             readOnlyToolNames: $readOnlyToolNames,
             writeToolNamesByPreview: $writeToolNamesByPreview,
             toolSignatures: array_filter($toolSignatures),
-            toolInputPermissions: $tool instanceof InputPermissionExampleTool ? [$tool::NAME => $tool::INPUT_PERMISSION] : [],
         );
         $toolAccessChecker = new McpToolAccessChecker(
             toolDefinitions: $toolDefinitions,

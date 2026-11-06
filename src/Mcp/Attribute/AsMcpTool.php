@@ -32,7 +32,6 @@ final class AsMcpTool extends McpTool
         array $descriptionValues = [],
         public readonly ?string $previewOf = null,
         public readonly ?string $permission = null,
-        public readonly ?string $inputPermission = null,
         public readonly ?string $rateLimiter = null,
     ) {
         parent::__construct(

@@ -6,6 +6,9 @@ parametersSchema:
     anzuNamedArguments: structure([
         classNamespaces: listOf(string()),
     ])
+    anzuMcpToolInputPermission: structure([
+        inputPermissions: arrayOf(string(), string()),
+    ])
 
 parameters:
     anzuMcpObjectArray:
@@ -13,6 +16,8 @@ parameters:
         objectNamespace: ''
     anzuNamedArguments:
         classNamespaces: []
+    anzuMcpToolInputPermission:
+        inputPermissions: []
 
 services:
     -
@@ -26,5 +31,11 @@ services:
         class: AnzuSystems\CommonBundle\PHPStan\Rules\NamedArgumentsRule
         arguments:
             classNamespaces: %anzuNamedArguments.classNamespaces%
+        tags:
+            - phpstan.rules.rule
+    -
+        class: AnzuSystems\CommonBundle\PHPStan\Rules\McpToolInputPermissionRule
+        arguments:
+            inputPermissions: %anzuMcpToolInputPermission.inputPermissions%
         tags:
             - phpstan.rules.rule

@@ -29,7 +29,6 @@ use Mcp\Schema\Result\InputRequiredResult;
 use Mcp\Server\RequestContext;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\RequestStack;
-use Symfony\Component\Security\Core\Exception\AccessDeniedException;
 use Symfony\Component\Validator\Validator\ValidatorInterface;
 use Throwable;
 use UnexpectedValueException;
@@ -260,7 +259,7 @@ final readonly class McpToolReferenceHandler implements ReferenceHandlerInterfac
         }
         if (is_object($input)) {
             $this->assertValid($input);
-            $this->assertInputGranted($toolName, $input);
+            $this->inputEnricher?->enrich($input);
         }
         if ($isWriteTool) {
             $this->writeToolGuard->assertWritable($toolName);
@@ -345,16 +344,6 @@ final readonly class McpToolReferenceHandler implements ReferenceHandlerInterfac
         }
 
         return $toolArguments;
-    }
-
-    private function assertInputGranted(string $toolName, object $input): void
-    {
-        if (false === $this->toolAccessChecker->isInputGranted($toolName, $input)) {
-            throw new AccessDeniedException();
-        }
-        if (is_string($this->toolDefinitions->find($toolName)?->inputPermission)) {
-            $this->inputEnricher?->enrich($input);
-        }
     }
 
     private function assertValid(object $input): void

@@ -17,7 +17,6 @@ final class McpToolDefinitionsFactory
      * @param array<string, string> $writeToolNamesByPreview
      * @param array<string, string> $toolRateLimiters
      * @param array<string, McpToolSignature> $toolSignatures
-     * @param array<string, string> $toolInputPermissions
      */
     public static function create(
         array $toolPermissions = [],
@@ -26,7 +25,6 @@ final class McpToolDefinitionsFactory
         array $writeToolNamesByPreview = [],
         array $toolRateLimiters = [],
         array $toolSignatures = [],
-        array $toolInputPermissions = [],
     ): McpToolDefinitions {
         $previewToolNames = array_flip($writeToolNamesByPreview);
         $toolNames = array_unique([
@@ -41,7 +39,6 @@ final class McpToolDefinitionsFactory
         foreach ($toolNames as $toolName) {
             $definitions[$toolName] = new McpToolDefinition(
                 permission: $toolPermissions[$toolName] ?? null,
-                inputPermission: $toolInputPermissions[$toolName] ?? null,
                 readOnly: in_array(needle: $toolName, haystack: $readOnlyToolNames, strict: true),
                 category: $toolCategories[$toolName] ?? null,
                 previewOf: $writeToolNamesByPreview[$toolName] ?? null,

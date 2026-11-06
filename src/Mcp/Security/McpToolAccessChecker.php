@@ -32,13 +32,6 @@ final readonly class McpToolAccessChecker
         return $this->isInReadScope($toolName) && $this->isPermissionGranted($toolName);
     }
 
-    public function isInputGranted(string $toolName, object $input): bool
-    {
-        $inputPermission = $this->toolDefinitions->find($toolName)?->inputPermission;
-
-        return null === $inputPermission || $this->security->isGranted($inputPermission, $input);
-    }
-
     public function isWriteGranted(string $toolName): bool
     {
         if (false === $this->isWriteTool($toolName)) {

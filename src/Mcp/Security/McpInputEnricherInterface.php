@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace AnzuSystems\CommonBundle\Mcp\Security;
 
 /**
- * Narrows an input that passed its inputPermission, e.g. an empty site filter to the sites the user may read. A voter
- * accepts such a filter, so a tool with an inputPermission does not compile without this service.
+ * Narrows the input of every call before its tool runs, e.g. an empty site filter to the sites the user may read. Without
+ * this service an empty filter stays empty and a repository reads every site.
  */
 interface McpInputEnricherInterface
 {

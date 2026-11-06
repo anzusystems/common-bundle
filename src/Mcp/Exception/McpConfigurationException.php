@@ -7,7 +7,6 @@ namespace AnzuSystems\CommonBundle\Mcp\Exception;
 use AnzuSystems\CommonBundle\Mcp\Handler\McpToolReferenceHandler;
 use AnzuSystems\CommonBundle\Mcp\Model\McpPreviewHashAwareInterface;
 use AnzuSystems\CommonBundle\Mcp\Model\McpWritePreviewInterface;
-use AnzuSystems\CommonBundle\Mcp\Security\McpInputEnricherInterface;
 use LogicException;
 
 /**
@@ -102,16 +101,6 @@ final class McpConfigurationException extends LogicException
     public static function createReadToolRateLimiter(string $toolName): self
     {
         return new self(sprintf('The MCP tool "%s" is a read tool, so it cannot name a rate limiter.', $toolName));
-    }
-
-    public static function createInputPermissionWithoutInput(string $toolName): self
-    {
-        return new self(sprintf('The MCP tool "%s" has an inputPermission, so its __invoke() must take an input class.', $toolName));
-    }
-
-    public static function createInputPermissionWithoutEnricher(string $toolName): self
-    {
-        return new self(sprintf('The MCP tool "%s" has an inputPermission, so the host must provide %s.', $toolName, McpInputEnricherInterface::class));
     }
 
     public static function createToolWithoutPermission(string $toolName): self

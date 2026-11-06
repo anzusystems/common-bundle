@@ -15,7 +15,6 @@ use AnzuSystems\CommonBundle\Mcp\Model\McpToolDefinition;
 use AnzuSystems\CommonBundle\Mcp\Model\McpToolSignature;
 use AnzuSystems\CommonBundle\Mcp\Model\McpWritePreviewInterface;
 use AnzuSystems\CommonBundle\Mcp\Resolver\McpToolSignatureResolver;
-use AnzuSystems\CommonBundle\Mcp\Security\McpInputEnricherInterface;
 use Mcp\Capability\Attribute\McpTool;
 use Mcp\Capability\Discovery\ElementMetadataResolver;
 use Mcp\Capability\Tool\NameValidator;
@@ -66,7 +65,6 @@ final class McpToolDefinitionsCompilerPass implements CompilerPassInterface
             writeToolNamesByPreview: $writeToolNamesByPreview,
         );
         $this->assertToolsHavePermission($toolsByName, $toolPermissions);
-        $this->assertInputPermissions($container, $toolsByName);
         $toolRateLimiters = $this->configureWriteRateLimiter($container, $toolsByName, $readOnlyToolNames);
         $container
             ->getDefinition(McpToolDefinitions::class)
@@ -104,7 +102,6 @@ final class McpToolDefinitionsCompilerPass implements CompilerPassInterface
             $tool = array_first($tools);
             $definitions[$toolName] = new Definition(McpToolDefinition::class, [
                 '$permission' => $toolPermissions[$toolName] ?? null,
-                '$inputPermission' => $tool instanceof AsMcpTool ? $tool->inputPermission : null,
                 '$readOnly' => in_array(needle: $toolName, haystack: $readOnlyToolNames, strict: true),
                 '$category' => $toolCategories[$toolName] ?? null,
                 '$previewOf' => $writeToolNamesByPreview[$toolName] ?? null,
@@ -290,25 +287,6 @@ final class McpToolDefinitionsCompilerPass implements CompilerPassInterface
                 && false === array_key_exists($toolName, $toolPermissions)
             ) {
                 throw McpConfigurationException::createToolWithoutPermission($toolName);
-            }
-        }
-    }
-
-    /**
-     * @param array<string, array<string, McpTool>> $toolsByName
-     */
-    private function assertInputPermissions(ContainerBuilder $container, array $toolsByName): void
-    {
-        foreach ($toolsByName as $toolName => $tools) {
-            $tool = array_first($tools);
-            if (false === $tool instanceof AsMcpTool || null === $tool->inputPermission) {
-                continue;
-            }
-            if (null === $this->resolveToolSignature($tools)->inputClass) {
-                throw McpConfigurationException::createInputPermissionWithoutInput($toolName);
-            }
-            if (false === $container->has(McpInputEnricherInterface::class)) {
-                throw McpConfigurationException::createInputPermissionWithoutEnricher($toolName);
             }
         }
     }

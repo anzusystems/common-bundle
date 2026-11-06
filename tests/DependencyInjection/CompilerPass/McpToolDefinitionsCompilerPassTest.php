@@ -12,7 +12,6 @@ use AnzuSystems\CommonBundle\Mcp\Exception\McpConfigurationException;
 use AnzuSystems\CommonBundle\Mcp\McpToolDefinitions;
 use AnzuSystems\CommonBundle\Mcp\McpWriteRateLimiter;
 use AnzuSystems\CommonBundle\Mcp\Model\McpToolSignature;
-use AnzuSystems\CommonBundle\Mcp\Security\McpInputEnricherInterface;
 use AnzuSystems\CommonBundle\Mcp\Tool\SearchAppLogsTool;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Tool\ConflictingExampleTool;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Tool\ExamplePermissionTool;
@@ -23,8 +22,6 @@ use AnzuSystems\CommonBundle\Tests\Data\Mcp\Tool\ExampleToolCategory;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Tool\ExampleWithoutInputTool;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Tool\ExampleWritePreviewTool;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Tool\ExampleWriteTool;
-use AnzuSystems\CommonBundle\Tests\Data\Mcp\Tool\InputPermissionExampleTool;
-use AnzuSystems\CommonBundle\Tests\Data\Mcp\Tool\InputPermissionWithoutInputExampleTool;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Tool\InvalidCategoryExampleTool;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Tool\InvalidNameExampleTool;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Tool\NoHashInputExamplePreviewTool;
@@ -48,7 +45,6 @@ final class McpToolDefinitionsCompilerPassTest extends TestCase
     private const string SERVER_NAME = 'core_cms';
     private const string DEFINITIONS_ARGUMENT = '$definitions';
     private const string PERMISSION_ARGUMENT = '$permission';
-    private const string INPUT_PERMISSION_ARGUMENT = '$inputPermission';
     private const string READ_ONLY_ARGUMENT = '$readOnly';
     private const string CATEGORY_ARGUMENT = '$category';
     private const string PREVIEW_OF_ARGUMENT = '$previewOf';
@@ -149,46 +145,6 @@ final class McpToolDefinitionsCompilerPassTest extends TestCase
         $signature = $this->getDefinitionField($container, self::SIGNATURE_ARGUMENT)[SearchAppLogsTool::NAME];
         self::assertInstanceOf(Definition::class, $signature);
         self::assertSame(McpToolSignature::class, $signature->getClass());
-    }
-
-    public function testInputPermissionReachesItsDefinition(): void
-    {
-        $container = $this->createMcpContainer();
-        $container->register(McpInputEnricherInterface::class);
-        $this->registerTools($container, [InputPermissionExampleTool::class]);
-
-        new McpToolDefinitionsCompilerPass()
-            ->process($container);
-
-        self::assertSame(
-            InputPermissionExampleTool::INPUT_PERMISSION,
-            $this->getDefinitionField($container, self::INPUT_PERMISSION_ARGUMENT)[InputPermissionExampleTool::NAME],
-        );
-    }
-
-    public function testInputPermissionWithoutEnricherFailsAtCompileTime(): void
-    {
-        $container = $this->createMcpContainer();
-        $this->registerTools($container, [InputPermissionExampleTool::class]);
-
-        $this->expectException(LogicException::class);
-        $this->expectExceptionMessage(McpConfigurationException::createInputPermissionWithoutEnricher(InputPermissionExampleTool::NAME)->getMessage());
-
-        new McpToolDefinitionsCompilerPass()
-            ->process($container);
-    }
-
-    public function testInputPermissionWithoutInputFailsAtCompileTime(): void
-    {
-        $container = $this->createMcpContainer();
-        $container->register(McpInputEnricherInterface::class);
-        $this->registerTools($container, [InputPermissionWithoutInputExampleTool::class]);
-
-        $this->expectException(LogicException::class);
-        $this->expectExceptionMessage(McpConfigurationException::createInputPermissionWithoutInput(InputPermissionWithoutInputExampleTool::NAME)->getMessage());
-
-        new McpToolDefinitionsCompilerPass()
-            ->process($container);
     }
 
     public function testPlainMcpToolHasNoSignature(): void
