@@ -15,7 +15,13 @@ final class SearchAuditLogsRequest
     #[Serialize]
     public ?int $userId = null;
 
-    #[McpField(description: 'When true (default), only failed requests are returned: http status 400 or higher, or a non-empty error or exception. Set it to false to include successful requests.')]
+    #[McpField(
+        description: <<<'TXT'
+            When true (default), only failed requests are returned: http status 400 or higher, or a non-empty error or exception.
+            Set it to false to include successful requests.
+            TXT
+        ,
+    )]
     #[Serialize]
     public bool $onlyErrors = true;
 

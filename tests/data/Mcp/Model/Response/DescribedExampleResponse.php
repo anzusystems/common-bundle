@@ -10,7 +10,13 @@ use AnzuSystems\SerializerBundle\Attributes\Serialize;
 
 final class DescribedExampleResponse
 {
-    #[McpField(description: 'Described plain field.')]
+    #[McpField(
+        description: <<<'TXT'
+            Described plain field.
+            Its second sentence.
+            TXT
+        ,
+    )]
     #[Serialize]
     public int $count = 0;
 

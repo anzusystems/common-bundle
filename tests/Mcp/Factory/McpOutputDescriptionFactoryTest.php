@@ -33,7 +33,7 @@ final class McpOutputDescriptionFactoryTest extends TestCase
             implode(PHP_EOL, [
                 'Returns:',
                 '- id, name',
-                '- count: Described plain field.',
+                '- count: Described plain field. Its second sentence.',
                 '- item (query): Described object of plain fields.',
             ]),
             new McpOutputDescriptionFactory()

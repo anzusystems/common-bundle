@@ -191,6 +191,8 @@ final readonly class ListKeywordsTool
   description, because clients hand the model the description and the input schema, not necessarily an output schema.
 * `#[McpField(description: …, descriptionValues: […])]` describes a DTO property, a response property or a case of a backed
   enum; the described cases of an enum field are listed after the field's own description, the default one marked.
+  A description longer than 120 characters or with a `{{ placeholder }}` is a nowdoc `<<<'TXT'` with one sentence per
+  line. The `Returns:` list joins the lines of a field description with spaces; the description of a tool keeps them.
   Keep validation messages generic: the schema rejects most invalid calls before the validator runs, and the
   handler prefixes every violation with its property path.
 

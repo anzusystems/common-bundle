@@ -25,7 +25,10 @@ trait McpPreviewHashTrait
         message: self::MESSAGE_PREVIEW_HASH_START . self::PREVIEW_TOOL . self::MESSAGE_PREVIEW_HASH_END,
     )]
     #[McpField(
-        description: 'The previewHash that {{ preview_tool }} returned for these arguments.',
+        description: <<<'TXT'
+            The previewHash that {{ preview_tool }} returned for these arguments.
+            TXT
+        ,
         descriptionValues: ['preview_tool' => self::PREVIEW_TOOL],
         requiredBySchema: false,
     )]

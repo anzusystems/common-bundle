@@ -74,7 +74,7 @@ final readonly class McpOutputDescriptionFactory
             $name = sprintf(self::FIELDS_FORMAT, $name, implode(self::FIELD_SEPARATOR, $inlineFields));
             $nestedLines = [];
         }
-        $line = is_string($description) ? sprintf(self::DESCRIPTION_FORMAT, $name, $description) : $name;
+        $line = is_string($description) ? sprintf(self::DESCRIPTION_FORMAT, $name, $this->joinLines($description)) : $name;
 
         return [sprintf(self::LINE_FORMAT, $indent, $line), ...$nestedLines];
     }
@@ -116,6 +116,11 @@ final readonly class McpOutputDescriptionFactory
         }
 
         return [] === $names ? null : $names;
+    }
+
+    private function joinLines(string $description): string
+    {
+        return (string) preg_replace(pattern: '/\s*\R\s*/u', replacement: ' ', subject: $description);
     }
 
     /**
