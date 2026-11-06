@@ -690,23 +690,16 @@ $routes
 ;
 ```
 
-
-## Debugging
-
-McpBundle's own tools work with this setup:
-
-* `bin/console debug:mcp` lists the tools of the server with their handler and description;
-* in a debug environment the Symfony profiler has an MCP panel, and every `/api/mcp` response carries an
-  `X-Debug-Token`.
-
-The server info of `initialize` comes from the McpBundle server config: set `version` (e.g. `env('APP_VERSION')`),
-`description` and `website_url` there.
-
-## Looking at the tools
+## Debugging and looking at the tools
 
 Tools are no routes, so NelmioApiDocBundle cannot describe them. Use what reads the same definitions a client gets:
 
-* `bin/console debug:mcp` lists the tools of the server, `bin/console debug:mcp <tool>` shows the description and the input
-  schema of one tool.
+* `bin/console debug:mcp` lists the tools of the server with their handler and description, `bin/console debug:mcp <tool>`
+  shows the description and the input schema of one tool.
+* In a debug environment the Symfony profiler has an MCP panel, and every `/api/mcp` response carries an
+  `X-Debug-Token`.
 * [MCP Inspector](https://github.com/modelcontextprotocol/inspector) (`npx @modelcontextprotocol/inspector`) connects to the
   endpoint with a token and calls the tools.
+
+The server info of `initialize` comes from the McpBundle server config: set `version` (e.g. `env('APP_VERSION')`),
+`description` and `website_url` there.

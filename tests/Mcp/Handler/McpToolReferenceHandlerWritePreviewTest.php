@@ -32,7 +32,7 @@ use Throwable;
 
 final class McpToolReferenceHandlerWritePreviewTest extends AbstractMcpToolReferenceHandlerTestCase
 {
-    private const string HASH_VIOLATION = 'previewHash: ' . ExampleWriteRequest::PREVIEW_HASH_MESSAGE;
+    private const string HASH_VIOLATION = 'previewHash: ' . ExampleWriteRequest::MESSAGE_PREVIEW_HASH_START . ExampleWritePreviewTool::NAME . ExampleWriteRequest::MESSAGE_PREVIEW_HASH_END;
 
     /**
      * @dataProvider auditLogProvider

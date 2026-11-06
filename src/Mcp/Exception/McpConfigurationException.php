@@ -14,6 +14,8 @@ use LogicException;
  */
 final class McpConfigurationException extends LogicException
 {
+    private const string TOOL_NAME_SEPARATOR = ', ';
+
     public static function createInvalidServerName(string $parameter): self
     {
         return new self(sprintf('The "%s" parameter must be the mcp server name.', $parameter));
@@ -44,7 +46,7 @@ final class McpConfigurationException extends LogicException
      */
     public static function createDuplicateToolName(string $toolName, array $toolMethods): self
     {
-        return new self(sprintf('The MCP tool name "%s" is registered by more than one tool (%s), every tool name must be unique.', $toolName, implode(', ', $toolMethods)));
+        return new self(sprintf('The MCP tool name "%s" is registered by more than one tool (%s), every tool name must be unique.', $toolName, implode(self::TOOL_NAME_SEPARATOR, $toolMethods)));
     }
 
     /**
@@ -52,7 +54,7 @@ final class McpConfigurationException extends LogicException
      */
     public static function createInvalidToolName(string $toolName, array $toolMethods): self
     {
-        return new self(sprintf('The MCP tool name "%s" of %s is invalid: use 1 to 64 letters, digits, dots, underscores, hyphens or slashes.', $toolName, implode(', ', $toolMethods)));
+        return new self(sprintf('The MCP tool name "%s" of %s is invalid: use 1 to 64 letters, digits, dots, underscores, hyphens or slashes.', $toolName, implode(self::TOOL_NAME_SEPARATOR, $toolMethods)));
     }
 
     public static function createInvalidCategory(string $category, string $toolName, string $pattern): self
@@ -80,7 +82,7 @@ final class McpConfigurationException extends LogicException
      */
     public static function createSecondPreview(string $writeToolName, array $previewToolNames): self
     {
-        return new self(sprintf('The MCP tool "%s" is previewed by more than one tool (%s), a write tool has one preview at most.', $writeToolName, implode(', ', $previewToolNames)));
+        return new self(sprintf('The MCP tool "%s" is previewed by more than one tool (%s), a write tool has one preview at most.', $writeToolName, implode(self::TOOL_NAME_SEPARATOR, $previewToolNames)));
     }
 
     public static function createPreviewWithPermission(string $previewToolName, string $writeToolName): self

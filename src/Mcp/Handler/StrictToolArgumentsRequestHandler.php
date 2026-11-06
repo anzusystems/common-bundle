@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace AnzuSystems\CommonBundle\Mcp\Handler;
 
-use AnzuSystems\CommonBundle\Mcp\Exception\McpToolAccessRejectedException;
+use AnzuSystems\CommonBundle\Mcp\Exception\McpToolArgumentsInputException;
 use AnzuSystems\CommonBundle\Mcp\Log\McpToolCallLogger;
 use AnzuSystems\CommonBundle\Mcp\Security\McpToolAccessChecker;
 use Mcp\Capability\Registry\ToolReference;
@@ -48,7 +48,7 @@ final readonly class StrictToolArgumentsRequestHandler implements RequestHandler
         }
 
         $allowedArguments = $this->getAllowedArguments($this->registry->getTool($request->name));
-        $message = McpToolAccessRejectedException::createUnknownArguments(
+        $message = McpToolArgumentsInputException::createUnknownArguments(
             $this->findUnknownArguments($request),
             $allowedArguments,
         )->getMessage();

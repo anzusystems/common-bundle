@@ -47,14 +47,14 @@ final readonly class McpOutputDescriptionFactory
         foreach ($this->getFields($schema) as $name => $field) {
             [$name, $nested] = $this->resolveNested(name: (string) $name, field: $field);
             $description = $field[McpSchemaFactory::DESCRIPTION] ?? null;
-            if (null === $description && [] === $this->getFields($nested)) {
+            if (null === $description && empty($this->getFields($nested))) {
                 $plainNames[] = $name;
 
                 continue;
             }
             $lines = [...$lines, ...$this->createFieldLines(name: $name, description: $description, nested: $nested, indent: $indent)];
         }
-        if ([] === $plainNames) {
+        if (empty($plainNames)) {
             return $lines;
         }
 
@@ -109,13 +109,13 @@ final readonly class McpOutputDescriptionFactory
         $names = [];
         foreach ($this->getFields($schema) as $name => $field) {
             [$name, $nested] = $this->resolveNested(name: (string) $name, field: $field);
-            if (isset($field[McpSchemaFactory::DESCRIPTION]) || [] !== $this->getFields($nested)) {
+            if (isset($field[McpSchemaFactory::DESCRIPTION]) || false === empty($this->getFields($nested))) {
                 return null;
             }
             $names[] = $name;
         }
 
-        return [] === $names ? null : $names;
+        return empty($names) ? null : $names;
     }
 
     private function joinLines(string $description): string

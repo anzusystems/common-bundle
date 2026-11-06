@@ -30,15 +30,14 @@ final readonly class McpObjectArrayRule implements Rule
 {
     public const string MESSAGE = '%s is %s. Use Collection<int, %s> (Collection<string, …> for a keyed map) instead of an array of objects (anzu-php-style: objects go in a Collection, arrays hold only ids and scalars).';
 
-    private const string NAMESPACE_SEPARATOR = '\\';
     private const string PROPERTY_SUBJECT_FORMAT = 'Property %s::$%s';
 
     private ClassNamespaceMatcher $classNamespaceMatcher;
-    private string $objectNamespacePrefix;
+    private ClassNamespaceMatcher $objectNamespaceMatcher;
 
     /**
      * @param list<string> $classNamespaces the namespaces whose classes are checked; `*` stands for one segment, e.g. `App\Domain\*\Mcp`
-     * @param string $objectNamespace arrays of objects from this namespace are reported, other objects (Uuid, DateTimeImmutable) are allowed
+     * @param string $objectNamespace arrays of objects from this namespace are reported (`*` stands for one segment), other objects (Uuid, DateTimeImmutable) are allowed
      */
     public function __construct(
         private ReflectionProvider $reflectionProvider,
@@ -46,7 +45,7 @@ final readonly class McpObjectArrayRule implements Rule
         string $objectNamespace,
     ) {
         $this->classNamespaceMatcher = new ClassNamespaceMatcher($classNamespaces);
-        $this->objectNamespacePrefix = trim($objectNamespace, self::NAMESPACE_SEPARATOR) . self::NAMESPACE_SEPARATOR;
+        $this->objectNamespaceMatcher = new ClassNamespaceMatcher([$objectNamespace]);
     }
 
     public function getNodeType(): string
@@ -144,7 +143,7 @@ final readonly class McpObjectArrayRule implements Rule
 
     private function isReportedObject(string $className): bool
     {
-        if (false === str_starts_with($className, $this->objectNamespacePrefix) || false === $this->reflectionProvider->hasClass($className)) {
+        if (false === $this->objectNamespaceMatcher->matches($className) || false === $this->reflectionProvider->hasClass($className)) {
             return false;
         }
 

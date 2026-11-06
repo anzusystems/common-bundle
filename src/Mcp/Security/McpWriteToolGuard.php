@@ -14,6 +14,7 @@ use Closure;
 use Mcp\Schema\Result\InputRequiredResult;
 use Mcp\Server\RequestContext;
 use Symfony\Component\HttpFoundation\RequestStack;
+use Throwable;
 
 /**
  * Keeps one HTTP request (one JSON-RPC batch) to at most one successful write: the main request is marked after a
@@ -79,10 +80,12 @@ final readonly class McpWriteToolGuard
         if ($isConfirmable && false === $isAnswered) {
             return $this->writeConfirmation->createInputRequiredResult(input: $input, preview: $preview);
         }
-        $this->writeRateLimiter->consume($toolName);
         if (null === $preview->currentState) {
-            $this->previewHashReservation->reserve($toolName, $input);
+            $this->consumeReserved(toolName: $toolName, input: $input);
+
+            return null;
         }
+        $this->writeRateLimiter->consume($toolName);
 
         return null;
     }
@@ -96,5 +99,20 @@ final readonly class McpWriteToolGuard
     {
         $this->requestStack->getMainRequest()?->attributes
             ->set(self::WRITE_TOOL_DONE_ATTR, true);
+    }
+
+    /**
+     * A retry with a used hash is refused before it takes a token, and a hash refused by the limit stays usable.
+     */
+    private function consumeReserved(string $toolName, McpPreviewHashAwareInterface $input): void
+    {
+        $this->previewHashReservation->reserve($toolName, $input);
+        try {
+            $this->writeRateLimiter->consume($toolName);
+        } catch (Throwable $exception) {
+            $this->previewHashReservation->release($input);
+
+            throw $exception;
+        }
     }
 }

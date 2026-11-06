@@ -251,14 +251,12 @@ final class McpToolAccessCheckerTest extends TestCase
     /**
      * @param list<string> $readOnlyToolNames
      * @param list<string> $grantedWriteTools
-     * @param array<string, string> $toolCategories
      * @param array<string, string> $writeToolNamesByPreview
      */
     private function createChecker(
         array $readOnlyToolNames,
         array $grantedWriteTools,
         ?McpToolScopeProviderInterface $toolScopeProvider = null,
-        array $toolCategories = [],
         array $writeToolNamesByPreview = [],
     ): McpToolAccessChecker {
         $security = $this->createStub(Security::class);
@@ -273,7 +271,6 @@ final class McpToolAccessCheckerTest extends TestCase
                     self::SECOND_GRANTED_TOOL => self::GRANTED_PERMISSION,
                 ],
                 readOnlyToolNames: $readOnlyToolNames,
-                toolCategories: $toolCategories,
                 writeToolNamesByPreview: $writeToolNamesByPreview,
             ),
             security: $security,

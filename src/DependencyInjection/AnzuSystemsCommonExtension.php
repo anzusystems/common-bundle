@@ -129,6 +129,8 @@ use Symfony\Component\RateLimiter\Storage\CacheStorage;
 
 final class AnzuSystemsCommonExtension extends Extension implements PrependExtensionInterface
 {
+    public const string USER_ENTITY_CLASS_PARAM = 'anzu_systems_common.user_entity_class';
+
     private const string MCP_TOOL_NAMESPACE = 'AnzuSystems\\CommonBundle\\Mcp\\Tool\\';
     private const string MCP_SESSION_STORE_CACHE = 'cache';
     private const int MCP_PAGINATION_LIMIT_DEFAULT = 50;
@@ -295,7 +297,7 @@ final class AnzuSystemsCommonExtension extends Extension implements PrependExten
             ->replaceArgument('$appRedis', new Reference($settings['app_redis']))
             ->replaceArgument('$unlockedCommands', $settings['unlocked_commands']);
 
-        $container->setParameter('anzu_systems_common.user_entity_class', $settings['user_entity_class']);
+        $container->setParameter(self::USER_ENTITY_CLASS_PARAM, $settings['user_entity_class']);
 
         $container
             ->getDefinition(CurrentAnzuUserProvider::class)
@@ -797,7 +799,7 @@ final class AnzuSystemsCommonExtension extends Extension implements PrependExten
         );
         $container->setDefinition(
             UuidArrayHandler::class,
-            (new Definition(UuidArrayHandler::class))
+            new Definition(UuidArrayHandler::class)
                 ->setArgument('$uuidHandler', new Reference(UuidHandler::class))
                 ->addTag(AnzuSystemsCommonBundle::TAG_SERIALIZER_HANDLER)
         );

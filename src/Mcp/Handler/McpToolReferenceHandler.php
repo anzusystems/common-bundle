@@ -6,6 +6,7 @@ namespace AnzuSystems\CommonBundle\Mcp\Handler;
 
 use AnzuSystems\CommonBundle\Log\Helper\AuditLogResourceHelper;
 use AnzuSystems\CommonBundle\Mcp\Exception\McpToolAccessRejectedException;
+use AnzuSystems\CommonBundle\Mcp\Exception\McpToolArgumentsInputException;
 use AnzuSystems\CommonBundle\Mcp\Exception\McpWriteRejectedException;
 use AnzuSystems\CommonBundle\Mcp\Factory\McpPreviewHashFactory;
 use AnzuSystems\CommonBundle\Mcp\Log\McpToolCallLogger;
@@ -353,7 +354,7 @@ final readonly class McpToolReferenceHandler implements ReferenceHandlerInterfac
             return;
         }
 
-        throw McpToolAccessRejectedException::createInvalidArguments($this->toolErrorResolver->formatViolations($violations));
+        throw McpToolArgumentsInputException::createInvalidArguments($this->toolErrorResolver->resolveViolationsMessage($violations));
     }
 
     private function resolveErrorMessage(string $toolName, Throwable $exception): ?string

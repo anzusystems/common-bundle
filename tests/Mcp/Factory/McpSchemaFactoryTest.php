@@ -14,6 +14,7 @@ use AnzuSystems\CommonBundle\Tests\Data\Mcp\Model\Request\CollectionExampleReque
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Model\Request\CompoundExampleRequest;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Model\Request\ConstraintExampleRequest;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Model\Request\DateExampleRequest;
+use AnzuSystems\CommonBundle\Tests\Data\Mcp\Model\Request\DescribedEnumExampleRequest;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Model\Request\EnumExampleRequest;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Model\Request\HookedExampleRequest;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Model\Request\NullableBareArrayExampleRequest;
@@ -54,7 +55,7 @@ final class McpSchemaFactoryTest extends TestCase
             ->createForClass(PreviewHashExampleRequest::class);
 
         self::assertArrayHasKey('previewHash', $schema[McpSchemaFactory::PROPERTIES]);
-        self::assertArrayNotHasKey('required', $schema);
+        self::assertArrayNotHasKey(self::REQUIRED, $schema);
     }
 
     public function testCompoundConstraintDescribesThePropertyLikeItsConstraints(): void
@@ -195,6 +196,12 @@ final class McpSchemaFactoryTest extends TestCase
             'array<mixed> has no item schema' => ['arrayOfMixed', ['type' => 'array', 'default' => []]],
             'array<string, mixed>' => ['mixedByString', ['type' => 'object', 'additionalProperties' => true, 'default' => []]],
             'array<string, X>' => ['stringsByString', ['type' => 'object', 'additionalProperties' => ['type' => 'string'], 'default' => []]],
+            'array<int, X> kept by RawArrayHandler' => ['rawStringsByInt', ['type' => 'object', 'additionalProperties' => ['type' => 'string'], 'default' => []]],
+            'nullable array<int, X> kept by RawArrayHandler' => [
+                'nullableRawStringsByInt',
+                ['type' => ['null', 'object'], 'additionalProperties' => ['type' => 'string'], 'default' => null],
+            ],
+            'list<X> kept by RawArrayHandler' => ['rawListOfStrings', $stringList],
         ];
     }
 
@@ -252,6 +259,38 @@ final class McpSchemaFactoryTest extends TestCase
         self::assertSame(['own', 'shared', 'parentOnly'], array_keys($schema[McpSchemaFactory::PROPERTIES]));
         self::assertSame('child', $schema[McpSchemaFactory::PROPERTIES]['shared']['default']);
         self::assertSame('parent', $schema[McpSchemaFactory::PROPERTIES]['parentOnly']['default']);
+    }
+
+    /**
+     * @dataProvider describedEnumProvider
+     */
+    public function testDescribedEnumValuesFollowTheFieldDescriptionAndMarkTheDefault(string $property, string $expectedDescription): void
+    {
+        $schema = new McpSchemaFactory()
+            ->createForClass(DescribedEnumExampleRequest::class);
+
+        self::assertSame($expectedDescription, $schema[McpSchemaFactory::PROPERTIES][$property][McpSchemaFactory::DESCRIPTION]);
+    }
+
+    /**
+     * @return array<string, array{string, string}>
+     */
+    public static function describedEnumProvider(): array
+    {
+        return [
+            'required with its own description' => [
+                'status',
+                DescribedEnumExampleRequest::STATUS_DESCRIPTION . ' "unchanged" = kept as it is, "changed" = kept with another text.',
+            ],
+            'default' => [
+                'defaultStatus',
+                '"unchanged" (default) = kept as it is, "changed" = kept with another text.',
+            ],
+            'nullable with a default' => [
+                'nullableStatus',
+                '"unchanged" = kept as it is, "changed" (default) = kept with another text.',
+            ],
+        ];
     }
 
     public function testDescribedClassesListNestedClassesEnumsAndCompoundConstraints(): void

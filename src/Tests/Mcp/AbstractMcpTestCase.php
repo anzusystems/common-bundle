@@ -11,10 +11,6 @@ use AnzuSystems\CommonBundle\Validator\Constraints\McpExistingId;
 abstract class AbstractMcpTestCase extends AnzuWebTestCase
 {
     private const string VIOLATION_FORMAT = '%s%s: %s';
-    private const string ID_FORMAT = '"%d"';
-    private const string ID_SEPARATOR = ', ';
-    private const string ID_PLACEHOLDER = '{{ id }}';
-    private const string IDS_PLACEHOLDER = '{{ ids }}';
 
     /**
      * @var array<string, McpTestClient>
@@ -101,7 +97,7 @@ abstract class AbstractMcpTestCase extends AnzuWebTestCase
     protected static function createUnknownIdError(string $field, int $id, string $resolverTool): string
     {
         return self::createInvalidArgumentError($field, strtr(McpExistingId::MESSAGE, [
-            self::ID_PLACEHOLDER => (string) $id,
+            McpExistingId::ID_PLACEHOLDER => (string) $id,
             McpExistingId::RESOLVER_TOOL_PLACEHOLDER => $resolverTool,
         ]));
     }
@@ -112,7 +108,7 @@ abstract class AbstractMcpTestCase extends AnzuWebTestCase
     protected static function createUnknownIdsError(string $field, array $ids, string $resolverTool): string
     {
         return self::createInvalidArgumentError($field, strtr(McpExistingId::LIST_MESSAGE, [
-            self::IDS_PLACEHOLDER => implode(self::ID_SEPARATOR, array_map(static fn (int $id): string => sprintf(self::ID_FORMAT, $id), $ids)),
+            McpExistingId::IDS_PLACEHOLDER => implode(McpExistingId::ID_SEPARATOR, array_map(static fn (int $id): string => sprintf(McpExistingId::ID_FORMAT, $id), $ids)),
             McpExistingId::RESOLVER_TOOL_PLACEHOLDER => $resolverTool,
         ]));
     }

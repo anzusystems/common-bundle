@@ -8,6 +8,9 @@ use AnzuSystems\CommonBundle\Mcp\Attribute\AsMcpTool;
 use AnzuSystems\CommonBundle\Mcp\Handler\McpToolReferenceHandler;
 use BackedEnum;
 use LogicException;
+use Mcp\Schema\Enum\ProtocolVersion;
+use Mcp\Schema\JsonRpc\MessageInterface;
+use Mcp\Server\Transport\StreamableHttpTransport;
 use ReflectionAttribute;
 use ReflectionClass;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
@@ -21,14 +24,11 @@ use UnexpectedValueException;
  */
 final class McpTestClient
 {
-    private const string JSONRPC_VERSION = '2.0';
-    private const string PROTOCOL_VERSION = '2025-03-26';
     private const string METHOD_INITIALIZE = 'initialize';
     private const string METHOD_TOOLS_CALL = 'tools/call';
     private const string METHOD_TOOLS_LIST = 'tools/list';
     private const string CLIENT_NAME = 'anzu-mcp-test-client';
     private const string CLIENT_VERSION = '1.0.0';
-    private const string HEADER_SESSION = 'Mcp-Session-Id';
     private const string SERVER_AUTHORIZATION = 'HTTP_AUTHORIZATION';
     private const string SERVER_HOST = 'HTTP_HOST';
     private const string SERVER_ACCEPT = 'HTTP_ACCEPT';
@@ -38,6 +38,9 @@ final class McpTestClient
     private const string CONTENT_TYPE_JSON = 'application/json';
     private const string ACCEPT = 'application/json, text/event-stream';
     private const string PREVIEW_HASH_KEY = 'previewHash';
+    private const string RESULT_KEY = 'result';
+    private const string ERROR_KEY = 'error';
+    private const string NAME_KEY = 'name';
 
     private ?string $sessionId = null;
     private int $lastRequestId = 0;
@@ -74,20 +77,20 @@ final class McpTestClient
     public function callTool(string $toolClass, array $arguments = []): McpToolResult
     {
         $message = $this->send(self::METHOD_TOOLS_CALL, [
-            'name' => self::resolveToolName($toolClass),
+            self::NAME_KEY => self::resolveToolName($toolClass),
             'arguments' => (object) array_map(
                 static fn (mixed $argument): mixed => $argument instanceof BackedEnum ? $argument->value : $argument,
                 $arguments,
             ),
         ]);
-        if (isset($message['error'])) {
-            return new McpToolResult(isError: true, error: (string) $message['error']['message'], data: []);
+        if (isset($message[self::ERROR_KEY])) {
+            return new McpToolResult(isError: true, error: (string) $message[self::ERROR_KEY]['message'], data: []);
         }
 
-        $data = $message['result']['structuredContent'] ?? [];
+        $data = $message[self::RESULT_KEY]['structuredContent'] ?? [];
 
         return new McpToolResult(
-            isError: $message['result']['isError'] ?? false,
+            isError: $message[self::RESULT_KEY]['isError'] ?? false,
             error: $data[McpToolReferenceHandler::ERROR_KEY] ?? null,
             data: $data,
         );
@@ -98,7 +101,7 @@ final class McpTestClient
      */
     public function listToolNames(): array
     {
-        return array_column($this->send(self::METHOD_TOOLS_LIST)['result']['tools'] ?? [], 'name');
+        return array_column($this->send(self::METHOD_TOOLS_LIST)[self::RESULT_KEY]['tools'] ?? [], self::NAME_KEY);
     }
 
     /**
@@ -135,11 +138,11 @@ final class McpTestClient
     private function initialize(): void
     {
         $response = $this->post(self::METHOD_INITIALIZE, [
-            'protocolVersion' => self::PROTOCOL_VERSION,
+            'protocolVersion' => ProtocolVersion::V2025_03_26->value,
             'capabilities' => (object) [],
-            'clientInfo' => ['name' => self::CLIENT_NAME, 'version' => self::CLIENT_VERSION],
+            'clientInfo' => [self::NAME_KEY => self::CLIENT_NAME, 'version' => self::CLIENT_VERSION],
         ]);
-        $this->sessionId = $response->headers->get(self::HEADER_SESSION);
+        $this->sessionId = $response->headers->get(StreamableHttpTransport::SESSION_HEADER);
         if (null === $this->sessionId) {
             throw new UnexpectedValueException(sprintf('The MCP server opened no session: %s', (string) $response->getContent()));
         }
@@ -165,7 +168,7 @@ final class McpTestClient
             uri: $this->path,
             server: $server,
             content: json_encode(
-                ['jsonrpc' => self::JSONRPC_VERSION, 'id' => ++$this->lastRequestId, 'method' => $method, 'params' => (object) $params],
+                ['jsonrpc' => MessageInterface::JSONRPC_VERSION, 'id' => ++$this->lastRequestId, 'method' => $method, 'params' => (object) $params],
                 JSON_THROW_ON_ERROR,
             ),
         );
@@ -176,5 +179,4 @@ final class McpTestClient
 
         return $response;
     }
-
 }

@@ -107,10 +107,10 @@ final readonly class NamedArgumentsRule implements Rule
             static fn (ParameterReflection|ReflectionParameter $parameter): bool => false === $parameter->isVariadic(),
         );
 
-        return array_values(array_map(
+        return array_map(
             static fn (ParameterReflection|ReflectionParameter $parameter): string => $parameter->getName(),
             $nameableParameters,
-        ));
+        ) |> array_values(...);
     }
 
     /**

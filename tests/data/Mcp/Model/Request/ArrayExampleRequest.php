@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace AnzuSystems\CommonBundle\Tests\Data\Mcp\Model\Request;
 
+use AnzuSystems\CommonBundle\Serializer\Handler\Handlers\RawArrayHandler;
 use AnzuSystems\SerializerBundle\Attributes\Serialize;
 
 final class ArrayExampleRequest
@@ -49,4 +50,22 @@ final class ArrayExampleRequest
      */
     #[Serialize]
     public array $stringsByString = [];
+
+    /**
+     * @var array<int, string>
+     */
+    #[Serialize(handler: RawArrayHandler::class)]
+    public array $rawStringsByInt = [];
+
+    /**
+     * @var array<int, string>|null
+     */
+    #[Serialize(handler: RawArrayHandler::class)]
+    public ?array $nullableRawStringsByInt = null;
+
+    /**
+     * @var list<string>
+     */
+    #[Serialize(handler: RawArrayHandler::class)]
+    public array $rawListOfStrings = [];
 }

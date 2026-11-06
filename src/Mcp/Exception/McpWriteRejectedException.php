@@ -8,6 +8,8 @@ use Symfony\Component\RateLimiter\RateLimit;
 
 final class McpWriteRejectedException extends McpToolCallRejectedException
 {
+    public const string RATE_LIMIT_EXCEEDED_START = 'The write limit of';
+
     public static function createNotGranted(string $toolName): self
     {
         return new self(sprintf('Access denied — the write tool "%s" is not granted to this token. Create a new personal access token with this write tool.', $toolName));
@@ -39,7 +41,7 @@ final class McpWriteRejectedException extends McpToolCallRejectedException
     public static function createRateLimitExceeded(array $toolNames, RateLimit $rateLimit): self
     {
         return new self(sprintf(
-            'The write limit of %d calls shared by %s is reached, try again after %s — do not retry before.',
+            self::RATE_LIMIT_EXCEEDED_START . ' %d calls shared by %s is reached, try again after %s — do not retry before.',
             $rateLimit->getLimit(),
             implode(', ', $toolNames),
             $rateLimit->getRetryAfter()

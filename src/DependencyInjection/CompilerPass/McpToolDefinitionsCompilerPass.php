@@ -34,7 +34,6 @@ final class McpToolDefinitionsCompilerPass implements CompilerPassInterface
     public const string TOOL_TAG = 'mcp.tool';
 
     private const string TOOL_TAG_METHOD = 'method';
-    private const string INVOKE_METHOD = '__invoke';
     private const string TOOL_METHOD_FORMAT = '%s::%s';
     private const string TOOL_METHOD_SEPARATOR = '::';
     private const string DEFINITIONS_ARGUMENT = '$definitions';
@@ -157,7 +156,7 @@ final class McpToolDefinitionsCompilerPass implements CompilerPassInterface
                 continue;
             }
             foreach ($tags as $tagAttributes) {
-                $method = $tagAttributes[self::TOOL_TAG_METHOD] ?? self::INVOKE_METHOD;
+                $method = $tagAttributes[self::TOOL_TAG_METHOD] ?? McpToolSignatureResolver::INVOKE_METHOD;
                 if (method_exists($class, $method)) {
                     $toolMethods[sprintf(self::TOOL_METHOD_FORMAT, $class, $method)] = new ReflectionMethod($class, $method);
                 }
@@ -188,7 +187,7 @@ final class McpToolDefinitionsCompilerPass implements CompilerPassInterface
     private function resolveToolAttribute(ReflectionMethod $reflection): ?McpTool
     {
         $attributes = $reflection->getAttributes(McpTool::class, ReflectionAttribute::IS_INSTANCEOF);
-        if (empty($attributes) && StringHelper::isSame(self::INVOKE_METHOD, $reflection->getName())) {
+        if (empty($attributes) && StringHelper::isSame(McpToolSignatureResolver::INVOKE_METHOD, $reflection->getName())) {
             $attributes = $reflection->getDeclaringClass()
                 ->getAttributes(McpTool::class, ReflectionAttribute::IS_INSTANCEOF);
         }

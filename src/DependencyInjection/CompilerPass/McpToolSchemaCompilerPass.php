@@ -123,9 +123,6 @@ final class McpToolSchemaCompilerPass implements CompilerPassInterface
      */
     private function resolveToolAttribute(string $class): ?AsMcpTool
     {
-        $attributes = new ReflectionClass($class)
-            ->getAttributes(AsMcpTool::class);
-
-        return empty($attributes) ? null : $attributes[0]->newInstance();
+        return array_first(new ReflectionClass($class)->getAttributes(AsMcpTool::class))?->newInstance();
     }
 }

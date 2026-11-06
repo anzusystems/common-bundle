@@ -16,8 +16,8 @@ use Symfony\Component\Validator\Constraints as Assert;
  */
 trait McpPreviewHashTrait
 {
-    private const string MESSAGE_PREVIEW_HASH_START = 'Call ';
-    private const string MESSAGE_PREVIEW_HASH_END = ' with the same arguments first, show the user its result and pass the previewHash it returned.';
+    public const string MESSAGE_PREVIEW_HASH_START = 'Call ';
+    public const string MESSAGE_PREVIEW_HASH_END = ' with the same arguments first, show the user its result and pass the previewHash it returned.';
 
     #[Assert\NotBlank(message: self::MESSAGE_PREVIEW_HASH_START . self::PREVIEW_TOOL . self::MESSAGE_PREVIEW_HASH_END)]
     #[Assert\Regex(

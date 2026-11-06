@@ -43,7 +43,7 @@ trait McpLogSearchResponseTrait
     ) {
     }
 
-    private static function windowTruncatedWarning(): string
+    private function windowTruncatedWarning(): string
     {
         return sprintf(
             'The requested window was longer than the %d-day cap and was shortened: only records between from and until were searched, the rest of the requested range was not. Repeat the search on the remaining days.',
@@ -51,7 +51,7 @@ trait McpLogSearchResponseTrait
         );
     }
 
-    private static function moreRecordsWarning(int $limit): string
+    private function moreRecordsWarning(int $limit): string
     {
         return sprintf('Only the first %d matching records were returned and more exist. Narrow the filters or the window instead of raising the limit.', $limit);
     }
@@ -59,7 +59,7 @@ trait McpLogSearchResponseTrait
     protected function getWarnings(): McpNotes
     {
         return new McpNotes()
-            ->addIf($this->result->window->truncated, self::windowTruncatedWarning())
-            ->addIf($this->result->hasMore, self::moreRecordsWarning($this->result->limit));
+            ->addIf($this->result->window->truncated, $this->windowTruncatedWarning())
+            ->addIf($this->result->hasMore, $this->moreRecordsWarning($this->result->limit));
     }
 }

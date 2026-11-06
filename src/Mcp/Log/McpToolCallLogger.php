@@ -7,11 +7,9 @@ namespace AnzuSystems\CommonBundle\Mcp\Log;
 use AnzuSystems\CommonBundle\Domain\User\CurrentAnzuUserProvider;
 use Mcp\Server\Session\SessionInterface;
 use Mcp\Server\Stateless\RequestMeta;
-use Monolog\Attribute\WithMonologChannel;
 use Psr\Log\LoggerInterface;
 use Throwable;
 
-#[WithMonologChannel('mcp')]
 final readonly class McpToolCallLogger
 {
     public const string CALL_LOG_MESSAGE = 'Mcp tool call.';

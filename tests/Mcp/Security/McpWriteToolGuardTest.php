@@ -14,14 +14,24 @@ use AnzuSystems\CommonBundle\Mcp\Security\McpToolScope;
 use AnzuSystems\CommonBundle\Mcp\Security\McpWriteConfirmation;
 use AnzuSystems\CommonBundle\Mcp\Security\McpWriteToolGuard;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\McpToolDefinitionsFactory;
+use AnzuSystems\CommonBundle\Tests\Data\Mcp\Model\Request\ExampleWriteRequest;
+use AnzuSystems\CommonBundle\Tests\Data\Mcp\Model\Response\ExampleWritePreviewResponse;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Security\StaticMcpToolScopeProvider;
 use AnzuSystems\Contracts\AnzuApp;
+use AnzuSystems\Contracts\Entity\AnzuUser;
+use Mcp\Schema\Request\CallToolRequest;
+use Mcp\Schema\Result\InputRequiredResult;
+use Mcp\Server\RequestContext;
+use Mcp\Server\Session\InMemorySessionStore;
+use Mcp\Server\Session\Session;
 use PHPUnit\Framework\TestCase;
 use Symfony\Bundle\SecurityBundle\Security;
 use Symfony\Component\Cache\Adapter\ArrayAdapter;
 use Symfony\Component\DependencyInjection\ServiceLocator;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\RequestStack;
+use Symfony\Component\RateLimiter\RateLimiterFactory;
+use Symfony\Component\RateLimiter\Storage\InMemoryStorage;
 use Symfony\Contracts\Translation\TranslatorInterface;
 
 final class McpWriteToolGuardTest extends TestCase
@@ -29,6 +39,14 @@ final class McpWriteToolGuardTest extends TestCase
     private const string READ_TOOL_NAME = 'list_examples';
     private const string WRITE_TOOL_NAME = 'create_example';
     private const string TOOL_PERMISSION = 'cms_example_read';
+    private const string PREVIEW_TOOL_NAME = 'preview_example';
+    private const string LIMITER = 'example_write';
+    private const string PREVIEW_HASH = 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
+    private const string OTHER_PREVIEW_HASH = 'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb';
+    private const string PREVIEW_TITLE = 'Example';
+    private const int USER_ID = 5;
+
+    private McpPreviewHashReservation $previewHashReservation;
 
     /**
      * @dataProvider writeGrantProvider
@@ -97,8 +115,82 @@ final class McpWriteToolGuardTest extends TestCase
         $this->addToAssertionCount(1);
     }
 
-    private function createGuard(bool $writeGranted = true, ?Request $request = null): McpWriteToolGuard
+    public function testRetryWithAUsedPreviewHashTakesNoToken(): void
     {
+        $guard = $this->createGuard(writeLimit: 2);
+        $this->guardPreview($guard, self::PREVIEW_HASH);
+
+        try {
+            $this->guardPreview($guard, self::PREVIEW_HASH);
+            self::fail('The used preview hash was accepted.');
+        } catch (McpWriteRejectedException $exception) {
+            self::assertSame(
+                McpWriteRejectedException::createPreviewHashUsed(self::WRITE_TOOL_NAME, McpPreviewHashReservation::LIFETIME_SECONDS)->getMessage(),
+                $exception->getMessage(),
+            );
+        }
+
+        self::assertNull($this->guardPreview($guard, self::OTHER_PREVIEW_HASH));
+    }
+
+    public function testPreviewHashRefusedByTheWriteLimitStaysUsable(): void
+    {
+        $guard = $this->createGuard(writeLimit: 1);
+        $this->guardPreview($guard, self::PREVIEW_HASH);
+
+        try {
+            $this->guardPreview($guard, self::OTHER_PREVIEW_HASH);
+            self::fail('The write limit was not applied.');
+        } catch (McpWriteRejectedException $exception) {
+            self::assertStringContainsString(self::WRITE_TOOL_NAME, $exception->getMessage());
+        }
+
+        $this->previewHashReservation->reserve(self::WRITE_TOOL_NAME, $this->createInput(self::OTHER_PREVIEW_HASH));
+        $this->addToAssertionCount(1);
+    }
+
+    private function guardPreview(McpWriteToolGuard $guard, string $previewHash): ?InputRequiredResult
+    {
+        $preview = new ExampleWritePreviewResponse(self::PREVIEW_TITLE);
+        $preview->previewHash = $previewHash;
+
+        return $guard->guardPreview(
+            toolName: self::WRITE_TOOL_NAME,
+            previewToolName: self::PREVIEW_TOOL_NAME,
+            input: $this->createInput($previewHash),
+            context: new RequestContext(
+                new Session(new InMemorySessionStore()),
+                new CallToolRequest(self::WRITE_TOOL_NAME, [])->withId(1),
+            ),
+            runPreview: static fn (): ExampleWritePreviewResponse => $preview,
+        );
+    }
+
+    private function createInput(string $previewHash): ExampleWriteRequest
+    {
+        $input = new ExampleWriteRequest();
+        $input->previewHash = $previewHash;
+
+        return $input;
+    }
+
+    private function createGuard(bool $writeGranted = true, ?Request $request = null, ?int $writeLimit = null): McpWriteToolGuard
+    {
+        $currentUserProvider = $this->createStub(CurrentAnzuUserProvider::class);
+        $currentUserProvider->method('getCurrentUser')
+            ->willReturn($this->createConfiguredMock(AnzuUser::class, ['getId' => self::USER_ID]));
+        $this->previewHashReservation = new McpPreviewHashReservation(new ArrayAdapter(), $currentUserProvider);
+        $rateLimiters = [];
+        $toolRateLimiters = [];
+        if (is_int($writeLimit)) {
+            $factory = new RateLimiterFactory(
+                ['id' => self::LIMITER, 'policy' => 'fixed_window', 'limit' => $writeLimit, 'interval' => '1 hour'],
+                new InMemoryStorage(),
+            );
+            $rateLimiters[self::LIMITER] = static fn (): RateLimiterFactory => $factory;
+            $toolRateLimiters[self::WRITE_TOOL_NAME] = self::LIMITER;
+        }
+
         $security = $this->createMock(Security::class);
         $security->method('isGranted')
             ->willReturn(true);
@@ -124,14 +216,14 @@ final class McpWriteToolGuardTest extends TestCase
             requestStack: $requestStack,
             writeConfirmation: new McpWriteConfirmation(
                 translator: $this->createStub(TranslatorInterface::class),
-                currentUserProvider: $this->createStub(CurrentAnzuUserProvider::class),
+                currentUserProvider: $currentUserProvider,
             ),
             writeRateLimiter: new McpWriteRateLimiter(
-                rateLimiters: new ServiceLocator([]),
-                toolDefinitions: McpToolDefinitionsFactory::create(),
-                currentUserProvider: $this->createStub(CurrentAnzuUserProvider::class),
+                rateLimiters: new ServiceLocator($rateLimiters),
+                toolDefinitions: McpToolDefinitionsFactory::create(toolRateLimiters: $toolRateLimiters),
+                currentUserProvider: $currentUserProvider,
             ),
-            previewHashReservation: new McpPreviewHashReservation(new ArrayAdapter(), $this->createStub(CurrentAnzuUserProvider::class)),
+            previewHashReservation: $this->previewHashReservation,
         );
     }
 

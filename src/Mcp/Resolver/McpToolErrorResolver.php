@@ -52,7 +52,7 @@ final readonly class McpToolErrorResolver
         return null;
     }
 
-    public function formatViolations(ConstraintViolationListInterface $violations): string
+    public function resolveViolationsMessage(ConstraintViolationListInterface $violations): string
     {
         $messages = [];
         foreach ($violations as $violation) {

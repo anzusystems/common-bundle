@@ -55,6 +55,7 @@ final class McpToolDefinitionsCompilerPassTest extends TestCase
     private const string RATE_LIMITER_ID = 'limiter.example_write';
     private const string TOOL_TAG_METHOD = 'method';
     private const string READ_TOOL_METHOD = 'listExamples';
+    private const string TOOL_METHOD_SEPARATOR = '::';
     private const string WRITE_TOOL_METHOD = 'createExample';
 
     public function testCollectsOnlyReadOnlyToolNamesForTheAccessChecker(): void
@@ -282,8 +283,10 @@ final class McpToolDefinitionsCompilerPassTest extends TestCase
         $container->register(ConflictingExampleTool::class)
             ->addTag(McpToolDefinitionsCompilerPass::TOOL_TAG, [self::TOOL_TAG_METHOD => self::READ_TOOL_METHOD]);
 
-        $this->expectException(LogicException::class);
-        $this->expectExceptionMessage(sprintf('The MCP tool name "%s" is registered by more than one tool', self::READ_TOOL_METHOD));
+        $this->expectExceptionObject(McpConfigurationException::createDuplicateToolName(
+            toolName: self::READ_TOOL_METHOD,
+            toolMethods: [ExampleTool::class . self::TOOL_METHOD_SEPARATOR . self::READ_TOOL_METHOD, ConflictingExampleTool::class . self::TOOL_METHOD_SEPARATOR . self::READ_TOOL_METHOD],
+        ));
 
         new McpToolDefinitionsCompilerPass()
             ->process($container);
@@ -295,8 +298,10 @@ final class McpToolDefinitionsCompilerPassTest extends TestCase
         $container->register(InvalidNameExampleTool::class)
             ->addTag(McpToolDefinitionsCompilerPass::TOOL_TAG, [self::TOOL_TAG_METHOD => self::READ_TOOL_METHOD]);
 
-        $this->expectException(LogicException::class);
-        $this->expectExceptionMessage(sprintf('The MCP tool name "%s" of', InvalidNameExampleTool::NAME));
+        $this->expectExceptionObject(McpConfigurationException::createInvalidToolName(
+            toolName: InvalidNameExampleTool::NAME,
+            toolMethods: [InvalidNameExampleTool::class . self::TOOL_METHOD_SEPARATOR . self::READ_TOOL_METHOD],
+        ));
 
         new McpToolDefinitionsCompilerPass()
             ->process($container);

@@ -14,9 +14,6 @@ use Symfony\Component\Validator\Exception\UnexpectedValueException;
 
 final class McpExistingIdValidator extends ConstraintValidator
 {
-    private const string ID_FORMAT = '"%d"';
-    private const string ID_SEPARATOR = ', ';
-
     public function __construct(
         private readonly ManagerRegistry $managerRegistry,
     ) {
@@ -44,7 +41,7 @@ final class McpExistingIdValidator extends ConstraintValidator
 
         $this->context
             ->buildViolation($constraint->message)
-            ->setParameter('{{ id }}', (string) $value)
+            ->setParameter(McpExistingId::ID_PLACEHOLDER, (string) $value)
             ->setParameter(McpExistingId::RESOLVER_TOOL_PLACEHOLDER, $constraint->resolverTool)
             ->addViolation()
         ;
@@ -68,7 +65,7 @@ final class McpExistingIdValidator extends ConstraintValidator
 
         $this->context
             ->buildViolation($constraint->listMessage)
-            ->setParameter('{{ ids }}', $this->formatIds($missingIds))
+            ->setParameter(McpExistingId::IDS_PLACEHOLDER, $this->formatIds($missingIds))
             ->setParameter(McpExistingId::RESOLVER_TOOL_PLACEHOLDER, $constraint->resolverTool)
             ->addViolation()
         ;
@@ -114,6 +111,6 @@ final class McpExistingIdValidator extends ConstraintValidator
      */
     private function formatIds(array $ids): string
     {
-        return implode(self::ID_SEPARATOR, array_map(static fn (int $id): string => sprintf(self::ID_FORMAT, $id), $ids));
+        return implode(McpExistingId::ID_SEPARATOR, array_map(static fn (int $id): string => sprintf(McpExistingId::ID_FORMAT, $id), $ids));
     }
 }

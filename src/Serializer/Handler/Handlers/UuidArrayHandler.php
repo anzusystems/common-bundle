@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace AnzuSystems\CommonBundle\Serializer\Handler\Handlers;
 
-use AnzuSystems\CommonBundle\Exception\ValidationException;
 use AnzuSystems\SerializerBundle\Context\SerializationContext;
 use AnzuSystems\SerializerBundle\Exception\SerializerException;
 use AnzuSystems\SerializerBundle\Handler\Handlers\AbstractHandler;
@@ -49,7 +48,7 @@ final class UuidArrayHandler extends AbstractHandler
             return [];
         }
         if (false === is_array($value)) {
-            throw new SerializerException(ValidationException::ERROR_FIELD_INVALID);
+            throw $this->invalidValue($value, $metadata);
         }
 
         $uuids = [];

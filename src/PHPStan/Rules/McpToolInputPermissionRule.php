@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace AnzuSystems\CommonBundle\PHPStan\Rules;
 
 use AnzuSystems\CommonBundle\Mcp\Attribute\AsMcpTool;
+use AnzuSystems\CommonBundle\Mcp\Resolver\McpToolSignatureResolver;
 use PhpParser\Node;
 use PhpParser\Node\Expr\MethodCall;
 use PhpParser\Node\Expr\Variable;
@@ -28,7 +29,6 @@ final readonly class McpToolInputPermissionRule implements Rule
 {
     public const string MESSAGE = 'MCP tool %s takes a request that implements %s, so __invoke() must call denyAccessUnlessGranted(%s, $%s) outside any branch.';
 
-    private const string INVOKE_METHOD = '__invoke';
     private const string CHECK_METHOD = 'denyAccessUnlessGranted';
 
     /**
@@ -52,7 +52,7 @@ final readonly class McpToolInputPermissionRule implements Rule
             return [];
         }
         $method = $node->getOriginalNode()
-            ->getMethod(self::INVOKE_METHOD);
+            ->getMethod(McpToolSignatureResolver::INVOKE_METHOD);
         $parameter = array_first($method?->getParams() ?? []);
         if (null === $method || null === $parameter || false === $parameter->type instanceof Name || false === $parameter->var instanceof Variable) {
             return [];

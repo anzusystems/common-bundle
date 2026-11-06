@@ -56,7 +56,7 @@ final class StringHelper
 
     public static function extractFirstLetter(string $string): string
     {
-        return (new UnicodeString(trim(preg_replace(pattern: '/[^\p{L}]+/u', replacement: self::EMPTY_STRING, subject: $string))))
+        return new UnicodeString(trim(preg_replace(pattern: '/[^\p{L}]+/u', replacement: self::EMPTY_STRING, subject: $string)))
             ->slice(0, 1)
             ->ascii()
             ->lower()

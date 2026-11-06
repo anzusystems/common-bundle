@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace AnzuSystems\CommonBundle\Mcp\Factory;
 
 use AnzuSystems\CommonBundle\Mcp\Attribute\McpField;
+use AnzuSystems\CommonBundle\Serializer\Handler\Handlers\RawArrayHandler;
 use AnzuSystems\SerializerBundle\Attributes\Serialize;
 use BackedEnum;
 use Doctrine\Common\Collections\Collection;
@@ -213,8 +214,32 @@ final class McpSchemaFactory
         if ($this->isUntypedArray($type)) {
             throw new LogicException(sprintf(self::UNTYPED_ARRAY_MESSAGE, $member->class, $member->getName()));
         }
+        $intKeyedRawArrayType = $this->findIntKeyedRawArrayType($member, $type);
+        if ($intKeyedRawArrayType instanceof CollectionType) {
+            $schema = $this->createForMap($intKeyedRawArrayType);
+
+            return $type instanceof NullableType ? $this->allowNull($schema) : $schema;
+        }
 
         return $this->createForType($type);
+    }
+
+    /**
+     * RawArrayHandler keeps the keys, so an int-keyed array that is not a list reaches the client as a JSON object.
+     */
+    private function findIntKeyedRawArrayType(ReflectionProperty|ReflectionMethod $member, Type $type): ?CollectionType
+    {
+        $innerType = $type instanceof NullableType ? $type->getWrappedType() : $type;
+        if (false === $innerType instanceof CollectionType || $innerType->isList()) {
+            return null;
+        }
+        $keyType = $innerType->getCollectionKeyType();
+        $isIntKeyed = $keyType instanceof BuiltinType && $keyType->isIdentifiedBy(TypeIdentifier::INT);
+        if ($isIntKeyed && RawArrayHandler::class === $this->resolveAttribute($member, Serialize::class)?->handler) {
+            return $innerType;
+        }
+
+        return null;
     }
 
     private function isUntypedCollection(Type $type): bool
@@ -262,9 +287,7 @@ final class McpSchemaFactory
             ];
         }
         if ($type instanceof CollectionType && $this->isKeyedByString($type)) {
-            $valueSchema = $this->createForType($type->getCollectionValueType());
-
-            return [self::TYPE => self::TYPE_OBJECT, self::ADDITIONAL_PROPERTIES => empty($valueSchema) ? true : $valueSchema];
+            return $this->createForMap($type);
         }
         if ($type instanceof CollectionType) {
             $valueSchema = $this->createForType($type->getCollectionValueType());
@@ -290,6 +313,16 @@ final class McpSchemaFactory
         }
 
         throw new LogicException(sprintf('The type "%s" cannot be described in an MCP tool schema, use a scalar, a backed enum, a list or a class.', $type));
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function createForMap(CollectionType $type): array
+    {
+        $valueSchema = $this->createForType($type->getCollectionValueType());
+
+        return [self::TYPE => self::TYPE_OBJECT, self::ADDITIONAL_PROPERTIES => empty($valueSchema) ? true : $valueSchema];
     }
 
     /**
