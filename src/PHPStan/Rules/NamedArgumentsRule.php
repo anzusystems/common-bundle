@@ -1,0 +1,159 @@
+<?php
+
+declare(strict_types=1);
+
+namespace AnzuSystems\CommonBundle\PHPStan\Rules;
+
+use AnzuSystems\CommonBundle\PHPStan\ClassNamespaceMatcher;
+use PhpParser\Node;
+use PhpParser\Node\Arg;
+use PhpParser\Node\Expr;
+use PhpParser\Node\Expr\CallLike;
+use PhpParser\Node\Expr\FuncCall;
+use PhpParser\Node\Expr\MethodCall;
+use PhpParser\Node\Expr\New_;
+use PhpParser\Node\Expr\NullsafeMethodCall;
+use PhpParser\Node\Expr\StaticCall;
+use PhpParser\Node\Identifier;
+use PhpParser\Node\Name;
+use PHPStan\Analyser\Scope;
+use PHPStan\Reflection\ExtendedMethodReflection;
+use PHPStan\Reflection\FunctionReflection;
+use PHPStan\Reflection\ParameterReflection;
+use PHPStan\Reflection\ParametersAcceptorSelector;
+use PHPStan\Reflection\ReflectionProvider;
+use PHPStan\Rules\Rule;
+use PHPStan\Rules\RuleErrorBuilder;
+use PHPStan\Type\Type;
+
+/**
+ * @implements Rule<CallLike>
+ */
+final readonly class NamedArgumentsRule implements Rule
+{
+    public const string MESSAGE = 'The call of %s() passes %d arguments, name them: %s (anzu-php-style: named parameters whenever a call passes more than two arguments).';
+
+    private const int MAX_UNNAMED_ARGUMENTS = 2;
+    private const string CONSTRUCTOR = '__construct';
+
+    private ClassNamespaceMatcher $classNamespaceMatcher;
+
+    /**
+     * @param list<string> $classNamespaces the namespaces whose classes are checked; `*` stands for one segment, e.g. `App\Domain\*\Mcp`
+     */
+    public function __construct(
+        private ReflectionProvider $reflectionProvider,
+        array $classNamespaces,
+    ) {
+        $this->classNamespaceMatcher = new ClassNamespaceMatcher($classNamespaces);
+    }
+
+    public function getNodeType(): string
+    {
+        return CallLike::class;
+    }
+
+    public function processNode(Node $node, Scope $scope): array
+    {
+        if ($node->isFirstClassCallable() || false === $this->isCheckedClass($scope)) {
+            return [];
+        }
+        $arguments = $node->getArgs();
+        $unnamedArguments = array_filter($arguments, static fn (Arg $argument): bool => null === $argument->name);
+        if (count($arguments) <= self::MAX_UNNAMED_ARGUMENTS || empty($unnamedArguments)) {
+            return [];
+        }
+        if (array_any($arguments, static fn (Arg $argument): bool => $argument->unpack)) {
+            return [];
+        }
+
+        $callee = $this->findCallee($node, $scope);
+        if (null === $callee || false === $callee->acceptsNamedArguments()->yes()) {
+            return [];
+        }
+        $parameters = ParametersAcceptorSelector::selectFromArgs(
+            scope: $scope,
+            args: $arguments,
+            parametersAcceptors: $callee->getVariants(),
+            namedArgumentsVariants: $callee->getNamedArgumentsVariants(),
+        )->getParameters();
+        $nameableParameters = array_filter($parameters, static fn (ParameterReflection $parameter): bool => false === $parameter->isVariadic());
+        // PHP refuses a named argument before a positional one, so a value for a variadic parameter keeps the whole call positional.
+        if (count($unnamedArguments) > count($nameableParameters)) {
+            return [];
+        }
+
+        $parameterNames = array_map(
+            static fn (ParameterReflection $parameter): string => $parameter->getName(),
+            array_slice($nameableParameters, 0, count($unnamedArguments)),
+        );
+
+        return [
+            RuleErrorBuilder::message(sprintf(self::MESSAGE, $callee->getName(), count($arguments), implode(', ', $parameterNames)))
+                ->identifier('anzu.namedArguments')
+                ->build(),
+        ];
+    }
+
+    private function isCheckedClass(Scope $scope): bool
+    {
+        $classReflection = $scope->getClassReflection();
+
+        return null !== $classReflection && $this->classNamespaceMatcher->matches($classReflection->getName());
+    }
+
+    private function findCallee(CallLike $call, Scope $scope): ExtendedMethodReflection|FunctionReflection|null
+    {
+        return match (true) {
+            $call instanceof FuncCall => $this->findFunction($call, $scope),
+            $call instanceof MethodCall, $call instanceof NullsafeMethodCall => $this->findMethod(
+                type: $scope->getType($call->var),
+                name: $call->name,
+                scope: $scope,
+            ),
+            $call instanceof StaticCall => $this->findMethod(
+                type: $this->resolveClassType($call->class, $scope),
+                name: $call->name,
+                scope: $scope,
+            ),
+            $call instanceof New_ => $this->findConstructor($call, $scope),
+            default => null,
+        };
+    }
+
+    private function findFunction(FuncCall $call, Scope $scope): ?FunctionReflection
+    {
+        if (false === $call->name instanceof Name || false === $this->reflectionProvider->hasFunction($call->name, $scope)) {
+            return null;
+        }
+
+        return $this->reflectionProvider->getFunction($call->name, $scope);
+    }
+
+    private function findConstructor(New_ $call, Scope $scope): ?ExtendedMethodReflection
+    {
+        if (false === $call->class instanceof Name && false === $call->class instanceof Expr) {
+            return null;
+        }
+
+        return $scope->getMethodReflection($this->resolveClassType($call->class, $scope), self::CONSTRUCTOR);
+    }
+
+    private function findMethod(Type $type, Identifier|Expr $name, Scope $scope): ?ExtendedMethodReflection
+    {
+        if (false === $name instanceof Identifier) {
+            return null;
+        }
+
+        return $scope->getMethodReflection($type, $name->toString());
+    }
+
+    private function resolveClassType(Name|Expr $class, Scope $scope): Type
+    {
+        if ($class instanceof Name) {
+            return $scope->resolveTypeByName($class);
+        }
+
+        return $scope->getType($class);
+    }
+}

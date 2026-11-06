@@ -45,7 +45,7 @@ final readonly class McpPreviewHashFactory
             self::KEY_CURRENT_STATE_HASH => is_object($currentState) ? $this->createStateHash($currentState) : null,
         ]
             |> (static fn (array $canonical): string => json_encode($canonical, JSON_THROW_ON_ERROR))
-            |> (fn (string $json): string => hash_hmac(self::ALGORITHM, $json, $this->secret));
+            |> (fn (string $json): string => hash_hmac(algo: self::ALGORITHM, data: $json, key: $this->secret));
     }
 
     /**

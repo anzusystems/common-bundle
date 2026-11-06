@@ -85,6 +85,6 @@ abstract class AbstractMcpLogDecorator
             return $value;
         }
 
-        return mb_substr($value, 0, self::FIELD_TRUNCATE_LENGTH) . self::TRUNCATED_SUFFIX;
+        return mb_substr(string: $value, start: 0, length: self::FIELD_TRUNCATE_LENGTH) . self::TRUNCATED_SUFFIX;
     }
 }

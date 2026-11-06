@@ -343,7 +343,7 @@ final class McpToolDefinitionsCompilerPass implements CompilerPassInterface
                 continue;
             }
             if (1 !== preg_match(self::CATEGORY_PATTERN, $tool->category)) {
-                throw McpConfigurationException::createInvalidCategory($tool->category, $toolName, self::CATEGORY_PATTERN);
+                throw McpConfigurationException::createInvalidCategory(category: $tool->category, toolName: $toolName, pattern: self::CATEGORY_PATTERN);
             }
             $toolCategories[$toolName] = $tool->category;
         }
@@ -421,7 +421,7 @@ final class McpToolDefinitionsCompilerPass implements CompilerPassInterface
             throw McpConfigurationException::createPreviewWithPermission($previewName, $writeToolName);
         }
         if (StringHelper::isNotSame($preview->category, $toolCategories[$writeToolName])) {
-            throw McpConfigurationException::createPreviewInOtherCategory($previewName, $writeToolName, $toolCategories[$writeToolName]);
+            throw McpConfigurationException::createPreviewInOtherCategory(previewToolName: $previewName, writeToolName: $writeToolName, category: $toolCategories[$writeToolName]);
         }
     }
 

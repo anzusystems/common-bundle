@@ -57,8 +57,8 @@ final readonly class McpRateLimiter
         $retryAfterSeconds = max(0, $retryAfter->getTimestamp() - time());
 
         throw new TooManyRequestsHttpException(
-            $retryAfterSeconds,
-            'Too many requests',
+            retryAfter: $retryAfterSeconds,
+            message: 'Too many requests',
             headers: [
                 'X-RateLimit-Limit' => (string) $rateLimit->getLimit(),
                 'X-RateLimit-Remaining' => (string) $rateLimit->getRemainingTokens(),
@@ -75,14 +75,14 @@ final readonly class McpRateLimiter
     private function createLimiter(string $key, int $limit): LimiterInterface
     {
         return new RateLimiterFactory(
-            [
+            config: [
                 'id' => self::LIMITER_ID,
                 'policy' => self::LIMITER_POLICY,
                 'limit' => $limit,
                 'interval' => $this->interval,
             ],
-            $this->storage,
-            $this->lockFactory,
+            storage: $this->storage,
+            lockFactory: $this->lockFactory,
         )->create($key);
     }
 

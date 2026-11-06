@@ -39,7 +39,7 @@ final readonly class McpController
         private LoggerInterface $logger,
         array $allowedHosts,
     ) {
-        $hosts = array_values(array_filter(array_map(trim(...), $allowedHosts), StringHelper::isNotEmpty(...)));
+        $hosts = array_filter(array_map(trim(...), $allowedHosts), StringHelper::isNotEmpty(...)) |> array_values(...);
         if ([] === $hosts) {
             throw new LogicException('MCP allowed_hosts must not be empty, every request would be rejected with 403.');
         }
@@ -52,11 +52,11 @@ final readonly class McpController
         $this->rateLimiter->checkRateLimit($this->resolveMessageCount($request));
 
         $transport = new StreamableHttpTransport(
-            $this->httpMessageFactory->createRequest($request),
-            $this->responseFactory,
-            $this->streamFactory,
-            $this->logger,
-            $this->middlewareFactory->create(),
+            request: $this->httpMessageFactory->createRequest($request),
+            responseFactory: $this->responseFactory,
+            streamFactory: $this->streamFactory,
+            logger: $this->logger,
+            middleware: $this->middlewareFactory->create(),
         );
 
         $psrResponse = $this->server->run($transport);

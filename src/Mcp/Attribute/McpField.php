@@ -34,7 +34,7 @@ final readonly class McpField
      */
     public static function fillPlaceholders(string $description, array $values): string
     {
-        preg_match_all(self::PLACEHOLDER_PATTERN, $description, $matches);
+        preg_match_all(pattern: self::PLACEHOLDER_PATTERN, subject: $description, matches: $matches);
         $usedNames = array_unique($matches[1]);
         $missingNames = array_diff($usedNames, array_keys($values));
         if (false === empty($missingNames)) {

@@ -202,6 +202,7 @@ A list of objects is a `Collection<int, X>` with `#[Serialize(type: X::class)]`:
 * A parameterless constructor sets an input `Collection` to `new ArrayCollection()`. A promoted parameter would be
   required.
 * `McpObjectArrayRule` reports an array of the host's objects in the MCP classes, also with `#[Serialize]`.
+* `NamedArgumentsRule` reports a call with more than two arguments that are not all named in the namespaces of `anzuNamedArguments.classNamespaces`. A call with a value for a variadic parameter, a spread or no known signature is left alone.
 
 ```php
 final class ListKeywordsRequest

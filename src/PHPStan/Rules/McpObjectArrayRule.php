@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace AnzuSystems\CommonBundle\PHPStan\Rules;
 
+use AnzuSystems\CommonBundle\PHPStan\ClassNamespaceMatcher;
 use Generator;
 use PhpParser\Node;
 use PhpParser\Node\Expr\Variable;
@@ -30,12 +31,8 @@ final readonly class McpObjectArrayRule implements Rule
     public const string MESSAGE = '%s is %s. Use Collection<int, %s> (Collection<string, …> for a keyed map) instead of an array of objects (anzu-php-style: objects go in a Collection, arrays hold only ids and scalars).';
 
     private const string NAMESPACE_SEPARATOR = '\\';
-    private const string NAMESPACE_WILDCARD = '*';
 
-    /**
-     * @var list<string>
-     */
-    private array $classPatterns;
+    private ClassNamespaceMatcher $classNamespaceMatcher;
     private string $objectNamespacePrefix;
 
     /**
@@ -47,7 +44,7 @@ final readonly class McpObjectArrayRule implements Rule
         array $classNamespaces,
         string $objectNamespace,
     ) {
-        $this->classPatterns = array_map($this->createClassPattern(...), $classNamespaces);
+        $this->classNamespaceMatcher = new ClassNamespaceMatcher($classNamespaces);
         $this->objectNamespacePrefix = trim($objectNamespace, self::NAMESPACE_SEPARATOR) . self::NAMESPACE_SEPARATOR;
     }
 
@@ -59,7 +56,7 @@ final readonly class McpObjectArrayRule implements Rule
     public function processNode(Node $node, Scope $scope): array
     {
         $classReflection = $node->getClassReflection();
-        if (false === $this->isCheckedClass($classReflection->getName())) {
+        if (false === $this->classNamespaceMatcher->matches($classReflection->getName())) {
             return [];
         }
 
@@ -144,11 +141,6 @@ final readonly class McpObjectArrayRule implements Rule
         return null;
     }
 
-    private function isCheckedClass(string $className): bool
-    {
-        return array_any($this->classPatterns, static fn (string $pattern): bool => 1 === preg_match($pattern, $className));
-    }
-
     private function isReportedObject(string $className): bool
     {
         if (false === str_starts_with($className, $this->objectNamespacePrefix) || false === $this->reflectionProvider->hasClass($className)) {
@@ -157,12 +149,5 @@ final readonly class McpObjectArrayRule implements Rule
 
         return false === $this->reflectionProvider->getClass($className)
             ->isEnum();
-    }
-
-    private function createClassPattern(string $namespace): string
-    {
-        $quotedNamespace = preg_quote(trim($namespace, self::NAMESPACE_SEPARATOR), '/');
-
-        return sprintf('/^%s\\\\/', str_replace(search: preg_quote(self::NAMESPACE_WILDCARD, '/'), replace: '\w+', subject: $quotedNamespace));
     }
 }

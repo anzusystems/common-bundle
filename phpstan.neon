@@ -1,4 +1,10 @@
+includes:
+    - src/PHPStan/rules.neon
+
 parameters:
+    anzuNamedArguments:
+        classNamespaces:
+            - 'AnzuSystems\CommonBundle\Mcp'
     tmpDir: var/cache/phpstan
     level: 5
     paths:

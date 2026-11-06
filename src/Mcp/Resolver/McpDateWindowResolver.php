@@ -28,13 +28,13 @@ final readonly class McpDateWindowResolver
         $parsedUntil = $this->parseDateTime($untilName, $until);
         $this->ensureNotInverted(fromName: $fromName, from: $parsedFrom, untilName: $untilName, until: $parsedUntil);
         $now = AnzuApp::date();
-        $clampedFrom = $this->clampFrom($parsedFrom, $parsedUntil, $now);
+        $clampedFrom = $this->clampFrom(from: $parsedFrom, until: $parsedUntil, now: $now);
         $clampedUntil = $this->clampUntil($clampedFrom, $parsedUntil);
 
         return new McpDateWindow(
-            $clampedFrom,
-            $clampedUntil,
-            truncated: $this->isUntilTruncated($parsedFrom, $parsedUntil, $clampedUntil, $now),
+            from: $clampedFrom,
+            until: $clampedUntil,
+            truncated: $this->isUntilTruncated(from: $parsedFrom, until: $parsedUntil, clampedUntil: $clampedUntil, now: $now),
         );
     }
 
@@ -47,8 +47,8 @@ final readonly class McpDateWindowResolver
         $clampedFrom = $this->clampLogFrom($resolvedFrom, $resolvedUntil);
 
         return new McpDateWindow(
-            $clampedFrom,
-            $resolvedUntil,
+            from: $clampedFrom,
+            until: $resolvedUntil,
             truncated: $this->isFromTruncated($resolvedFrom, $clampedFrom),
         );
     }

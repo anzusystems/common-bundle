@@ -137,7 +137,7 @@ final class McpToolReferenceHandlerTest extends TestCase
             tool: new ExampleSearchTool(static fn (): McpLogsByContextResponse => self::createResponse()),
         );
 
-        $result = $this->callTool($handler, ExampleSearchTool::class, ExampleSearchTool::NAME, self::LIMIT);
+        $result = $this->callTool(handler: $handler, toolClass: ExampleSearchTool::class, toolName: ExampleSearchTool::NAME, limit: self::LIMIT);
 
         self::assertFalse($result->isError);
         self::assertSame(['auditLogs', 'appLogs', 'mcpToolCalls', 'hint'], array_keys($result->structuredContent));
@@ -165,7 +165,7 @@ final class McpToolReferenceHandlerTest extends TestCase
     {
         $handler = $this->createHandler(tool: new ExampleContextTool());
 
-        $result = $this->callTool($handler, ExampleContextTool::class, ExampleContextTool::NAME, self::LIMIT);
+        $result = $this->callTool(handler: $handler, toolClass: ExampleContextTool::class, toolName: ExampleContextTool::NAME, limit: self::LIMIT);
 
         self::assertFalse($result->isError);
         self::assertSame(['tool' => ExampleContextTool::NAME, 'level' => self::LEVEL], $result->structuredContent);
@@ -187,8 +187,8 @@ final class McpToolReferenceHandlerTest extends TestCase
             requestStack: $requestStack,
         );
 
-        $firstResult = $this->callTool($handler, ExampleErrorResultTool::class, ExampleErrorResultTool::NAME);
-        $secondResult = $this->callTool($handler, ExampleErrorResultTool::class, ExampleErrorResultTool::NAME);
+        $firstResult = $this->callTool(handler: $handler, toolClass: ExampleErrorResultTool::class, toolName: ExampleErrorResultTool::NAME);
+        $secondResult = $this->callTool(handler: $handler, toolClass: ExampleErrorResultTool::class, toolName: ExampleErrorResultTool::NAME);
 
         self::assertTrue($firstResult->isError);
         self::assertSame(
@@ -223,7 +223,7 @@ final class McpToolReferenceHandlerTest extends TestCase
             tool: new ExampleSearchTool(static fn (): McpLogsByContextResponse => throw new RuntimeException('must not run')),
         );
 
-        $result = $this->callTool($handler, ExampleSearchTool::class, ExampleSearchTool::NAME, self::LIMIT_INVALID);
+        $result = $this->callTool(handler: $handler, toolClass: ExampleSearchTool::class, toolName: ExampleSearchTool::NAME, limit: self::LIMIT_INVALID);
 
         self::assertTrue($result->isError);
         self::assertSame(
@@ -350,7 +350,7 @@ final class McpToolReferenceHandlerTest extends TestCase
 
         $this->initAppReadOnlyMode(true);
         try {
-            $result = $this->callTool($handler, ExampleSearchTool::class, ExampleSearchTool::NAME, self::LIMIT_INVALID);
+            $result = $this->callTool(handler: $handler, toolClass: ExampleSearchTool::class, toolName: ExampleSearchTool::NAME, limit: self::LIMIT_INVALID);
         } finally {
             $this->initAppReadOnlyMode(false);
         }
@@ -1279,7 +1279,7 @@ final class McpToolReferenceHandlerTest extends TestCase
 
     private function callToolWithoutInput(McpToolReferenceHandler $handler): CallToolResult
     {
-        return $this->callTool($handler, ExampleWithoutInputTool::class, ExampleWithoutInputTool::NAME);
+        return $this->callTool(handler: $handler, toolClass: ExampleWithoutInputTool::class, toolName: ExampleWithoutInputTool::NAME);
     }
 
     private function createSdkTool(string $toolName): Tool

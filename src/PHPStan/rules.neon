@@ -3,11 +3,16 @@ parametersSchema:
         classNamespaces: listOf(string()),
         objectNamespace: string(),
     ])
+    anzuNamedArguments: structure([
+        classNamespaces: listOf(string()),
+    ])
 
 parameters:
     anzuMcpObjectArray:
         classNamespaces: []
         objectNamespace: ''
+    anzuNamedArguments:
+        classNamespaces: []
 
 services:
     -
@@ -15,5 +20,11 @@ services:
         arguments:
             classNamespaces: %anzuMcpObjectArray.classNamespaces%
             objectNamespace: %anzuMcpObjectArray.objectNamespace%
+        tags:
+            - phpstan.rules.rule
+    -
+        class: AnzuSystems\CommonBundle\PHPStan\Rules\NamedArgumentsRule
+        arguments:
+            classNamespaces: %anzuNamedArguments.classNamespaces%
         tags:
             - phpstan.rules.rule

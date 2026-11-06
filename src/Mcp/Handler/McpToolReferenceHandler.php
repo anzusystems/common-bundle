@@ -71,7 +71,7 @@ final readonly class McpToolReferenceHandler implements ReferenceHandlerInterfac
         $payload = [self::ERROR_KEY => $error];
 
         return new CallToolResult(
-            new ToolResultFormatter()
+            content: new ToolResultFormatter()
                 ->format($payload),
             isError: true,
             structuredContent: $payload,
@@ -86,7 +86,7 @@ final readonly class McpToolReferenceHandler implements ReferenceHandlerInterfac
         if ($reference instanceof ToolReference) {
             $signature = $this->resolveSignature($reference);
             if ($signature instanceof McpToolSignature) {
-                return $this->callTool($reference, $signature, $arguments);
+                return $this->callTool(reference: $reference, signature: $signature, arguments: $arguments);
             }
             if (false === $this->toolAccessChecker->isToolGranted($reference->tool->name)) {
                 return self::createErrorResult(McpToolAccessRejectedException::createNotGranted($reference->tool->name)->getMessage());

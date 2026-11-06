@@ -188,7 +188,7 @@ final class McpSchemaFactory
             $innerType = $innerType->getWrappedType();
         }
 
-        return $innerType instanceof ObjectType && is_a($innerType->getClassName(), Collection::class, true);
+        return $innerType instanceof ObjectType && is_a(object_or_class: $innerType->getClassName(), class: Collection::class, allow_string: true);
     }
 
     /**
@@ -198,7 +198,7 @@ final class McpSchemaFactory
     {
         $schemaType = $schema[self::TYPE] ?? null;
 
-        return $type === $schemaType || (is_array($schemaType) && in_array($type, $schemaType, true));
+        return $type === $schemaType || (is_array($schemaType) && in_array(needle: $type, haystack: $schemaType, strict: true));
     }
 
     /**
@@ -225,7 +225,7 @@ final class McpSchemaFactory
         if ($type instanceof CollectionType) {
             return [self::TYPE => self::TYPE_ARRAY, self::ITEMS => $this->createForType($type->getCollectionValueType())];
         }
-        if ($type instanceof ObjectType && is_a($type->getClassName(), Uuid::class, true)) {
+        if ($type instanceof ObjectType && is_a(object_or_class: $type->getClassName(), class: Uuid::class, allow_string: true)) {
             return [self::TYPE => self::TYPE_STRING, self::FORMAT => self::FORMAT_UUID];
         }
         if ($type instanceof ObjectType) {

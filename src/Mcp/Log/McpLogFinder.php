@@ -56,10 +56,10 @@ final readonly class McpLogFinder
         );
 
         return new McpLogSearchResult(
-            $this->decorate(array_slice($documents, 0, $limit), McpAuditLogDecorator::class),
-            $window,
-            $limit,
-            count($documents) > $limit,
+            logs: $this->decorate(array_slice(array: $documents, offset: 0, length: $limit), McpAuditLogDecorator::class),
+            window: $window,
+            limit: $limit,
+            hasMore: count($documents) > $limit,
         );
     }
 
@@ -77,10 +77,10 @@ final readonly class McpLogFinder
         );
 
         return new McpLogSearchResult(
-            $this->decorate(array_slice($documents, 0, $limit), McpAppLogDecorator::class),
-            $window,
-            $limit,
-            count($documents) > $limit,
+            logs: $this->decorate(array_slice(array: $documents, offset: 0, length: $limit), McpAppLogDecorator::class),
+            window: $window,
+            limit: $limit,
+            hasMore: count($documents) > $limit,
         );
     }
 
@@ -90,9 +90,9 @@ final readonly class McpLogFinder
         $from = $this->createByContextFrom();
 
         return new McpLogsByContextResult(
-            $this->decorate($this->auditLogRepository->findLatestByContextId($contextId, $from, self::LIMIT_MAX), McpAuditLogDecorator::class),
-            $this->decorate($this->journalLogRepository->findLatestByContextId($contextId, $from, self::LIMIT_MAX), McpAppLogDecorator::class),
-            $this->decorate($this->mcpLogRepository->findLatestByContextId($contextId, $from, self::LIMIT_MAX), McpToolCallLogDecorator::class),
+            auditLogs: $this->decorate($this->auditLogRepository->findLatestByContextId(contextId: $contextId, from: $from, limit: self::LIMIT_MAX), McpAuditLogDecorator::class),
+            appLogs: $this->decorate($this->journalLogRepository->findLatestByContextId(contextId: $contextId, from: $from, limit: self::LIMIT_MAX), McpAppLogDecorator::class),
+            mcpToolCalls: $this->decorate($this->mcpLogRepository->findLatestByContextId(contextId: $contextId, from: $from, limit: self::LIMIT_MAX), McpToolCallLogDecorator::class),
         );
     }
 
