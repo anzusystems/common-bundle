@@ -50,7 +50,7 @@ abstract class AbstractMcpLogDecorator
     {
         $value = $data[$key] ?? null;
 
-        return is_string($value) ? $value : null;
+        return is_string($value) && '' !== $value ? $value : null;
     }
 
     /**

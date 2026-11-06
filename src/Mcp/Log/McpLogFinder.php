@@ -43,7 +43,6 @@ final readonly class McpLogFinder
     public function findAuditLogs(SearchAuditLogsRequest $request): McpLogSearchResult
     {
         $window = $this->dateWindowResolver->resolveLogWindow($request->from, $request->until);
-        $limit = $this->clampLimit($request->limit);
         $documents = $this->auditLogRepository->findLatest(
             from: $window->from,
             until: $window->until,
@@ -52,35 +51,34 @@ final readonly class McpLogFinder
             resourceName: $request->resourceName,
             contextId: $this->contextIdResolver->resolveOptional($request->contextId),
             onlyErrors: $request->onlyErrors,
-            limit: $limit + self::LOOKAHEAD,
+            limit: $request->limit + self::LOOKAHEAD,
         );
 
         return new McpLogSearchResult(
-            logs: $this->decorate(array_slice(array: $documents, offset: 0, length: $limit), McpAuditLogDecorator::class),
+            logs: $this->decorate(array_slice(array: $documents, offset: 0, length: $request->limit), McpAuditLogDecorator::class),
             window: $window,
-            limit: $limit,
-            hasMore: count($documents) > $limit,
+            limit: $request->limit,
+            hasMore: count($documents) > $request->limit,
         );
     }
 
     public function findAppLogs(SearchAppLogsRequest $request): McpLogSearchResult
     {
         $window = $this->dateWindowResolver->resolveLogWindow($request->from, $request->until);
-        $limit = $this->clampLimit($request->limit);
         $documents = $this->journalLogRepository->findLatest(
             from: $window->from,
             until: $window->until,
-            levelName: null === $request->level ? null : strtoupper($request->level),
+            levelName: $request->level,
             messageContains: $request->messageContains,
             contextId: $this->contextIdResolver->resolveOptional($request->contextId),
-            limit: $limit + self::LOOKAHEAD,
+            limit: $request->limit + self::LOOKAHEAD,
         );
 
         return new McpLogSearchResult(
-            logs: $this->decorate(array_slice(array: $documents, offset: 0, length: $limit), McpAppLogDecorator::class),
+            logs: $this->decorate(array_slice(array: $documents, offset: 0, length: $request->limit), McpAppLogDecorator::class),
             window: $window,
-            limit: $limit,
-            hasMore: count($documents) > $limit,
+            limit: $request->limit,
+            hasMore: count($documents) > $request->limit,
         );
     }
 
@@ -99,11 +97,6 @@ final readonly class McpLogFinder
     private function createByContextFrom(): DateTimeImmutable
     {
         return AnzuApp::date()->modify(sprintf('-%d days', self::BY_CONTEXT_SCAN_DAYS));
-    }
-
-    private function clampLimit(int $limit): int
-    {
-        return min(max($limit, self::LIMIT_MIN), self::LIMIT_MAX);
     }
 
     /**

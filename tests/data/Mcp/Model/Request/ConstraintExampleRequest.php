@@ -55,4 +55,8 @@ final class ConstraintExampleRequest
     #[Assert\Choice(choices: ['first', 'second'])]
     #[Serialize]
     public string $choice = 'first';
+
+    #[Assert\Choice(choices: ['first', 'second'])]
+    #[Serialize]
+    public ?string $nullableChoice = null;
 }

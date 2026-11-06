@@ -25,7 +25,6 @@ use AnzuSystems\CommonBundle\Mcp\McpWriteRateLimiter;
 use AnzuSystems\CommonBundle\Mcp\Resolver\McpContextIdResolver;
 use AnzuSystems\CommonBundle\Mcp\Resolver\McpDateWindowResolver;
 use AnzuSystems\CommonBundle\Mcp\Resolver\McpHostResolver;
-use AnzuSystems\CommonBundle\Mcp\Resolver\McpPageWindowResolver;
 use AnzuSystems\CommonBundle\Mcp\Resolver\McpToolErrorResolver;
 use AnzuSystems\CommonBundle\Mcp\Security\McpDeleteGuard;
 use AnzuSystems\CommonBundle\Mcp\Security\McpInputEnricherInterface;
@@ -54,8 +53,6 @@ return static function (ContainerConfigurator $configurator): void {
     $services->set(McpContextIdResolver::class);
 
     $services->set(McpDateWindowResolver::class);
-
-    $services->set(McpPageWindowResolver::class);
 
     $services->set(StrictToolArgumentsRequestHandler::class)
         ->arg('$registry', null)

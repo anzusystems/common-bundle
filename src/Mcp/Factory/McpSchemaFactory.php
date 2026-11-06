@@ -324,12 +324,30 @@ final class McpSchemaFactory
                 $constraint instanceof Assert\GreaterThanOrEqual => $this->applyBounds(schema: $schema, minKey: self::MINIMUM, min: $constraint->value, maxKey: self::MAXIMUM, max: null),
                 $constraint instanceof Assert\LessThan => $this->applyExclusiveBound(schema: $schema, inclusiveKey: self::MAXIMUM, exclusiveKey: self::EXCLUSIVE_MAXIMUM, value: $constraint->value, step: -1),
                 $constraint instanceof Assert\LessThanOrEqual => $this->applyBounds(schema: $schema, minKey: self::MINIMUM, min: null, maxKey: self::MAXIMUM, max: $constraint->value),
-                $constraint instanceof Assert\Choice && is_array($constraint->choices) => [...$schema, self::ENUM => array_values($constraint->choices)],
+                $constraint instanceof Assert\Choice && is_array($constraint->choices) => $this->applyChoices($schema, array_values($constraint->choices)),
                 default => $schema,
             };
         }
 
         return $schema;
+    }
+
+    /**
+     * A nullable property keeps null among its choices, as the validator skips null.
+     *
+     * @param array<string, mixed> $schema
+     * @param list<mixed> $choices
+     *
+     * @return array<string, mixed>
+     */
+    private function applyChoices(array $schema, array $choices): array
+    {
+        $types = (array) ($schema[self::TYPE] ?? []);
+        if (in_array(needle: self::TYPE_NULL, haystack: $types, strict: true)) {
+            $choices[] = null;
+        }
+
+        return [...$schema, self::ENUM => $choices];
     }
 
     /**

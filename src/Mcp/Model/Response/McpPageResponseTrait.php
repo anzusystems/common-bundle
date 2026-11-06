@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace AnzuSystems\CommonBundle\Mcp\Model\Response;
 
-use AnzuSystems\CommonBundle\Mcp\Resolver\McpPageWindowResolver;
 use AnzuSystems\SerializerBundle\Attributes\Serialize;
 
 /**
@@ -12,8 +11,6 @@ use AnzuSystems\SerializerBundle\Attributes\Serialize;
  */
 trait McpPageResponseTrait
 {
-    use McpWarningsTrait;
-
     #[Serialize]
     public int $page {
         get => $this->pageWindow->page;
@@ -22,11 +19,5 @@ trait McpPageResponseTrait
     #[Serialize]
     public int $limit {
         get => $this->pageWindow->limit;
-    }
-
-    protected function getWarnings(): McpNotes
-    {
-        return new McpNotes()
-            ->addIf($this->pageWindow->clamped, new McpPageWindowResolver()->getClampWarning($this->pageWindow));
     }
 }

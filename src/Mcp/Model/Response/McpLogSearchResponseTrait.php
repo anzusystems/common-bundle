@@ -24,7 +24,7 @@ trait McpLogSearchResponseTrait
         get => $this->result->window->from->format(DateTimeInterface::ATOM);
     }
 
-    #[McpField(description: 'End of the time window actually searched; a longer requested window is shortened and reported in warnings, so repeat the search on the remaining days.')]
+    #[McpField(description: 'End of the time window actually searched.')]
     #[Serialize]
     public string $until {
         get => $this->result->window->until->format(DateTimeInterface::ATOM);

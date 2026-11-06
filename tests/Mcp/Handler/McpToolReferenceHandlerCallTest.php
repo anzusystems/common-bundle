@@ -12,6 +12,7 @@ use AnzuSystems\CommonBundle\Tests\Data\Mcp\Tool\ExampleContextTool;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Tool\ExampleSearchTool;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Tool\ExampleWithoutInputTool;
 use Mcp\Capability\Registry\ToolReference;
+use Mcp\Schema\Content\TextContent;
 use Symfony\Component\Security\Core\Exception\AccessDeniedException;
 
 final class McpToolReferenceHandlerCallTest extends AbstractMcpToolReferenceHandlerTestCase
@@ -27,6 +28,9 @@ final class McpToolReferenceHandlerCallTest extends AbstractMcpToolReferenceHand
         self::assertFalse($result->isError);
         self::assertSame(['auditLogs', 'appLogs', 'mcpToolCalls'], array_keys($result->structuredContent));
         self::assertSame([], $result->structuredContent['auditLogs']);
+        $content = $result->content[0];
+        self::assertInstanceOf(TextContent::class, $content);
+        self::assertSame('{"auditLogs":[],"appLogs":[],"mcpToolCalls":[]}', $content->text);
         self::assertCount(1, $this->insertedDocuments);
         $document = $this->insertedDocuments[0];
         self::assertSame(McpLogger::LEVEL_NAME_INFO, $document['levelName']);

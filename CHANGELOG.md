@@ -41,11 +41,11 @@
 * `McpToolDefinitions::getPreviewToolName()` returns the preview of a write tool, `null` when it has none.
 * `McpPreviewHashFactory` and `McpPreviewHashTrait` (moved from the host): the hash covers the serialized decorator of the current state without `id`, `adminUrl`, `createdAt` and `modifiedAt`, so a new entity needs no hash code of its own.
 * `McpToolReferenceHandler` calls the host service `McpInputEnricherInterface` for the input of every call before the tool runs, so an empty site filter can be narrowed to what the user may read. A tool that takes an input naming what it reads checks it itself with `denyAccessUnlessGranted()` on the first line of `__invoke()`.
-* `McpPageResponseTrait`: `page`, `limit` and the warning about a reduced page of a list response.
+* `McpPageResponseTrait`: `page` and `limit` of a list response.
 * `McpNotes`, `McpWarningsTrait` and `McpNextStepsTrait`: a response gives advice in `warnings` (how the result is incomplete or adjusted) and `nextSteps` (what to do next), only in the fields it can fill, built by `getWarnings()` and `getNextSteps()` with `McpNotes::addIf()` from texts in named static methods. `AbstractMcpTestCase` has `assertToolWarning()` and `assertToolNextStep()`.
 * `McpSchemaFactory` describes a property with a `Compound` constraint by the constraints inside it.
 * `McpToolSchemaCompilerPass` adds the write limit of a tool to its description, with the tools that share it.
-* Log tools return null instead of `''` and `0` for a value the record does not have, `get_logs_by_context` returns the `client` of a tool call, and the output schema lists the fields of a record through the new `McpAuditLogDecorator`, `McpAppLogDecorator` and `McpToolCallLogDecorator`.
+* Log tools return null instead of `''` and `0` for a value the record does not have or stores empty, `get_logs_by_context` returns the `client` of a tool call, and the output schema lists the fields of a record through the new `McpAuditLogDecorator`, `McpAppLogDecorator` and `McpToolCallLogDecorator`.
 
 ### Changes
 * BC change: the deprecated `ApiFilterParamConverter`, `EnumParamConverter` and `ValueObjectParamConverter` and the support of `sensio/framework-extra-bundle` are gone. Use `ApiFilterParamValueResolver`, `ValueObjectValueResolver` and the `BackedEnumValueResolver` of Symfony.
@@ -85,7 +85,10 @@
 * `doctrine/dbal` needs `^4.4` and `doctrine/orm` needs `^3.3`, for `CurrentTimestamp` and `SqlOutputWalker`.
 * `ForceIndexWalker` extends `SqlOutputWalker`. The SQL stays the same.
 * `Job::$scheduledAt` declares its default as `new CurrentTimestamp()`. The schema stays the same, no migration is needed.
-* BC change: `McpPageWindow` exposes `$clamped`, `$raisedToMinimum`, `$offset` and `$reachableRows` as virtual properties instead of `isClamped()`, `isRaisedToMinimum()`, `getOffset()` and `getReachableRows()`; the class is no longer `readonly`, its constructor properties still are.
+* BC change: `McpPageWindowResolver` is removed and `McpPageWindow` takes only `page` and `limit`, with `$offset` as a virtual property instead of `getOffset()`. A request declares the range of both with `Assert\Range` (`McpPageWindow::PAGE_MIN`, `PAGE_MAX`, `LIMIT_MIN` and the maximum of the tool), so the input schema refuses a page or limit outside it instead of the tool reducing it with a warning. The log tools refuse a `limit` above 50 the same way, and `level` of `search_app_logs` is an enum of the upper-case level names instead of a case-insensitive string.
+* MCP tool results carry compact JSON in their text content instead of the pretty-printed JSON of the SDK formatter, which costs a client about a third fewer tokens.
+* `McpSchemaFactory` keeps `null` in the enum of a nullable property with `Assert\Choice`, so the input schema no longer refuses the `null` the validator accepts.
+* The `Returns:` list of a tool description puts the fields without a description on one line, and an object whose fields have no description on the line of the object, e.g. `- rubric (id, name)`.
 * BC change: `#[AsMcpTool]` requires `category`. Add `category:` to every tool before upgrading.
 * BC change: `McpObjectArrayRule` reports `#[Serialize]` arrays of host objects too; declare them as `Collection<int, X>`.
 * BC change: `McpSchemaFactory` fails the container compilation for a `Collection` property without `Collection<…>` in its `@var` (a getter without it in its `@return`).

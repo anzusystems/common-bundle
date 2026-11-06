@@ -587,11 +587,14 @@ errors) and the log window (`resolveLogWindow()`) at `DATE_RANGE_MAX_DAYS` (31).
   earlier than now, i.e. whenever the range was cut short at `from + 31 days`.
 * `resolveLogWindow()` — `true` when `from` was moved forward to `until - 31 days`.
 
-`McpPageWindowResolver` does the same for pagination: `resolve($page, $limit, $limitMax)` clamps the page at
-`PAGE_MAX` (200) and the limit at the caller's maximum, and the returned `McpPageWindow` reports `$clamped` plus
-the offset and the number of rows still reachable through pagination.
+Pagination is checked by the input schema instead: a request declares
+`#[Assert\Range(min: McpPageWindow::PAGE_MIN, max: McpPageWindow::PAGE_MAX)]` on `page` and
+`#[Assert\Range(min: McpPageWindow::LIMIT_MIN, max: <its maximum>)]` on `limit`, so the SDK refuses a page or limit
+outside them before the tool runs. `McpPageWindow` gives the tool the `offset`.
 
-Tools must surface both. A response gives advice in two `list<string>` fields of plain-language sentences:
+Tools must surface a shortened window. `warnings` report only what the server finds out while it answers, such as a
+shortened window, more records than the limit or a search that did not finish; an argument the tool cannot use is
+refused by the schema or the validator instead. A response gives advice in two `list<string>` fields of plain-language sentences:
 `warnings` says how the result is incomplete or adjusted, `nextSteps` says what the agent has to do next. A response has
 only the fields it can fill, and a field it has is always present (`[]` when there is nothing to say). Data stays in its
 own fields, and advice that is always true belongs in the description of the tool. `McpWarningsTrait` and
@@ -619,12 +622,11 @@ final class McpExampleListResponse
 }
 ```
 
-`McpPageResponseTrait` uses `McpWarningsTrait` for a reduced page. A list response that needs more declares its own `getWarnings()` and
-calls `McpPageWindowResolver::getClampWarning()` in it. `McpAppLogSearchResponse` / `McpAuditLogSearchResponse`
+`McpPageResponseTrait` returns `page` and `limit` of a list response. `McpAppLogSearchResponse` / `McpAuditLogSearchResponse`
 build the log tool response from the `McpLogSearchResult` — rows, the effective `from`/`until`, the effective `limit`,
 and the `warnings` for a shortened window or for results that were actually cut off — so a client cannot mistake a
 partial result for a complete one. `McpLogFinder` fetches one row beyond the effective limit to tell the two apart, so
-the warning reports real truncation rather than a clamped `limit` argument.
+the warning reports real truncation.
 
 ## Log query bounds
 

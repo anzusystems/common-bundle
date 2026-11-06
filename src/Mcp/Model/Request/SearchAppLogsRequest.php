@@ -6,12 +6,16 @@ namespace AnzuSystems\CommonBundle\Mcp\Model\Request;
 
 use AnzuSystems\CommonBundle\Mcp\Attribute\McpField;
 use AnzuSystems\SerializerBundle\Attributes\Serialize;
+use Symfony\Component\Validator\Constraints as Assert;
 
 final class SearchAppLogsRequest
 {
     use McpLogSearchRequestTrait;
 
-    #[McpField(description: 'Log level name, e.g. "ERROR", "WARNING", "INFO". Case-insensitive, exact match. Omit for all levels.')]
+    private const array LEVELS = ['DEBUG', 'INFO', 'NOTICE', 'WARNING', 'ERROR', 'CRITICAL', 'ALERT', 'EMERGENCY'];
+
+    #[Assert\Choice(choices: self::LEVELS)]
+    #[McpField(description: 'Omit for all levels.')]
     #[Serialize]
     public ?string $level = null;
 

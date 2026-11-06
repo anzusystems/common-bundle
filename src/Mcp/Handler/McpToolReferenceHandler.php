@@ -19,11 +19,11 @@ use AnzuSystems\CommonBundle\Mcp\Security\McpToolAccessChecker;
 use AnzuSystems\CommonBundle\Mcp\Security\McpWriteToolGuard;
 use AnzuSystems\SerializerBundle\Serializer;
 use Doctrine\ORM\OptimisticLockException;
-use Mcp\Capability\Formatter\ToolResultFormatter;
 use Mcp\Capability\Registry\ElementReference;
 use Mcp\Capability\Registry\ReferenceHandlerInterface;
 use Mcp\Capability\Registry\ToolReference;
 use Mcp\Capability\RegistryInterface;
+use Mcp\Schema\Content\TextContent;
 use Mcp\Schema\Result\CallToolResult;
 use Mcp\Schema\Result\InputRequiredResult;
 use Mcp\Server\RequestContext;
@@ -42,6 +42,7 @@ final readonly class McpToolReferenceHandler implements ReferenceHandlerInterfac
     public const string ERROR_RESULT_MESSAGE = 'The tool returned an error result.';
     public const string UNHANDLED_ERROR_FORMAT = 'Unhandled %s';
 
+    private const int JSON_FLAGS = JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR | JSON_INVALID_UTF8_SUBSTITUTE;
     private const string SESSION_ARGUMENT = '_session';
     private const string REQUEST_ARGUMENT = '_request';
     private const array SDK_ARGUMENT_KEYS = [
@@ -70,8 +71,7 @@ final readonly class McpToolReferenceHandler implements ReferenceHandlerInterfac
         $payload = [self::ERROR_KEY => $error];
 
         return new CallToolResult(
-            content: new ToolResultFormatter()
-                ->format($payload),
+            content: self::createContent($payload),
             isError: true,
             structuredContent: $payload,
         );
@@ -403,9 +403,20 @@ final readonly class McpToolReferenceHandler implements ReferenceHandlerInterfac
     private function createSuccessResult(array $payload): CallToolResult
     {
         return new CallToolResult(
-            new ToolResultFormatter()
-                ->format($payload),
+            self::createContent($payload),
             structuredContent: $payload,
         );
+    }
+
+    /**
+     * The SDK formatter pretty-prints the JSON, which a client hands the model as about a third more tokens.
+     *
+     * @param array<string, mixed> $payload
+     *
+     * @return list<TextContent>
+     */
+    private static function createContent(array $payload): array
+    {
+        return [new TextContent(json_encode(value: $payload, flags: self::JSON_FLAGS))];
     }
 }

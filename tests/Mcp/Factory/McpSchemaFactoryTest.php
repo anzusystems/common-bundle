@@ -302,6 +302,7 @@ final class McpSchemaFactoryTest extends TestCase
             'LessThan on a number stays exclusive' => ['lessThanNumber', ['type' => 'number', 'exclusiveMaximum' => 10, 'default' => 1.0]],
             'LessThanOrEqual' => ['lessThanOrEqual', ['type' => 'integer', 'maximum' => 10, 'default' => 1]],
             'Choice' => ['choice', ['type' => 'string', 'enum' => ['first', 'second'], 'default' => 'first']],
+            'Choice on a nullable property keeps null' => ['nullableChoice', ['type' => ['null', 'string'], 'enum' => ['first', 'second', null], 'default' => null]],
         ];
     }
 

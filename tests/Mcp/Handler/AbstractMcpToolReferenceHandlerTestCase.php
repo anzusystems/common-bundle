@@ -74,7 +74,7 @@ abstract class AbstractMcpToolReferenceHandlerTestCase extends TestCase
     protected const string INPUT_ERROR_MESSAGE = 'Invalid input.';
     protected const string LEVEL = 'ERROR';
     protected const string TITLE_FIELD = 'title';
-    protected const string LIMIT_VIOLATION = 'limit: This value should be greater than or equal to 1.';
+    protected const string LIMIT_VIOLATION = 'limit: This value should be between 1 and 50.';
     protected const string INVOKE_METHOD = '__invoke';
     protected const string SECRET = 'test_secret';
     // The HMAC of the write tool, WRITE_ARGUMENTS and no current state under SECRET.

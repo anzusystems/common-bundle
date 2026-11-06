@@ -35,11 +35,8 @@ trait McpLogSearchRequestTrait
     #[Serialize]
     public ?string $until = null;
 
-    #[Assert\GreaterThanOrEqual(value: McpLogFinder::LIMIT_MIN)]
-    #[McpField(
-        description: 'Maximum number of records, capped at {{ limitMax }}.',
-        descriptionValues: ['limitMax' => McpLogFinder::LIMIT_MAX],
-    )]
+    #[Assert\Range(min: McpLogFinder::LIMIT_MIN, max: McpLogFinder::LIMIT_MAX)]
+    #[McpField(description: 'Maximum number of records.')]
     #[Serialize]
     public int $limit = McpLogFinder::LIMIT_DEFAULT;
 }
