@@ -28,4 +28,11 @@ interface AnzuRepositoryInterface
     ): ApiInfiniteResponseList;
 
     public function exists(int|string $id): bool;
+
+    /**
+     * @param list<int> $ids
+     *
+     * @return list<int>
+     */
+    public function findExistingIds(array $ids): array;
 }

@@ -43,7 +43,7 @@ final class McpExistingIdValidatorTest extends AnzuKernelTestCase
             'nothing set' => [null, [], null],
             'existing id' => [Example::EXAMPLE_INSTANCE_ID, [], null],
             'existing ids with a duplicate' => [null, [Example::EXAMPLE_INSTANCE_ID, Example::EXAMPLE_INSTANCE_ID], null],
-            'empty list of an entity with a composite id is not looked up' => [null, [], []],
+            'empty list of an entity without an anzu repository is not looked up' => [null, [], []],
         ];
     }
 
@@ -83,7 +83,7 @@ final class McpExistingIdValidatorTest extends AnzuKernelTestCase
         );
     }
 
-    public function testEntityWithCompositeIdentifierFails(): void
+    public function testEntityWithoutAnzuRepositoryFails(): void
     {
         $this->expectException(LogicException::class);
 

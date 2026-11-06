@@ -617,10 +617,11 @@ entity and tells the client which tool lists the valid ids, so an agent does not
 public ?int $siteId = null;
 ```
 
-`McpExistingIdValidator` reads the ids with one query through the entity manager of the entity
-(`SELECT <identifier> FROM <entity> WHERE <identifier> IN (:ids)`); `null` and `[]` pass without a query. An unknown id
+`McpExistingIdValidator` reads the ids with one query through `AnzuRepositoryInterface::findExistingIds()` of the
+entity's repository; `null` and `[]` pass without a query. An unknown id
 fails with `Unknown id "5" — no such record exists. Resolve it via list_sites instead of guessing the id.`, unknown ids
-of a list with one violation naming each of them once. An entity with a composite identifier is a `LogicException`.
+of a list with one violation naming each of them once. An entity whose repository does not implement
+`AnzuRepositoryInterface` is a `LogicException`.
 The validator is registered also without the `mcp` section.
 
 A tool can then take the entity with `EntityManager::getReference()` and needs no `find()` and `null` check. A row

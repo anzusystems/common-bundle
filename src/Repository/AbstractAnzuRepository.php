@@ -177,6 +177,24 @@ abstract class AbstractAnzuRepository extends ServiceEntityRepository implements
         ]);
     }
 
+    /**
+     * @param list<int> $ids
+     *
+     * @return list<int>
+     */
+    public function findExistingIds(array $ids): array
+    {
+        /** @var list<int> $existingIds */
+        $existingIds = $this->createQueryBuilder('entity')
+            ->select('entity.id')
+            ->where('entity.id IN (:ids)')
+            ->setParameter('ids', $ids)
+            ->getQuery()
+            ->getSingleColumnResult();
+
+        return $existingIds;
+    }
+
     public function getTouchedByUserQuery(AnzuUser $user): QueryBuilder
     {
         if (false === is_a($this->getEntityClass(), UserTrackingInterface::class, true)) {
