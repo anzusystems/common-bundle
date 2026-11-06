@@ -9,8 +9,6 @@ use Symfony\Component\HttpFoundation\Request;
 
 final readonly class McpHostResolver
 {
-    public const string ROUTING_CONDITION_ALIAS = 'mcp_host';
-
     private const string HOST_ROOT_DOT = '.';
 
     /**
@@ -35,10 +33,5 @@ final readonly class McpHostResolver
             haystack: $this->allowedHosts,
             strict: true,
         );
-    }
-
-    public function isNotMcpHost(Request $request): bool
-    {
-        return false === $this->isMcpHost($request);
     }
 }

@@ -436,6 +436,8 @@ reservation.
 
 `McpPreviewHashTrait` adds the `previewHash` field to the input of a write tool; the class declares the constant
 `PREVIEW_TOOL` with the name of its preview, which the error and the field description use.
+The schema does not list the field as `required` (`#[McpField(requiredBySchema: false)]`), because the SDK would refuse a
+missing value with a generic error before the validator could name the preview to call.
 
 `#[AsMcpTool(rateLimiter: 'quiz_write')]` names a limiter of `framework.rate_limiter`, the budget of writes per user on top
 of `McpRateLimiter`. A write that passed its preview takes one token before the tool runs, tools naming one limiter share
@@ -658,8 +660,6 @@ $routes
 ;
 ```
 
-`McpHostResolver` is a routing condition service (alias `mcp_host`) for routes that must differ by host:
-`condition: "service('mcp_host').isMcpHost(request)"` or `isNotMcpHost(request)`.
 
 ## Debugging
 
@@ -671,3 +671,12 @@ McpBundle's own tools work with this setup:
 
 The server info of `initialize` comes from the McpBundle server config: set `version` (e.g. `env('APP_VERSION')`),
 `description` and `website_url` there.
+
+## Looking at the tools
+
+Tools are no routes, so NelmioApiDocBundle cannot describe them. Use what reads the same definitions a client gets:
+
+* `bin/console debug:mcp` lists the tools of the server, `bin/console debug:mcp <tool>` shows the description and the input
+  schema of one tool.
+* [MCP Inspector](https://github.com/modelcontextprotocol/inspector) (`npx @modelcontextprotocol/inspector`) connects to the
+  endpoint with a token and calls the tools.

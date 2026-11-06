@@ -22,9 +22,14 @@ final readonly class McpField
 
     /**
      * @param array<string, int|float|string> $descriptionValues
+     * @param bool $requiredBySchema false leaves a field the validator requires out of `required`, so a missing value gets the
+     *                               message of the validator instead of the generic error of the SDK schema check
      */
-    public function __construct(string $description, array $descriptionValues = [])
-    {
+    public function __construct(
+        string $description,
+        array $descriptionValues = [],
+        public bool $requiredBySchema = true,
+    ) {
         $this->description = self::fillPlaceholders($description, $descriptionValues);
     }
 

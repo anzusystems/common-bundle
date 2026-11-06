@@ -22,7 +22,6 @@ final class McpHostResolverTest extends TestCase
         $request = Request::create(sprintf('http://%s/', $host));
 
         self::assertSame($expectedMcpHost, $resolver->isMcpHost($request));
-        self::assertSame(false === $expectedMcpHost, $resolver->isNotMcpHost($request));
     }
 
     public function testAllowedHostsAreTrimmedAndEmptyOnesLeftOut(): void

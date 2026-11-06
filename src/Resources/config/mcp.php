@@ -168,7 +168,6 @@ return static function (ContainerConfigurator $configurator): void {
 
     $services->set(McpHostResolver::class)
         ->arg('$allowedHosts', null)
-        ->tag('routing.condition_service', ['alias' => McpHostResolver::ROUTING_CONDITION_ALIAS])
     ;
 
     $services->set(McpHostRouteListener::class)

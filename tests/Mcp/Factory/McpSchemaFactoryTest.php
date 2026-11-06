@@ -17,6 +17,7 @@ use AnzuSystems\CommonBundle\Tests\Data\Mcp\Model\Request\DateExampleRequest;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Model\Request\EnumExampleRequest;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Model\Request\HookedExampleRequest;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Model\Request\NullableBareArrayExampleRequest;
+use AnzuSystems\CommonBundle\Tests\Data\Mcp\Model\Request\PreviewHashExampleRequest;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Model\Request\UntypedCollectionExampleRequest;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Model\Request\UuidExampleRequest;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Model\Response\BareArrayExampleResponse;
@@ -46,6 +47,15 @@ final class McpSchemaFactoryTest extends TestCase
     ];
     private const string REQUIRED = 'required';
     private const array LOGS_BY_CONTEXT_FIELDS = ['auditLogs', 'appLogs', 'mcpToolCalls', 'hint'];
+
+    public function testPreviewHashIsLeftToTheValidator(): void
+    {
+        $schema = new McpSchemaFactory()
+            ->createForClass(PreviewHashExampleRequest::class);
+
+        self::assertArrayHasKey('previewHash', $schema[McpSchemaFactory::PROPERTIES]);
+        self::assertArrayNotHasKey('required', $schema);
+    }
 
     public function testCompoundConstraintDescribesThePropertyLikeItsConstraints(): void
     {

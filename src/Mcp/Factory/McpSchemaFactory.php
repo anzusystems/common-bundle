@@ -112,7 +112,10 @@ final class McpSchemaFactory
             }
             $properties[$name] = $schema;
             if ($member instanceof ReflectionMethod || $this->isRequired($member, $constraints)) {
-                $required[] = $name;
+                $field = $this->resolveAttribute($member, McpField::class);
+                if (null === $field || $field->requiredBySchema) {
+                    $required[] = $name;
+                }
 
                 continue;
             }

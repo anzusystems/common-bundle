@@ -12,6 +12,7 @@ use Symfony\Component\Validator\Constraints as Assert;
 /**
  * The using class declares PREVIEW_TOOL, the name of the preview tool that issues the hash. A constant of this trait
  * must not read it: Symfony's container resource evaluates the constants of the trait itself and fails the compilation.
+ * The hash stays out of the schema's `required`, so a client that skipped the preview learns which tool to call.
  */
 trait McpPreviewHashTrait
 {
@@ -26,6 +27,7 @@ trait McpPreviewHashTrait
     #[McpField(
         description: 'The previewHash that {{ preview_tool }} returned for these arguments.',
         descriptionValues: ['preview_tool' => self::PREVIEW_TOOL],
+        requiredBySchema: false,
     )]
     #[Serialize]
     public string $previewHash = '';
