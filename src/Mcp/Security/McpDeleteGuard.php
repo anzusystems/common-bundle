@@ -65,7 +65,11 @@ final readonly class McpDeleteGuard
             return;
         }
 
-        throw McpDeleteRejectedException::createRefused($entity::getResourceName(), (string) $entity->getId(), $refusals);
+        throw McpDeleteRejectedException::createRefused(
+            resourceName: $entity::getResourceName(),
+            id: (string) $entity->getId(),
+            refusals: $refusals,
+        );
     }
 
     private function resolveDependencyProvider(object $entity): McpDeleteDependencyProviderInterface

@@ -43,7 +43,7 @@ final class StrictToolArgumentsRequestHandlerTest extends TestCase
     public function testUnknownArgumentOfAGrantedToolListsTheAllowedOnesAndIsLogged(): void
     {
         $handler = $this->createHandler(toolGranted: true);
-        $request = $this->createRequest([self::UNKNOWN_ARGUMENT => 1]);
+        $request = $this->createRequest([self::UNKNOWN_ARGUMENT => 'a secret', self::ALLOWED_ARGUMENT => 'x']);
 
         self::assertTrue($handler->supports($request));
         $response = $handler->handle($request, new Session(new InMemorySessionStore()));
@@ -58,6 +58,7 @@ final class StrictToolArgumentsRequestHandlerTest extends TestCase
         );
         self::assertCount(1, $this->insertedDocuments);
         self::assertSame(self::TOOL_NAME, $this->insertedDocuments[0]['tool']);
+        self::assertSame([self::ALLOWED_ARGUMENT => 'x'], $this->insertedDocuments[0]['params']);
     }
 
     public function testToolThatIsNotGrantedIsLeftToTheSdk(): void

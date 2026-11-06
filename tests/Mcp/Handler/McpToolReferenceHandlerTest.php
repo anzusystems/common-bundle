@@ -199,7 +199,7 @@ final class McpToolReferenceHandlerTest extends TestCase
         self::assertTrue($request->attributes->has(AuditLogResourceHelper::RESOURCE_EXCLUDE_ATTR_NAME));
     }
 
-    public function testReferenceOfAToolWithoutAsMcpToolGoesToTheInnerHandlerUnchanged(): void
+    public function testToolWithoutAsMcpToolIsDeniedBecauseItHasNoPermission(): void
     {
         $handler = $this->createHandler(tool: new ExampleTool());
         $reference = new ToolReference(
@@ -209,8 +209,12 @@ final class McpToolReferenceHandlerTest extends TestCase
 
         $result = $handler->handle($reference, $this->createArguments(self::READ_TOOL_METHOD, []));
 
-        self::assertSame([], $result);
-        self::assertSame([], $this->insertedDocuments);
+        self::assertInstanceOf(CallToolResult::class, $result);
+        self::assertTrue($result->isError);
+        self::assertSame(
+            McpToolAccessRejectedException::createNotGranted(self::READ_TOOL_METHOD)->getMessage(),
+            $result->structuredContent[McpToolReferenceHandler::ERROR_KEY],
+        );
     }
 
     public function testInvalidRequestIsReturnedAsToolErrorWithoutRunningTheTool(): void

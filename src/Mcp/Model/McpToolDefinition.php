@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace AnzuSystems\CommonBundle\Mcp\Model;
 
 /**
- * What the MCP handler and checkers know about one tool, built by McpCompilerPass from its attribute.
+ * What the MCP handler and checkers know about one tool, built by McpToolDefinitionsCompilerPass from its attribute.
  */
 final readonly class McpToolDefinition
 {

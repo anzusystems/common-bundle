@@ -88,6 +88,9 @@ final readonly class McpToolReferenceHandler implements ReferenceHandlerInterfac
             if ($signature instanceof McpToolSignature) {
                 return $this->callTool($reference, $signature, $arguments);
             }
+            if (false === $this->toolAccessChecker->isToolGranted($reference->tool->name)) {
+                return self::createErrorResult(McpToolAccessRejectedException::createNotGranted($reference->tool->name)->getMessage());
+            }
         }
 
         return $this->inner->handle($reference, $arguments);
@@ -110,7 +113,7 @@ final readonly class McpToolReferenceHandler implements ReferenceHandlerInterfac
         $confirmationRequest = null;
 
         try {
-            $input = $this->resolveInput($toolName, $signature, $arguments);
+            $input = $this->resolveInput(toolName: $toolName, signature: $signature, arguments: $arguments);
             $params = is_object($input) ? $this->toArray($input) : [];
             $this->assertCallable($toolName, $input);
 
@@ -123,7 +126,7 @@ final readonly class McpToolReferenceHandler implements ReferenceHandlerInterfac
                 reference: $reference,
                 toolName: $toolName,
                 input: $input,
-                toolArguments: $this->createToolArguments($signature, $input, $arguments),
+                toolArguments: $this->createToolArguments(signature: $signature, input: $input, arguments: $arguments),
             );
             if ($result->isError) {
                 $error = $this->resolveResultError($result);
@@ -157,8 +160,11 @@ final readonly class McpToolReferenceHandler implements ReferenceHandlerInterfac
     private function guardWrite(string $toolName, ?object $input, array $arguments): ?InputRequiredResult
     {
         $previewToolName = $this->toolAccessChecker->getPreviewToolName($toolName);
-        if (null === $previewToolName || false === $input instanceof McpPreviewHashAwareInterface) {
+        if (null === $previewToolName) {
             return null;
+        }
+        if (false === $input instanceof McpPreviewHashAwareInterface) {
+            throw new UnexpectedValueException(sprintf('The input of the MCP write tool "%s" does not implement %s.', $toolName, McpPreviewHashAwareInterface::class));
         }
 
         return $this->writeToolGuard->guardPreview(

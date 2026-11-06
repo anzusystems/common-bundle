@@ -133,6 +133,7 @@ its `__invoke()` takes the request DTO and returns the response.
         Filter {{ list_published_articles }} by the returned ids.
         TXT,
     category: McpToolCategory::KEYWORDS,
+    permission: Permission::CMS_KEYWORD_READ,
     descriptionValues: ['list_published_articles' => ListPublishedArticlesTool::NAME],
     readOnly: true,
 )]
@@ -263,8 +264,8 @@ to the inner handler unchanged:
 
 `McpToolReferenceHandlerCompilerPass` puts the handler into the server after McpBundle's `McpPass`: around an SDK
 `ReferenceHandler` on the handler locator of the server, or, when MCP App tool templates registered
-`mcp.server.<server>.app.reference_handler`, between that handler and its SDK handler. It also reads the `__invoke()` signature of every `#[AsMcpTool]` tool once
-and passes the map to the handler, so a call needs no reflection. It fails the container
+`mcp.server.<server>.app.reference_handler`, between that handler and its SDK handler. `McpToolDefinitionsCompilerPass` reads the `__invoke()` signature of every `#[AsMcpTool]` tool once
+and stores it in `McpToolDefinition::$signature`, so a call needs no reflection. `McpToolReferenceHandlerCompilerPass` fails the container
 compilation when an `#[AsMcpTool]` tool also has an MCP App template (the template needs an array, the handler returns
 a `CallToolResult`) and when the server already has another reference handler.
 
@@ -344,16 +345,17 @@ and fails the container compilation with a `LogicException` when
 * a preview is not `readOnly`;
 * a write tool has more than one preview;
 * a preview has its own permission;
-* a tool declared by `#[AsMcpTool]` that is not a preview has no permission (`TOOL_WITHOUT_PERMISSION_MESSAGE`);
+* a tool declared by `#[AsMcpTool]` that is not a preview has no permission (`McpConfigurationException::createToolWithoutPermission()`);
 * a preview is in another category than its write tool;
-* a write tool declared by `#[AsMcpTool]` has no preview (`WRITE_TOOL_WITHOUT_PREVIEW_MESSAGE`);
+* a write tool declared by `#[AsMcpTool]` has no preview (`McpConfigurationException::createWriteToolWithoutPreview()`);
 * the response class of a preview does not implement `McpWritePreviewInterface`
-  (`PREVIEW_RESPONSE_WITHOUT_CONFIRMATION_MESSAGE`);
+  (`McpConfigurationException::createPreviewResponseWithoutConfirmation()`);
 * the input class of a write tool does not implement `McpPreviewHashAwareInterface` or does not extend the input class
-  of its preview (`WRITE_INPUT_NOT_PREVIEW_INPUT_MESSAGE`).
+  of its preview (`McpConfigurationException::createWriteInputNotPreviewInput()`).
 
 A tool that is not declared by `#[McpTool]` on a tagged `mcp.tool` service (e.g. one registered by an McpBundle app)
-is unknown to these checks. It has no permission and neither has a plain `#[McpTool]`, so both are denied.
+is unknown to these checks. It has no permission and neither has a plain `#[McpTool]`, so `tools/list` hides both and
+`McpToolReferenceHandler` answers their `tools/call` with the tool access error.
 
 ### Write tools
 
@@ -444,8 +446,8 @@ and the validation of the input, so a call without the right to write asks nothi
    * `previewHash: null` runs the write without a question, because such a write saves nothing;
    * another `previewHash` than in the arguments is a tool error (`McpWriteRejectedException::createPreviewStale()`);
    * the same `previewHash` ends the call with `input_required`, under the key `confirm_<previewHash>`.
-2. The client repeats the call with `inputResponses`. With `accept` and `confirm: true` the write runs, without the
-   preview. Any other answer under that key is a tool error (`McpWriteRejectedException::createConfirmationRefused()`), and nothing is
+2. The client repeats the call with `inputResponses`. With `accept` and `confirm: true` the preview runs again and, when
+   its `previewHash` still matches, the write runs. Any other answer under that key is a tool error (`McpWriteRejectedException::createConfirmationRefused()`), and nothing is
    asked again: `decline`, `cancel`, an unticked box and an answer that cannot be read. An answer under another key asks
    again.
 

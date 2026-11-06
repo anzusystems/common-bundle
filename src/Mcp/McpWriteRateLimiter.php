@@ -38,10 +38,10 @@ final readonly class McpWriteRateLimiter
         }
 
         throw McpWriteRejectedException::createRateLimitExceeded(
-            array_keys(array_filter(
+            array_filter(
                 $this->toolDefinitions->all(),
                 static fn (McpToolDefinition $definition): bool => $rateLimiterName === $definition->rateLimiter,
-            )),
+            ) |> array_keys(...),
             $rateLimit,
         );
     }

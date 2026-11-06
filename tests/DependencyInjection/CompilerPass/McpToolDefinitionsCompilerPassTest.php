@@ -46,9 +46,6 @@ use Symfony\Component\DependencyInjection\Definition;
 final class McpToolDefinitionsCompilerPassTest extends TestCase
 {
     private const string SERVER_NAME = 'core_cms';
-    private const string CONTROLLER_ID = 'mcp.server.core_cms.controller';
-    private const string BUILDER_ID = 'mcp.server.core_cms.builder';
-    private const string TAGGED_SERVICE_ID = 'tagged_service';
     private const string DEFINITIONS_ARGUMENT = '$definitions';
     private const int PERMISSION_INDEX = 0;
     private const int INPUT_PERMISSION_INDEX = 1;

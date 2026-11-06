@@ -60,10 +60,10 @@ final readonly class McpToolAccessChecker
      */
     public function getToolNames(): array
     {
-        return array_keys(array_filter(
+        return array_filter(
             $this->toolDefinitions->all(),
             static fn (McpToolDefinition $definition): bool => is_string($definition->permission),
-        ));
+        ) |> array_keys(...);
     }
 
     /**
@@ -71,10 +71,7 @@ final readonly class McpToolAccessChecker
      */
     public function getWriteToolNames(): array
     {
-        return array_values(array_filter(
-            $this->getToolNames(),
-            $this->isWriteTool(...),
-        ));
+        return array_filter($this->getToolNames(), $this->isWriteTool(...)) |> array_values(...);
     }
 
     /**
@@ -82,10 +79,7 @@ final readonly class McpToolAccessChecker
      */
     public function getPermittedToolNames(): array
     {
-        return array_values(array_filter(
-            $this->getToolNames(),
-            $this->isPermissionGranted(...),
-        ));
+        return array_filter($this->getToolNames(), $this->isPermissionGranted(...)) |> array_values(...);
     }
 
     /**
@@ -93,10 +87,7 @@ final readonly class McpToolAccessChecker
      */
     public function getPermittedWriteToolNames(): array
     {
-        return array_values(array_filter(
-            $this->getWriteToolNames(),
-            $this->isPermissionGranted(...),
-        ));
+        return array_filter($this->getWriteToolNames(), $this->isPermissionGranted(...)) |> array_values(...);
     }
 
     public function getToolCategory(string $toolName): string

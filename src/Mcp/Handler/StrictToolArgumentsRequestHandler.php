@@ -47,13 +47,15 @@ final readonly class StrictToolArgumentsRequestHandler implements RequestHandler
             return Error::forInternalError('Unsupported request.', $request->getId());
         }
 
+        $allowedArguments = $this->getAllowedArguments($this->registry->getTool($request->name));
         $message = McpToolAccessRejectedException::createUnknownArguments(
             $this->findUnknownArguments($request),
-            $this->getAllowedArguments($this->registry->getTool($request->name)),
+            $allowedArguments,
         )->getMessage();
+        // A value under an unknown name can be anything, so only its name goes to the log, in the error.
         $this->toolCallLogger->logCall(
             toolName: $request->name,
-            params: $request->arguments,
+            params: array_intersect_key($request->arguments, array_flip($allowedArguments)),
             error: $message,
             durationMs: self::NO_DURATION_MS,
             session: $session,

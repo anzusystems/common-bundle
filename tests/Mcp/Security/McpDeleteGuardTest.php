@@ -88,9 +88,9 @@ final class McpDeleteGuardTest extends TestCase
 
         $this->expectException(McpToolCallRejectedException::class);
         $this->expectExceptionMessage(McpDeleteRejectedException::createRefused(
-            self::RESOURCE_NAME,
-            self::ENTITY_ID,
-            [
+            resourceName: self::RESOURCE_NAME,
+            id: self::ENTITY_ID,
+            refusals: [
                 $this->createTooOldRefusal($createdAt),
                 McpDeleteGuard::NOT_CREATOR_MESSAGE,
                 sprintf(McpDeleteGuard::IN_USE_MESSAGE, self::FIRST_DEPENDENCY),

@@ -67,7 +67,8 @@
   "suggest": {
     "psr/simple-cache": "Required by the \"mcp\" config section (^3.0)",
     "symfony/mcp-bundle": "Required by the \"mcp\" config section (^0.13)",
-    "symfony/rate-limiter": "Required by the \"mcp\" config section (^7.0|^8.0)"
+    "symfony/rate-limiter": "Required by the \"mcp\" config section (^7.0|^8.0)",
+    "symfony/translation": "Required by the \"mcp\" config section, the write confirmation translates its text (^7.0|^8.0)"
   },
   "conflict": {
     "symfony/mcp-bundle": "<0.13"

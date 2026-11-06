@@ -191,15 +191,12 @@ final class McpToolDefinitionsCompilerPass implements CompilerPassInterface
     private function resolveToolAttribute(ReflectionMethod $reflection): ?McpTool
     {
         $attributes = $reflection->getAttributes(McpTool::class, ReflectionAttribute::IS_INSTANCEOF);
-        if ([] === $attributes && self::INVOKE_METHOD === $reflection->getName()) {
+        if (empty($attributes) && StringHelper::isSame(self::INVOKE_METHOD, $reflection->getName())) {
             $attributes = $reflection->getDeclaringClass()
                 ->getAttributes(McpTool::class, ReflectionAttribute::IS_INSTANCEOF);
         }
-        if ([] === $attributes) {
-            return null;
-        }
 
-        return $attributes[0]->newInstance();
+        return array_first($attributes)?->newInstance();
     }
 
     /**
@@ -323,13 +320,13 @@ final class McpToolDefinitionsCompilerPass implements CompilerPassInterface
      */
     private function resolveReadOnlyToolNames(array $toolsByName): array
     {
-        return array_keys(array_filter(
+        return array_filter(
             $toolsByName,
             static fn (array $tools): bool => array_any(
                 $tools,
                 static fn (McpTool $tool): bool => true === $tool->annotations?->readOnlyHint,
             ),
-        ));
+        ) |> array_keys(...);
     }
 
     /**

@@ -134,6 +134,27 @@ final class McpConfigurationException extends LogicException
         return new self(sprintf('The input class of the MCP write tool "%s" must implement %s and extend the input class of its preview "%s".', $toolName, McpPreviewHashAwareInterface::class, $previewToolName));
     }
 
+    public static function createToolWithoutInvoke(string $class, string $invokeMethod): self
+    {
+        return new self(sprintf('The MCP tool "%s" declares #[AsMcpTool], so it declares %s().', $class, $invokeMethod));
+    }
+
+    public static function createInvalidToolReturn(string $class, string $method, string $resultClass, string $type): self
+    {
+        return new self(sprintf('The MCP tool "%s::%s()" returns a response class or %s, not "%s".', $class, $method, $resultClass, $type));
+    }
+
+    public static function createInvalidToolParameter(string $class, string $method, string $contextClass, string $parameter): self
+    {
+        return new self(sprintf(
+            'The MCP tool "%s::%s()" takes its input class and then the optional %s, so "$%s" does not fit: move it into the input class.',
+            $class,
+            $method,
+            $contextClass,
+            $parameter,
+        ));
+    }
+
     public static function createNotAsMcpTool(string $toolMethod): self
     {
         return new self(sprintf('The MCP tool "%s" is not declared by #[AsMcpTool].', $toolMethod));

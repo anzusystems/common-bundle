@@ -7,8 +7,6 @@ namespace AnzuSystems\CommonBundle\Tests\DependencyInjection\CompilerPass;
 use AnzuSystems\CommonBundle\DependencyInjection\CompilerPass\McpCompilerPass;
 use AnzuSystems\CommonBundle\Mcp\Attribute\AsMcpTool;
 use AnzuSystems\CommonBundle\Mcp\Controller\McpController;
-use AnzuSystems\CommonBundle\Mcp\McpToolDefinitions;
-use AnzuSystems\CommonBundle\Mcp\McpWriteRateLimiter;
 use LogicException;
 use Mcp\Schema\ServerCapabilities;
 use PHPUnit\Framework\TestCase;
@@ -22,20 +20,7 @@ final class McpCompilerPassTest extends TestCase
     private const string CONTROLLER_ID = 'mcp.server.core_cms.controller';
     private const string BUILDER_ID = 'mcp.server.core_cms.builder';
     private const string TAGGED_SERVICE_ID = 'tagged_service';
-    private const string DEFINITIONS_ARGUMENT = '$definitions';
-    private const int PERMISSION_INDEX = 0;
-    private const int INPUT_PERMISSION_INDEX = 1;
-    private const int READ_ONLY_INDEX = 2;
-    private const int CATEGORY_INDEX = 3;
-    private const int PREVIEW_OF_INDEX = 4;
-    private const int PREVIEW_TOOL_INDEX = 5;
-    private const int RATE_LIMITER_INDEX = 6;
-    private const int SIGNATURE_INDEX = 7;
     private const string TOOL_PERMISSION = 'cms_example_read';
-    private const string RATE_LIMITER_ID = 'limiter.example_write';
-    private const string TOOL_TAG_METHOD = 'method';
-    private const string READ_TOOL_METHOD = 'listExamples';
-    private const string WRITE_TOOL_METHOD = 'createExample';
 
     public function testDoesNothingWhenMcpIsDisabled(): void
     {
@@ -133,8 +118,6 @@ final class McpCompilerPassTest extends TestCase
         $container = new ContainerBuilder();
         $container->setParameter(McpCompilerPass::SERVER_NAME_PARAM, [self::SERVER_NAME]);
         $container->register(McpController::class);
-        $container->register(McpWriteRateLimiter::class)
-            ->setArgument('$rateLimiters', null);
 
         $this->expectException(LogicException::class);
 
@@ -148,10 +131,6 @@ final class McpCompilerPassTest extends TestCase
         $container->setParameter(McpCompilerPass::SERVER_NAME_PARAM, self::SERVER_NAME);
         $container->setParameter(AsMcpTool::LOG_TOOLS_PERMISSION_PARAM, self::TOOL_PERMISSION);
         $container->register(McpController::class);
-        $container->register(McpWriteRateLimiter::class)
-            ->setArgument('$rateLimiters', null);
-        $container->register(McpToolDefinitions::class)
-            ->setArgument(self::DEFINITIONS_ARGUMENT, []);
 
         return $container;
     }

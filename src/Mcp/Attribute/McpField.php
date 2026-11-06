@@ -37,7 +37,7 @@ final readonly class McpField
         preg_match_all(self::PLACEHOLDER_PATTERN, $description, $matches);
         $usedNames = array_unique($matches[1]);
         $missingNames = array_diff($usedNames, array_keys($values));
-        if ([] !== $missingNames) {
+        if (false === empty($missingNames)) {
             throw new LogicException(sprintf(
                 'Placeholders "%s" have no value in the MCP description "%s".',
                 implode('", "', $missingNames),
@@ -45,7 +45,7 @@ final readonly class McpField
             ));
         }
         $unusedNames = array_diff(array_keys($values), $usedNames);
-        if ([] !== $unusedNames) {
+        if (false === empty($unusedNames)) {
             throw new LogicException(sprintf(
                 'Values "%s" have no placeholder in the MCP description "%s".',
                 implode('", "', $unusedNames),

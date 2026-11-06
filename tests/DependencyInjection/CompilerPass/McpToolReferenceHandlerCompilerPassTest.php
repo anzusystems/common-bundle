@@ -21,7 +21,6 @@ final class McpToolReferenceHandlerCompilerPassTest extends TestCase
     private const string SERVER_NAME = 'core_cms';
     private const string HANDLER_LOCATOR_ID = '.service_locator.example';
     private const string INNER_ARGUMENT = '$inner';
-    private const string ADD_TOOL_METHOD = 'addTool';
     private const string SET_CONTAINER_METHOD = 'setContainer';
     private const string SET_REFERENCE_HANDLER_METHOD = 'setReferenceHandler';
     private const string APP_RENDERER_ID = 'mcp.app.renderer';

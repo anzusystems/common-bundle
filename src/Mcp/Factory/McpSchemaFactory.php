@@ -256,13 +256,13 @@ final class McpSchemaFactory
                     self::ITEMS => $this->applyConstraints((array) ($schema[self::ITEMS] ?? []), (array) $constraint->constraints),
                 ],
                 $constraint instanceof Assert\NotBlank => $this->applyNotBlank($schema),
-                $constraint instanceof Assert\Length => $this->applyBounds($schema, self::MIN_LENGTH, $constraint->min, self::MAX_LENGTH, $constraint->max),
-                $constraint instanceof Assert\Count => $this->applyBounds($schema, self::MIN_ITEMS, $constraint->min, self::MAX_ITEMS, $constraint->max),
-                $constraint instanceof Assert\Range => $this->applyBounds($schema, self::MINIMUM, $constraint->min, self::MAXIMUM, $constraint->max),
-                $constraint instanceof Assert\GreaterThan => $this->applyExclusiveBound($schema, self::MINIMUM, self::EXCLUSIVE_MINIMUM, $constraint->value, 1),
-                $constraint instanceof Assert\GreaterThanOrEqual => $this->applyBounds($schema, self::MINIMUM, $constraint->value, self::MAXIMUM, null),
-                $constraint instanceof Assert\LessThan => $this->applyExclusiveBound($schema, self::MAXIMUM, self::EXCLUSIVE_MAXIMUM, $constraint->value, -1),
-                $constraint instanceof Assert\LessThanOrEqual => $this->applyBounds($schema, self::MINIMUM, null, self::MAXIMUM, $constraint->value),
+                $constraint instanceof Assert\Length => $this->applyBounds(schema: $schema, minKey: self::MIN_LENGTH, min: $constraint->min, maxKey: self::MAX_LENGTH, max: $constraint->max),
+                $constraint instanceof Assert\Count => $this->applyBounds(schema: $schema, minKey: self::MIN_ITEMS, min: $constraint->min, maxKey: self::MAX_ITEMS, max: $constraint->max),
+                $constraint instanceof Assert\Range => $this->applyBounds(schema: $schema, minKey: self::MINIMUM, min: $constraint->min, maxKey: self::MAXIMUM, max: $constraint->max),
+                $constraint instanceof Assert\GreaterThan => $this->applyExclusiveBound(schema: $schema, inclusiveKey: self::MINIMUM, exclusiveKey: self::EXCLUSIVE_MINIMUM, value: $constraint->value, step: 1),
+                $constraint instanceof Assert\GreaterThanOrEqual => $this->applyBounds(schema: $schema, minKey: self::MINIMUM, min: $constraint->value, maxKey: self::MAXIMUM, max: null),
+                $constraint instanceof Assert\LessThan => $this->applyExclusiveBound(schema: $schema, inclusiveKey: self::MAXIMUM, exclusiveKey: self::EXCLUSIVE_MAXIMUM, value: $constraint->value, step: -1),
+                $constraint instanceof Assert\LessThanOrEqual => $this->applyBounds(schema: $schema, minKey: self::MINIMUM, min: null, maxKey: self::MAXIMUM, max: $constraint->value),
                 $constraint instanceof Assert\Choice && is_array($constraint->choices) => [...$schema, self::ENUM => array_values($constraint->choices)],
                 default => $schema,
             };
@@ -377,7 +377,8 @@ final class McpSchemaFactory
             return $member->getName();
         }
 
-        return lcfirst((string) preg_replace(self::GETTER_PREFIX_PATTERN, '', $member->getName()));
+        return (string) preg_replace(pattern: self::GETTER_PREFIX_PATTERN, replacement: '', subject: $member->getName())
+            |> lcfirst(...);
     }
 
     private function normalizeDefault(mixed $default): mixed

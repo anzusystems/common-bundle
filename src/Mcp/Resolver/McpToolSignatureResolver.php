@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace AnzuSystems\CommonBundle\Mcp\Resolver;
 
 use AnzuSystems\CommonBundle\Mcp\Attribute\AsMcpTool;
+use AnzuSystems\CommonBundle\Mcp\Exception\McpConfigurationException;
 use AnzuSystems\CommonBundle\Mcp\Model\McpToolSignature;
-use LogicException;
 use Mcp\Schema\Result\CallToolResult;
 use Mcp\Server\RequestContext;
 use ReflectionClass;
@@ -29,7 +29,7 @@ final readonly class McpToolSignatureResolver
             return null;
         }
         if (false === $reflection->hasMethod(self::INVOKE_METHOD)) {
-            throw new LogicException(sprintf('The MCP tool "%s" declares #[AsMcpTool], so it declares %s().', $class, self::INVOKE_METHOD));
+            throw McpConfigurationException::createToolWithoutInvoke($class, self::INVOKE_METHOD);
         }
         $method = $reflection->getMethod(self::INVOKE_METHOD);
         $inputParameter = $this->resolveInputParameter($method);
@@ -44,14 +44,14 @@ final readonly class McpToolSignatureResolver
     private function resolveInputParameter(ReflectionMethod $method): ?ReflectionParameter
     {
         $parameters = $method->getParameters();
-        $lastParameter = end($parameters);
+        $lastParameter = array_last($parameters);
         if ($lastParameter instanceof ReflectionParameter && $this->isRequestContext($lastParameter)) {
             array_pop($parameters);
         }
         if (count($parameters) > 1) {
             throw $this->createParameterException($method, $parameters[1]);
         }
-        $inputParameter = $parameters[0] ?? null;
+        $inputParameter = array_first($parameters);
         if (null === $inputParameter) {
             return null;
         }
@@ -73,13 +73,12 @@ final readonly class McpToolSignatureResolver
             return CallToolResult::class === $class ? null : $class;
         }
 
-        throw new LogicException(sprintf(
-            'The MCP tool "%s::%s()" returns a response class or %s, not "%s".',
-            $method->class,
-            $method->name,
-            CallToolResult::class,
-            (string) $type,
-        ));
+        throw McpConfigurationException::createInvalidToolReturn(
+            class: $method->class,
+            method: $method->name,
+            resultClass: CallToolResult::class,
+            type: (string) $type,
+        );
     }
 
     /**
@@ -103,14 +102,13 @@ final readonly class McpToolSignatureResolver
         return RequestContext::class === $this->resolveClass($parameter->getType());
     }
 
-    private function createParameterException(ReflectionMethod $method, ReflectionParameter $parameter): LogicException
+    private function createParameterException(ReflectionMethod $method, ReflectionParameter $parameter): McpConfigurationException
     {
-        return new LogicException(sprintf(
-            'The MCP tool "%s::%s()" takes its input class and then the optional %s, so "$%s" does not fit: move it into the input class.',
-            $method->class,
-            $method->name,
-            RequestContext::class,
-            $parameter->getName(),
-        ));
+        return McpConfigurationException::createInvalidToolParameter(
+            class: $method->class,
+            method: $method->name,
+            contextClass: RequestContext::class,
+            parameter: $parameter->getName(),
+        );
     }
 }

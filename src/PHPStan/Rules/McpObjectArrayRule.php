@@ -163,6 +163,6 @@ final readonly class McpObjectArrayRule implements Rule
     {
         $quotedNamespace = preg_quote(trim($namespace, self::NAMESPACE_SEPARATOR), '/');
 
-        return sprintf('/^%s\\\\/', str_replace(preg_quote(self::NAMESPACE_WILDCARD, '/'), '\w+', $quotedNamespace));
+        return sprintf('/^%s\\\\/', str_replace(search: preg_quote(self::NAMESPACE_WILDCARD, '/'), replace: '\w+', subject: $quotedNamespace));
     }
 }

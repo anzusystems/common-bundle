@@ -22,6 +22,6 @@ final readonly class InvalidParameterExampleTool
 
     public function __invoke(SearchAppLogsRequest $request, int $siteId): McpLogsByContextResponse
     {
-        return new McpLogsByContextResponse(new McpLogsByContextResult(new ArrayCollection(), new ArrayCollection(), new ArrayCollection()));
+        return new McpLogsByContextResponse(new McpLogsByContextResult(auditLogs: new ArrayCollection(), appLogs: new ArrayCollection(), mcpToolCalls: new ArrayCollection()));
     }
 }
