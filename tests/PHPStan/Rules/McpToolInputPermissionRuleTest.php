@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace AnzuSystems\CommonBundle\Tests\PHPStan\Rules;
 
 use AnzuSystems\CommonBundle\PHPStan\Rules\McpToolInputPermissionRule;
+use AnzuSystems\CommonBundle\Tests\Data\PHPStan\Mcp\InputPermission\CheckAfterEarlyReturnTool;
 use AnzuSystems\CommonBundle\Tests\Data\PHPStan\Mcp\InputPermission\CheckInBranchTool;
 use AnzuSystems\CommonBundle\Tests\Data\PHPStan\Mcp\InputPermission\ExamplePermission;
 use AnzuSystems\CommonBundle\Tests\Data\PHPStan\Mcp\InputPermission\MissingCheckTool;
@@ -30,6 +31,7 @@ final class McpToolInputPermissionRuleTest extends RuleTestCase
                 [$this->createMessage(WrongPermissionTool::class), 33],
                 [$this->createMessage(WrongSubjectTool::class), 46],
                 [$this->createMessage(CheckInBranchTool::class), 59],
+                [$this->createMessage(CheckAfterEarlyReturnTool::class), 74],
             ],
         );
     }

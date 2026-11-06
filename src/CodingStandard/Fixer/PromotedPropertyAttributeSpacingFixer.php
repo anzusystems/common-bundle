@@ -16,6 +16,8 @@ use SplFileInfo;
 
 final class PromotedPropertyAttributeSpacingFixer extends AbstractFixer implements WhitespacesAwareFixerInterface
 {
+    private const string LINE_FEED = "\n";
+
     private const array PROMOTION_KINDS = [
         CT::T_CONSTRUCTOR_PROPERTY_PROMOTION_PUBLIC,
         CT::T_CONSTRUCTOR_PROPERTY_PROMOTION_PROTECTED,
@@ -69,7 +71,7 @@ final class PromotedPropertyAttributeSpacingFixer extends AbstractFixer implemen
             $openIndex = $tokens->getNextTokenOfKind($nameIndex, ['(']);
             $closeIndex = $tokens->findBlockEnd(Tokens::BLOCK_TYPE_PARENTHESIS, $openIndex);
 
-            if (false === str_contains($tokens->generatePartialCode($openIndex, $closeIndex), "\n")) {
+            if (false === str_contains($tokens->generatePartialCode($openIndex, $closeIndex), self::LINE_FEED)) {
                 continue;
             }
 
@@ -195,7 +197,7 @@ final class PromotedPropertyAttributeSpacingFixer extends AbstractFixer implemen
         }
 
         $whitespace = $tokens[$index]->getContent();
-        $indent = substr($whitespace, strrpos($whitespace, "\n") + 1);
+        $indent = substr($whitespace, strrpos($whitespace, self::LINE_FEED) + 1);
         $fixed = str_repeat($this->whitespacesConfig->getLineEnding(), $lineBreaks) . $indent;
 
         if ($fixed !== $whitespace) {
@@ -205,6 +207,6 @@ final class PromotedPropertyAttributeSpacingFixer extends AbstractFixer implemen
 
     private function isLineBreak(Token $token): bool
     {
-        return $token->isWhitespace() && str_contains($token->getContent(), "\n");
+        return $token->isWhitespace() && str_contains($token->getContent(), self::LINE_FEED);
     }
 }

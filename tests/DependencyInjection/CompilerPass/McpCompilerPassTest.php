@@ -182,5 +182,4 @@ final class McpCompilerPassTest extends TestCase
 
         return $container;
     }
-
 }

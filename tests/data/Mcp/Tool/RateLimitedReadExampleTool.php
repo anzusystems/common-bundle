@@ -15,7 +15,7 @@ use Closure;
     category: ExampleToolCategory::EXAMPLES,
     readOnly: true,
     permission: 'example_read',
-    rateLimiter: 'example_write',
+    rateLimiter: RateLimitedExampleTool::RATE_LIMITER,
 )]
 final readonly class RateLimitedReadExampleTool
 {

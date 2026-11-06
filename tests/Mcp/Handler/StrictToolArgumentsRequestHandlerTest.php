@@ -31,6 +31,7 @@ final class StrictToolArgumentsRequestHandlerTest extends TestCase
 {
     private const string TOOL_NAME = 'example_read';
     private const string ALLOWED_ARGUMENT = 'title';
+    private const string ALLOWED_VALUE = 'x';
     private const string UNKNOWN_ARGUMENT = 'nonsense';
     private const string PERMISSION = 'example_read';
     private const int USER_ID = 7;
@@ -43,7 +44,7 @@ final class StrictToolArgumentsRequestHandlerTest extends TestCase
     public function testUnknownArgumentOfAGrantedToolListsTheAllowedOnesAndIsLogged(): void
     {
         $handler = $this->createHandler(toolGranted: true);
-        $request = $this->createRequest([self::UNKNOWN_ARGUMENT => 'a secret', self::ALLOWED_ARGUMENT => 'x']);
+        $request = $this->createRequest([self::UNKNOWN_ARGUMENT => 'a secret', self::ALLOWED_ARGUMENT => self::ALLOWED_VALUE]);
 
         self::assertTrue($handler->supports($request));
         $response = $handler->handle($request, new Session(new InMemorySessionStore()));
@@ -58,7 +59,7 @@ final class StrictToolArgumentsRequestHandlerTest extends TestCase
         );
         self::assertCount(1, $this->insertedDocuments);
         self::assertSame(self::TOOL_NAME, $this->insertedDocuments[0]['tool']);
-        self::assertSame([self::ALLOWED_ARGUMENT => 'x'], $this->insertedDocuments[0]['params']);
+        self::assertSame([self::ALLOWED_ARGUMENT => self::ALLOWED_VALUE], $this->insertedDocuments[0]['params']);
         self::assertSame($result->structuredContent[McpToolReferenceHandler::ERROR_KEY], $this->insertedDocuments[0]['error']);
     }
 
@@ -69,7 +70,7 @@ final class StrictToolArgumentsRequestHandlerTest extends TestCase
 
     public function testKnownArgumentsAreLeftToTheSdk(): void
     {
-        self::assertFalse($this->createHandler(toolGranted: true)->supports($this->createRequest([self::ALLOWED_ARGUMENT => 'x'])));
+        self::assertFalse($this->createHandler(toolGranted: true)->supports($this->createRequest([self::ALLOWED_ARGUMENT => self::ALLOWED_VALUE])));
     }
 
     /**

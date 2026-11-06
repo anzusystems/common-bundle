@@ -54,14 +54,6 @@ final readonly class McpToolAccessChecker
         return array_filter($this->toolDefinitions->getToolNames(), $this->isPermissionGranted(...)) |> array_values(...);
     }
 
-    /**
-     * @return list<string>
-     */
-    public function getPermittedWriteToolNames(): array
-    {
-        return array_filter($this->toolDefinitions->getWriteToolNames(), $this->isPermissionGranted(...)) |> array_values(...);
-    }
-
     public function isWriteTool(string $toolName): bool
     {
         return true !== $this->toolDefinitions->find($toolName)?->readOnly;

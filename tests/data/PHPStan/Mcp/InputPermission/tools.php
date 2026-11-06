@@ -68,6 +68,36 @@ final readonly class CheckInBranchTool
     }
 }
 
+#[AsMcpTool(name: 'early_return', description: '', category: 'examples', readOnly: true)]
+final readonly class CheckAfterEarlyReturnTool
+{
+    public function __invoke(ScopedExampleRequest $request, bool $enabled): void
+    {
+        if ($enabled) {
+            return;
+        }
+        $this->denyAccessUnlessGranted(ExamplePermission::SCOPED, $request);
+    }
+
+    private function denyAccessUnlessGranted(string $attributes, object $subject): void
+    {
+    }
+}
+
+#[AsMcpTool(name: 'second_check', description: '', category: 'examples', readOnly: true)]
+final readonly class CheckedAfterOtherCheckTool
+{
+    public function __invoke(ScopedExampleRequest $request): void
+    {
+        $this->denyAccessUnlessGranted(ExamplePermission::OTHER, $request);
+        $this->denyAccessUnlessGranted(ExamplePermission::SCOPED, $request);
+    }
+
+    private function denyAccessUnlessGranted(string $attributes, object $subject): void
+    {
+    }
+}
+
 #[AsMcpTool(name: 'unscoped', description: '', category: 'examples', readOnly: true)]
 final readonly class UnscopedRequestTool
 {

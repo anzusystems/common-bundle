@@ -22,7 +22,7 @@ final class McpToolReferenceHandlerErrorTest extends AbstractMcpToolReferenceHan
     public function testInvalidRequestIsReturnedAsToolErrorWithoutRunningTheTool(): void
     {
         $handler = $this->createHandler(
-            tool: new ExampleSearchTool(static fn (): McpLogsByContextResponse => throw new RuntimeException('must not run')),
+            tool: new ExampleSearchTool(static fn (): McpLogsByContextResponse => throw new RuntimeException(self::MUST_NOT_RUN_MESSAGE)),
         );
 
         $result = $this->callTool(handler: $handler, toolClass: ExampleSearchTool::class, toolName: ExampleSearchTool::NAME, limit: self::LIMIT_INVALID);
@@ -89,7 +89,7 @@ final class McpToolReferenceHandlerErrorTest extends AbstractMcpToolReferenceHan
     public function testConfiguredToolErrorExceptionIsMappedToMessage(): void
     {
         $handler = $this->createHandlerWithoutInputTool(
-            toolHandler: static fn (): McpLogsByContextResponse => throw new RuntimeException('backend down'),
+            toolHandler: static fn (): McpLogsByContextResponse => throw new RuntimeException(self::HANDLED_EXCEPTION_MESSAGE),
             toolErrorExceptions: [RuntimeException::class => self::BACKEND_ERROR_MESSAGE],
         );
 
@@ -119,14 +119,14 @@ final class McpToolReferenceHandlerErrorTest extends AbstractMcpToolReferenceHan
     public function testUnknownExceptionIsRethrownAndLoggedAsError(): void
     {
         $handler = $this->createHandlerWithoutInputTool(
-            static fn (): McpLogsByContextResponse => throw new RuntimeException('boom'),
+            static fn (): McpLogsByContextResponse => throw new RuntimeException(self::UNHANDLED_EXCEPTION_MESSAGE),
         );
 
         try {
             $this->callToolWithoutInput($handler);
             self::fail('Expected ' . RuntimeException::class);
         } catch (RuntimeException $exception) {
-            self::assertSame('boom', $exception->getMessage());
+            self::assertSame(self::UNHANDLED_EXCEPTION_MESSAGE, $exception->getMessage());
         }
 
         self::assertCount(1, $this->insertedDocuments);

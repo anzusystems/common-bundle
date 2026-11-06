@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace AnzuSystems\CommonBundle\Mcp\Model\Decorator;
 
+use AnzuSystems\CommonBundle\Helper\StringHelper;
 use AnzuSystems\SerializerBundle\Attributes\Serialize;
 use DateTimeInterface;
 use MongoDB\BSON\UTCDateTime;
@@ -50,7 +51,7 @@ abstract class AbstractMcpLogDecorator
     {
         $value = $data[$key] ?? null;
 
-        return is_string($value) && '' !== $value ? $value : null;
+        return is_string($value) && StringHelper::isNotEmpty($value) ? $value : null;
     }
 
     /**

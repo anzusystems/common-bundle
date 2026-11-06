@@ -202,7 +202,7 @@ final class McpToolDefinitionsCompilerPassTest extends TestCase
         return [
             'category that is not camelCase' => [
                 [InvalidCategoryExampleTool::class],
-                McpConfigurationException::createInvalidCategory(category: 'example.tools', toolName: InvalidCategoryExampleTool::NAME, pattern: '/^[a-z][a-zA-Z0-9]*$/')->getMessage(),
+                McpConfigurationException::createInvalidCategory(category: 'example.tools', toolName: InvalidCategoryExampleTool::NAME, pattern: McpToolDefinitionsCompilerPass::CATEGORY_PATTERN)->getMessage(),
             ],
             'preview of an unknown tool' => [
                 [ExamplePreviewTool::class],

@@ -345,6 +345,31 @@ final class McpSchemaFactoryTest extends TestCase
         ];
     }
 
+    /**
+     * @dataProvider requiredConstraintProvider
+     */
+    public function testConstraintMakesAPropertyWithADefaultRequired(string $property, bool $expectedRequired): void
+    {
+        $schema = new McpSchemaFactory()
+            ->createForClass(ConstraintExampleRequest::class);
+
+        self::assertSame($expectedRequired, in_array(needle: $property, haystack: $schema[self::REQUIRED] ?? [], strict: true));
+    }
+
+    /**
+     * @return array<string, array{string, bool}>
+     */
+    public static function requiredConstraintProvider(): array
+    {
+        return [
+            'NotBlank' => ['notBlank', true],
+            'NotBlank allowing null' => ['notBlankAllowingNull', false],
+            'NotNull' => ['notNull', true],
+            'Count with a minimum' => ['countMin', true],
+            'no constraint that requires a value' => ['range', false],
+        ];
+    }
+
     public function testHookedRequestPropertyKeepsItsDefaultAndConstraints(): void
     {
         $schema = new McpSchemaFactory()

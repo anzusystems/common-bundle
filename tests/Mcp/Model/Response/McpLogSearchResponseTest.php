@@ -64,6 +64,14 @@ final class McpLogSearchResponseTest extends TestCase
         self::assertStringEndsWith(AbstractMcpLogDecorator::TRUNCATED_SUFFIX, $response['message']);
     }
 
+    public function testEmptyValueIsNull(): void
+    {
+        $response = McpSerializerFactory::create()
+            ->toArray(new McpAppLogDecorator(['message' => '']));
+
+        self::assertNull($response['message']);
+    }
+
     private function createSearchResult(bool $truncated, int $limit, bool $hasMore, ?AbstractMcpLogDecorator $log = null): McpLogSearchResult
     {
         return new McpLogSearchResult(

@@ -28,6 +28,10 @@ services:
         tags:
             - phpstan.rules.rule
     -
+        class: AnzuSystems\CommonBundle\PHPStan\Rules\McpTraitObjectArrayRule
+        tags:
+            - phpstan.rules.rule
+    -
         class: AnzuSystems\CommonBundle\PHPStan\Rules\NamedArgumentsRule
         arguments:
             classNamespaces: %anzuNamedArguments.classNamespaces%

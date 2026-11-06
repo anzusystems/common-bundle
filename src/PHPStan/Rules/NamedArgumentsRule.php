@@ -34,7 +34,7 @@ use ReflectionParameter;
  */
 final readonly class NamedArgumentsRule implements Rule
 {
-    public const string MESSAGE = 'The call of %s() passes %d arguments, name them: %s (anzu-php-style: named parameters whenever a call passes more than two arguments).';
+    public const string MESSAGE = 'The call of %s() passes %d arguments, name them: %s (named arguments are required whenever a call passes more than two arguments).';
 
     private const int MAX_UNNAMED_ARGUMENTS = 2;
     private const string CONSTRUCTOR = '__construct';

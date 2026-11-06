@@ -205,8 +205,8 @@ A list of objects is a `Collection<int, X>` with `#[Serialize(type: X::class)]`:
 * On input `type:` is required, otherwise `ObjectHandler` builds the items as the collection class.
 * A parameterless constructor sets an input `Collection` to `new ArrayCollection()`. A promoted parameter would be
   required.
-* `McpObjectArrayRule` reports an array of the host's objects in the MCP classes, also with `#[Serialize]`.
-* `McpToolInputPermissionRule` reports an `#[AsMcpTool]` whose request implements an interface of `anzuMcpToolInputPermission.inputPermissions` and whose `__invoke()` does not call `denyAccessUnlessGranted()` with the permission of that interface on the request, outside any branch.
+* `McpObjectArrayRule` reports an array of the host's objects in the MCP classes, also with `#[Serialize]`, and `McpTraitObjectArrayRule` in the MCP traits.
+* `McpToolInputPermissionRule` reports an `#[AsMcpTool]` whose request implements an interface of `anzuMcpToolInputPermission.inputPermissions` and whose `__invoke()` does not call `denyAccessUnlessGranted()` with the permission of that interface on the request before any other statement.
 * `NamedArgumentsRule` reports a call with more than two arguments that are not all named in the namespaces of `anzuNamedArguments.classNamespaces`. A call with a value for a variadic parameter, a spread or no known signature is left alone.
 
 ```php
@@ -387,7 +387,7 @@ write tool. A tool without an explicit `name` is matched by the name the SDK der
 A write tool additionally has to be in the write tools of the request's scope (*Token scope* below), so it is hidden
 from `tools/list` and denied on `tools/call` without it. Without a scope every write tool is denied, for super admins
 too. `McpToolDefinitions::getWriteToolNames()` lists the tools with a permission that are write tools, in
-the order of the tools, and `McpToolAccessChecker::getPermittedWriteToolNames()` narrows them to the tools whose permission the current user holds. A call
+the order of the tools. A call
 denied only for the scope answers `Access denied — the write tool "<tool>" is not granted to this token. Create a new personal access token with this write tool.` Annotate
 every read tool, or it disappears for clients without the write grant:
 
@@ -450,7 +450,7 @@ repeat it.
 A preview has no permission of its own: `McpToolAccessChecker` grants it exactly when it grants its write tool —
 the write tools of the scope and the permission of the write tool — in `tools/list` and on
 `tools/call`; otherwise the call gets the usual tool access error. `McpToolDefinitions::getToolNames()` and
-`getWriteToolNames()`, and `McpToolAccessChecker::getPermittedToolNames()` and `getPermittedWriteToolNames()` read the
+`getWriteToolNames()`, and `McpToolAccessChecker::getPermittedToolNames()` read the
 tools with a permission, so they never list a preview. As a read tool it skips the write grant check of its own, read-only mode, the one write per request and the
 audit log.
 

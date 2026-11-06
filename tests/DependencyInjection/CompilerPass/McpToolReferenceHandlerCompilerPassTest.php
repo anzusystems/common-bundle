@@ -6,10 +6,10 @@ namespace AnzuSystems\CommonBundle\Tests\DependencyInjection\CompilerPass;
 
 use AnzuSystems\CommonBundle\DependencyInjection\CompilerPass\McpCompilerPass;
 use AnzuSystems\CommonBundle\DependencyInjection\CompilerPass\McpToolReferenceHandlerCompilerPass;
+use AnzuSystems\CommonBundle\Mcp\Exception\McpConfigurationException;
 use AnzuSystems\CommonBundle\Mcp\Handler\McpToolReferenceHandler;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Tool\ExampleSearchTool;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Tool\ExampleTool;
-use LogicException;
 use Mcp\Capability\Registry\ReferenceHandler;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
@@ -72,8 +72,7 @@ final class McpToolReferenceHandlerCompilerPassTest extends TestCase
             self::SERVER_NAME => [ExampleSearchTool::class . '::' . self::INVOKE_METHOD => self::APP_TEMPLATE],
         ]);
 
-        $this->expectException(LogicException::class);
-        $this->expectExceptionMessage(sprintf('The MCP tool "%s" declares #[AsMcpTool] and the MCP App template', ExampleSearchTool::class));
+        $this->expectExceptionObject(McpConfigurationException::createAppTemplateOnAsMcpTool(ExampleSearchTool::class, ExampleSearchTool::class . '::' . self::INVOKE_METHOD));
 
         new McpToolReferenceHandlerCompilerPass()
             ->process($container);
@@ -99,8 +98,7 @@ final class McpToolReferenceHandlerCompilerPassTest extends TestCase
         $this->getBuilder($container)
             ->addMethodCall(self::SET_REFERENCE_HANDLER_METHOD, [new Reference(self::APP_RENDERER_ID)]);
 
-        $this->expectException(LogicException::class);
-        $this->expectExceptionMessage(sprintf('The mcp server "%s" already has a reference handler', self::SERVER_NAME));
+        $this->expectExceptionObject(McpConfigurationException::createForeignReferenceHandler(self::SERVER_NAME));
 
         new McpToolReferenceHandlerCompilerPass()
             ->process($container);

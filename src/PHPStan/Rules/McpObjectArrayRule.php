@@ -14,6 +14,7 @@ use PHPStan\Node\InClassNode;
 use PHPStan\Reflection\ClassReflection;
 use PHPStan\Reflection\ParametersAcceptorSelector;
 use PHPStan\Reflection\ReflectionProvider;
+use PHPStan\Rules\IdentifierRuleError;
 use PHPStan\Rules\Rule;
 use PHPStan\Rules\RuleErrorBuilder;
 use PHPStan\Type\Type;
@@ -28,7 +29,7 @@ use PHPStan\Type\VerbosityLevel;
  */
 final readonly class McpObjectArrayRule implements Rule
 {
-    public const string MESSAGE = '%s is %s. Use Collection<int, %s> (Collection<string, …> for a keyed map) instead of an array of objects (anzu-php-style: objects go in a Collection, arrays hold only ids and scalars).';
+    public const string MESSAGE = '%s is %s. Use Collection<int, %s> (Collection<string, …> for a keyed map) instead of an array of objects (objects go in a Collection, arrays hold only ids and scalars, see src/Resources/doc/mcp.md of anzusystems/common-bundle).';
 
     private const string PROPERTY_SUBJECT_FORMAT = 'Property %s::$%s';
 
@@ -55,13 +56,20 @@ final readonly class McpObjectArrayRule implements Rule
 
     public function processNode(Node $node, Scope $scope): array
     {
-        $classReflection = $node->getClassReflection();
+        return $this->findErrors(classLike: $node->getOriginalNode(), classReflection: $node->getClassReflection());
+    }
+
+    /**
+     * @return list<IdentifierRuleError>
+     */
+    public function findErrors(ClassLike $classLike, ClassReflection $classReflection): array
+    {
         if (false === $this->classNamespaceMatcher->matches($classReflection->getName())) {
             return [];
         }
 
         $errors = [];
-        foreach ($this->getDeclaredTypes($node->getOriginalNode(), $classReflection) as [$subject, $type, $line]) {
+        foreach ($this->getDeclaredTypes($classLike, $classReflection) as [$subject, $type, $line]) {
             $objectClassName = $this->findArrayObjectClassName($type);
             if (null === $objectClassName) {
                 continue;

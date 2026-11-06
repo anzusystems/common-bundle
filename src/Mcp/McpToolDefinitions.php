@@ -56,7 +56,7 @@ final readonly class McpToolDefinitions
     {
         return $this->find($toolName)
             ->category
-                        ?? throw new LogicException(sprintf('The MCP tool "%s" has no category.', $toolName));
+            ?? throw new LogicException(sprintf('The MCP tool "%s" has no category.', $toolName));
     }
 
     public function getPreviewToolName(string $writeToolName): ?string

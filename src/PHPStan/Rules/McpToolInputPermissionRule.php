@@ -27,7 +27,7 @@ use PHPStan\Type\Constant\ConstantStringType;
  */
 final readonly class McpToolInputPermissionRule implements Rule
 {
-    public const string MESSAGE = 'MCP tool %s takes a request that implements %s, so __invoke() must call denyAccessUnlessGranted(%s, $%s) outside any branch.';
+    public const string MESSAGE = 'MCP tool %s takes a request that implements %s, so __invoke() must call denyAccessUnlessGranted(%s, $%s) before any other statement.';
 
     private const string CHECK_METHOD = 'denyAccessUnlessGranted';
 
@@ -81,7 +81,10 @@ final readonly class McpToolInputPermissionRule implements Rule
     private function checksRequest(ClassMethod $method, string $permission, string $parameterName, Scope $scope): bool
     {
         foreach ($method->getStmts() ?? [] as $statement) {
-            if ($statement instanceof Expression && $this->isCheck(expression: $statement->expr, permission: $permission, parameterName: $parameterName, scope: $scope)) {
+            if (false === $statement instanceof Expression || false === $this->isCheckCall($statement->expr)) {
+                return false;
+            }
+            if ($this->checksPermission(call: $statement->expr, permission: $permission, parameterName: $parameterName, scope: $scope)) {
                 return true;
             }
         }
@@ -89,12 +92,17 @@ final readonly class McpToolInputPermissionRule implements Rule
         return false;
     }
 
-    private function isCheck(Node $expression, string $permission, string $parameterName, Scope $scope): bool
+    /**
+     * @phpstan-assert-if-true MethodCall $expression
+     */
+    private function isCheckCall(Node $expression): bool
     {
-        if (false === $expression instanceof MethodCall || false === $expression->name instanceof Identifier || self::CHECK_METHOD !== $expression->name->toString()) {
-            return false;
-        }
-        [$attribute, $subject] = array_pad(array: $expression->getArgs(), length: 2, value: null);
+        return $expression instanceof MethodCall && $expression->name instanceof Identifier && self::CHECK_METHOD === $expression->name->toString();
+    }
+
+    private function checksPermission(MethodCall $call, string $permission, string $parameterName, Scope $scope): bool
+    {
+        [$attribute, $subject] = array_pad(array: $call->getArgs(), length: 2, value: null);
 
         if (null === $attribute || false === $subject?->value instanceof Variable || $parameterName !== $subject->value->name) {
             return false;

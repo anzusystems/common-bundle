@@ -72,6 +72,10 @@ abstract class AbstractMcpToolReferenceHandlerTestCase extends TestCase
     protected const string TOOL_PERMISSION = 'cms_test_read';
     protected const string BACKEND_ERROR_MESSAGE = 'Backend is temporarily unavailable, retry the call.';
     protected const string INPUT_ERROR_MESSAGE = 'Invalid input.';
+    protected const string MUST_NOT_RUN_MESSAGE = 'must not run';
+    protected const string HANDLED_EXCEPTION_MESSAGE = 'backend down';
+    protected const string UNHANDLED_EXCEPTION_MESSAGE = 'boom';
+    protected const string OPTIMISTIC_LOCK_MESSAGE = 'The row changed.';
     protected const string LEVEL = 'ERROR';
     protected const string TITLE_FIELD = 'title';
     protected const string LIMIT_VIOLATION = 'limit: This value should be between 1 and 50.';

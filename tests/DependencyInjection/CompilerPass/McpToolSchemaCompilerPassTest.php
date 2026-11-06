@@ -6,6 +6,7 @@ namespace AnzuSystems\CommonBundle\Tests\DependencyInjection\CompilerPass;
 
 use AnzuSystems\CommonBundle\DependencyInjection\CompilerPass\McpCompilerPass;
 use AnzuSystems\CommonBundle\DependencyInjection\CompilerPass\McpToolSchemaCompilerPass;
+use AnzuSystems\CommonBundle\Mcp\Exception\McpConfigurationException;
 use AnzuSystems\CommonBundle\Mcp\Factory\McpOutputDescriptionFactory;
 use AnzuSystems\CommonBundle\Mcp\Factory\McpSchemaFactory;
 use AnzuSystems\CommonBundle\Mcp\Model\Decorator\McpAuditLogDecorator;
@@ -19,7 +20,8 @@ use AnzuSystems\CommonBundle\Tests\Data\Mcp\Tool\InvalidReturnExampleTool;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Tool\PlainMcpToolExampleTool;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Tool\RateLimitedExampleTool;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Tool\SharedRateLimitedExampleTool;
-use LogicException;
+use Mcp\Schema\Result\CallToolResult;
+use Mcp\Server\RequestContext;
 use PHPUnit\Framework\TestCase;
 use ReflectionClass;
 use Symfony\Component\Config\Resource\FileResource;
@@ -153,30 +155,39 @@ final class McpToolSchemaCompilerPassTest extends TestCase
      *
      * @param class-string $toolClass
      */
-    public function testInvalidInvokeSignatureFailsAtCompileTime(string $toolClass, string $expectedMessage): void
+    public function testInvalidInvokeSignatureFailsAtCompileTime(string $toolClass, McpConfigurationException $expectedException): void
     {
         $container = $this->createContainer($toolClass);
 
-        $this->expectException(LogicException::class);
-        $this->expectExceptionMessage($expectedMessage);
+        $this->expectExceptionObject($expectedException);
 
         new McpToolSchemaCompilerPass()
             ->process($container);
     }
 
     /**
-     * @return array<string, array{class-string, string}>
+     * @return array<string, array{class-string, McpConfigurationException}>
      */
     public static function invalidSignatureProvider(): array
     {
         return [
             'parameter that is not the input class' => [
                 InvalidParameterExampleTool::class,
-                sprintf('The MCP tool "%s::__invoke()" takes its input class and then the optional', InvalidParameterExampleTool::class),
+                McpConfigurationException::createInvalidToolParameter(
+                    class: InvalidParameterExampleTool::class,
+                    method: self::INVOKE_METHOD,
+                    contextClass: RequestContext::class,
+                    parameter: 'siteId',
+                ),
             ],
             'array return type' => [
                 InvalidReturnExampleTool::class,
-                sprintf('The MCP tool "%s::__invoke()" returns a response class or', InvalidReturnExampleTool::class),
+                McpConfigurationException::createInvalidToolReturn(
+                    class: InvalidReturnExampleTool::class,
+                    method: self::INVOKE_METHOD,
+                    resultClass: CallToolResult::class,
+                    type: 'array',
+                ),
             ],
         ];
     }

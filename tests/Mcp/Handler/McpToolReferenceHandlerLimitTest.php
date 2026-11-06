@@ -32,7 +32,7 @@ final class McpToolReferenceHandlerLimitTest extends AbstractMcpToolReferenceHan
     public function testWriteCallInReadOnlyModeIsRejectedWithoutRunningTheTool(): void
     {
         $handler = $this->createHandlerWithoutInputTool(
-            toolHandler: static fn (): McpLogsByContextResponse => throw new RuntimeException('must not run'),
+            toolHandler: static fn (): McpLogsByContextResponse => throw new RuntimeException(self::MUST_NOT_RUN_MESSAGE),
             readOnlyTool: false,
         );
 
@@ -169,8 +169,8 @@ final class McpToolReferenceHandlerLimitTest extends AbstractMcpToolReferenceHan
     {
         return [
             'error result' => [static fn (): CallToolResult => McpToolReferenceHandler::createErrorResult(self::INPUT_ERROR_MESSAGE)],
-            'handled exception' => [static fn (): CallToolResult => throw new RuntimeException('backend down')],
-            'optimistic lock' => [static fn (): CallToolResult => throw new OptimisticLockException('The row changed.', null)],
+            'handled exception' => [static fn (): CallToolResult => throw new RuntimeException(self::HANDLED_EXCEPTION_MESSAGE)],
+            'optimistic lock' => [static fn (): CallToolResult => throw new OptimisticLockException(self::OPTIMISTIC_LOCK_MESSAGE, null)],
         ];
     }
 

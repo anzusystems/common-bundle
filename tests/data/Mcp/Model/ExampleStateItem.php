@@ -6,7 +6,7 @@ namespace AnzuSystems\CommonBundle\Tests\Data\Mcp\Model;
 
 use AnzuSystems\SerializerBundle\Attributes\Serialize;
 
-final class ExampleStateItem
+final readonly class ExampleStateItem
 {
     public function __construct(
         #[Serialize]

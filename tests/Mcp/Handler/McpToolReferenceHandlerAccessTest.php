@@ -49,7 +49,7 @@ final class McpToolReferenceHandlerAccessTest extends AbstractMcpToolReferenceHa
         string $expectedError,
     ): void {
         $handler = $this->createHandlerWithoutInputTool(
-            toolHandler: static fn (): McpLogsByContextResponse => throw new RuntimeException('must not run'),
+            toolHandler: static fn (): McpLogsByContextResponse => throw new RuntimeException(self::MUST_NOT_RUN_MESSAGE),
             toolGranted: $toolGranted,
             readOnlyTool: false,
             writeGranted: $writeGranted,
@@ -134,7 +134,7 @@ final class McpToolReferenceHandlerAccessTest extends AbstractMcpToolReferenceHa
         string $expectedError,
     ): void {
         $handler = $this->createHandler(
-            tool: new ExampleSearchTool(static fn (): McpLogsByContextResponse => throw new RuntimeException('must not run')),
+            tool: new ExampleSearchTool(static fn (): McpLogsByContextResponse => throw new RuntimeException(self::MUST_NOT_RUN_MESSAGE)),
             readOnlyTool: false,
             writeGranted: $writeGranted,
         );

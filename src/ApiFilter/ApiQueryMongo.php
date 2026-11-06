@@ -113,11 +113,9 @@ final class ApiQueryMongo
     {
         $fieldAttributes = $this->getPropertyByField($field)
             ->getAttributes(PersistedName::class);
-        if (array_key_exists(0, $fieldAttributes)) {
-            return $fieldAttributes[0]->newInstance()->name;
-        }
 
-        return $field;
+        return array_first($fieldAttributes)?->newInstance()
+            ->name ?? $field;
     }
 
     private function getFilterValue(string $filterVariant, string $field, mixed $value): mixed

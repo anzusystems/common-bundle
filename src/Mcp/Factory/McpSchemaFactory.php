@@ -98,7 +98,7 @@ final class McpSchemaFactory
         $properties = [];
         $required = [];
         $reflection = new ReflectionClass($class);
-        foreach ([...$this->collectProperties($reflection), ...$reflection->getMethods()] as $member) {
+        foreach ([...$this->collectProperties($reflection), ...$reflection->getMethods(ReflectionMethod::IS_PUBLIC)] as $member) {
             $serialize = $this->resolveAttribute($member, Serialize::class);
             if (null === $serialize) {
                 continue;
@@ -531,11 +531,6 @@ final class McpSchemaFactory
      */
     private function resolveAttribute(ReflectionProperty|ReflectionMethod|ReflectionEnumBackedCase $member, string $class): ?object
     {
-        $attributes = $member->getAttributes($class);
-        if (empty($attributes)) {
-            return null;
-        }
-
-        return $attributes[0]->newInstance();
+        return array_first($member->getAttributes($class))?->newInstance();
     }
 }

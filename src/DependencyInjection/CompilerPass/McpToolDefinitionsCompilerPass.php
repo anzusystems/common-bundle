@@ -32,13 +32,13 @@ use Symfony\Component\DependencyInjection\Reference;
 final class McpToolDefinitionsCompilerPass implements CompilerPassInterface
 {
     public const string TOOL_TAG = 'mcp.tool';
+    public const string CATEGORY_PATTERN = '/^[a-z][a-zA-Z0-9]*$/';
 
     private const string TOOL_TAG_METHOD = 'method';
     private const string TOOL_METHOD_FORMAT = '%s::%s';
     private const string TOOL_METHOD_SEPARATOR = '::';
     private const string DEFINITIONS_ARGUMENT = '$definitions';
     private const string RATE_LIMITER_ID_FORMAT = 'limiter.%s';
-    private const string CATEGORY_PATTERN = '/^[a-z][a-zA-Z0-9]*$/';
 
     public function process(ContainerBuilder $container): void
     {

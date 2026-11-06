@@ -17,6 +17,7 @@ final class McpPreviewHashFactoryTest extends TestCase
     private const string TOOL = 'example_write';
     private const string OTHER_TOOL = 'other_write';
     private const string TITLE = 'Title';
+    private const string OTHER_TITLE = 'Other';
     private const string SECRET = 'secret';
     private const string FIRST_DATE = '2026-01-01T00:00:00+00:00';
     private const string SECOND_DATE = '2026-01-02T00:00:00+00:00';
@@ -41,7 +42,7 @@ final class McpPreviewHashFactoryTest extends TestCase
         $hash = $factory->create(writeToolName: self::TOOL, input: $input, currentState: null);
 
         self::assertNotSame($hash, $factory->create(writeToolName: self::OTHER_TOOL, input: $input, currentState: null));
-        self::assertNotSame($hash, $factory->create(writeToolName: self::TOOL, input: $this->createPreviewInput('Other'), currentState: null));
+        self::assertNotSame($hash, $factory->create(writeToolName: self::TOOL, input: $this->createPreviewInput(self::OTHER_TITLE), currentState: null));
         self::assertNotSame($hash, $factory->create(writeToolName: self::TOOL, input: $input, currentState: $this->createPreviewInput(self::TITLE)));
         self::assertNotSame($hash, new McpPreviewHashFactory(McpSerializerFactory::create(), 'other')->create(writeToolName: self::TOOL, input: $input, currentState: null));
         self::assertMatchesRegularExpression(McpPreviewHashFactory::PREVIEW_HASH_PATTERN, $hash);
@@ -57,7 +58,7 @@ final class McpPreviewHashFactoryTest extends TestCase
         );
         self::assertNotSame(
             $factory->createStateHash(new ExampleState(id: 1, modifiedAt: self::FIRST_DATE, item: new ExampleStateItem(1, self::TITLE))),
-            $factory->createStateHash(new ExampleState(id: 1, modifiedAt: self::FIRST_DATE, item: new ExampleStateItem(1, 'Other'))),
+            $factory->createStateHash(new ExampleState(id: 1, modifiedAt: self::FIRST_DATE, item: new ExampleStateItem(1, self::OTHER_TITLE))),
         );
     }
 

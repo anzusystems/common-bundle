@@ -59,4 +59,23 @@ final class ConstraintExampleRequest
     #[Assert\Choice(choices: ['first', 'second'])]
     #[Serialize]
     public ?string $nullableChoice = null;
+
+    #[Assert\NotBlank]
+    #[Serialize]
+    public string $notBlank = '';
+
+    #[Assert\NotBlank(allowNull: true)]
+    #[Serialize]
+    public ?string $notBlankAllowingNull = null;
+
+    #[Assert\NotNull]
+    #[Serialize]
+    public ?string $notNull = null;
+
+    /**
+     * @var list<string>
+     */
+    #[Assert\Count(min: 1)]
+    #[Serialize]
+    public array $countMin = [];
 }

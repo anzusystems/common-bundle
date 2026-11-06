@@ -66,13 +66,6 @@ final class McpToolAccessCheckerTest extends TestCase
         ];
     }
 
-    public function testPermittedWriteToolNamesListOnlyWriteToolsWithGrantedToolPermission(): void
-    {
-        $checker = $this->createChecker([self::SECOND_GRANTED_TOOL], []);
-
-        self::assertSame([self::GRANTED_TOOL], $checker->getPermittedWriteToolNames());
-    }
-
     /**
      * @dataProvider toolScopeProvider
      *
@@ -86,10 +79,10 @@ final class McpToolAccessCheckerTest extends TestCase
             toolScopeProvider: $toolScopeProvider,
         );
 
-        $grantedTools = array_values(array_filter(
+        $grantedTools = array_filter(
             [self::GRANTED_TOOL, self::SECOND_GRANTED_TOOL, self::DENIED_TOOL, self::UNMAPPED_TOOL],
             $checker->isToolGranted(...),
-        ));
+        ) |> array_values(...);
 
         self::assertSame($expectedGrantedTools, $grantedTools);
     }
@@ -172,7 +165,6 @@ final class McpToolAccessCheckerTest extends TestCase
         );
 
         self::assertSame([self::GRANTED_TOOL, self::SECOND_GRANTED_TOOL], $checker->getPermittedToolNames());
-        self::assertSame([self::GRANTED_TOOL, self::SECOND_GRANTED_TOOL], $checker->getPermittedWriteToolNames());
     }
 
     /**
@@ -234,7 +226,6 @@ final class McpToolAccessCheckerTest extends TestCase
 
         self::assertTrue($checker->isToolGranted(self::PREVIEW_TOOL));
         self::assertNotContains(self::PREVIEW_TOOL, $checker->getPermittedToolNames());
-        self::assertNotContains(self::PREVIEW_TOOL, $checker->getPermittedWriteToolNames());
     }
 
     /**

@@ -8,6 +8,7 @@ use AnzuSystems\CommonBundle\Mcp\Handler\McpToolReferenceHandler;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Tool\ExampleSearchTool;
 use AnzuSystems\CommonBundle\Tests\Data\Model\Enum\DummyEnum;
 use AnzuSystems\CommonBundle\Tests\Mcp\McpTestClient;
+use Mcp\Schema\JsonRpc\MessageInterface;
 use PHPUnit\Framework\TestCase;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 use Symfony\Component\HttpFoundation\Response;
@@ -20,6 +21,9 @@ final class McpTestClientTest extends TestCase
     private const string TOKEN = 'plain_token';
     private const string SESSION_ID = 'session-1';
     private const string ERROR_MESSAGE = 'The tool failed.';
+    private const string STRUCTURED_CONTENT_KEY = 'structuredContent';
+    private const string IS_ERROR_KEY = 'isError';
+    private const string SERVER_SESSION = 'HTTP_MCP_SESSION_ID';
 
     /**
      * @var list<array{server: array<string, string>, body: array<string, mixed>}>
@@ -30,16 +34,16 @@ final class McpTestClientTest extends TestCase
     {
         $client = $this->createClient([
             $this->createInitializeResponse(),
-            $this->createResultResponse(['structuredContent' => []]),
-            $this->createResultResponse(['structuredContent' => []]),
+            $this->createResultResponse([self::STRUCTURED_CONTENT_KEY => []]),
+            $this->createResultResponse([self::STRUCTURED_CONTENT_KEY => []]),
         ]);
 
         $client->callTool(ExampleSearchTool::class);
         $client->callTool(ExampleSearchTool::class);
 
         self::assertSame(['initialize', 'tools/call', 'tools/call'], array_map(static fn (array $request): string => $request['body']['method'], $this->requests));
-        self::assertArrayNotHasKey('HTTP_MCP_SESSION_ID', $this->requests[0]['server']);
-        self::assertSame(self::SESSION_ID, $this->requests[2]['server']['HTTP_MCP_SESSION_ID']);
+        self::assertArrayNotHasKey(self::SERVER_SESSION, $this->requests[0]['server']);
+        self::assertSame(self::SESSION_ID, $this->requests[2]['server'][self::SERVER_SESSION]);
         foreach ($this->requests as $request) {
             self::assertSame('Bearer ' . self::TOKEN, $request['server']['HTTP_AUTHORIZATION']);
             self::assertSame(self::HOST, $request['server']['HTTP_HOST']);
@@ -48,7 +52,7 @@ final class McpTestClientTest extends TestCase
 
     public function testToolNameAndEnumValuesAreSentLikeAClientSendsThem(): void
     {
-        $client = $this->createClient([$this->createInitializeResponse(), $this->createResultResponse(['structuredContent' => []])]);
+        $client = $this->createClient([$this->createInitializeResponse(), $this->createResultResponse([self::STRUCTURED_CONTENT_KEY => []])]);
 
         $client->callTool(ExampleSearchTool::class, ['level' => DummyEnum::Default]);
 
@@ -58,7 +62,7 @@ final class McpTestClientTest extends TestCase
 
     public function testToolResultIsReturnedWithItsData(): void
     {
-        $client = $this->createClient([$this->createInitializeResponse(), $this->createResultResponse(['structuredContent' => ['id' => 5]])]);
+        $client = $this->createClient([$this->createInitializeResponse(), $this->createResultResponse([self::STRUCTURED_CONTENT_KEY => ['id' => 5]])]);
 
         $result = $client->callTool(ExampleSearchTool::class);
 
@@ -71,7 +75,7 @@ final class McpTestClientTest extends TestCase
     {
         $client = $this->createClient([
             $this->createInitializeResponse(),
-            $this->createResultResponse(['isError' => true, 'structuredContent' => [McpToolReferenceHandler::ERROR_KEY => self::ERROR_MESSAGE]]),
+            $this->createResultResponse([self::IS_ERROR_KEY => true, self::STRUCTURED_CONTENT_KEY => [McpToolReferenceHandler::ERROR_KEY => self::ERROR_MESSAGE]]),
         ]);
 
         $result = $client->callTool(ExampleSearchTool::class);
@@ -84,7 +88,7 @@ final class McpTestClientTest extends TestCase
     {
         $client = $this->createClient([
             $this->createInitializeResponse(),
-            new Response(json_encode(['jsonrpc' => '2.0', 'id' => 2, 'error' => ['code' => -32_602, 'message' => self::ERROR_MESSAGE]], JSON_THROW_ON_ERROR)),
+            new Response(json_encode(['jsonrpc' => MessageInterface::JSONRPC_VERSION, 'id' => 2, 'error' => ['code' => -32_602, 'message' => self::ERROR_MESSAGE]], JSON_THROW_ON_ERROR)),
         ]);
 
         $result = $client->callTool(ExampleSearchTool::class);
@@ -108,7 +112,7 @@ final class McpTestClientTest extends TestCase
     {
         $client = $this->createClient([
             $this->createInitializeResponse(),
-            $this->createResultResponse(['isError' => true, 'structuredContent' => [McpToolReferenceHandler::ERROR_KEY => self::ERROR_MESSAGE]]),
+            $this->createResultResponse([self::IS_ERROR_KEY => true, self::STRUCTURED_CONTENT_KEY => [McpToolReferenceHandler::ERROR_KEY => self::ERROR_MESSAGE]]),
         ]);
 
         $this->expectException(UnexpectedValueException::class);
@@ -148,6 +152,6 @@ final class McpTestClientTest extends TestCase
      */
     private function createResultResponse(array $result): Response
     {
-        return new Response(json_encode(['jsonrpc' => '2.0', 'id' => 2, 'result' => $result], JSON_THROW_ON_ERROR));
+        return new Response(json_encode(['jsonrpc' => MessageInterface::JSONRPC_VERSION, 'id' => 2, 'result' => $result], JSON_THROW_ON_ERROR));
     }
 }

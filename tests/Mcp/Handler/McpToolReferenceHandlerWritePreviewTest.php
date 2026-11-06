@@ -162,7 +162,7 @@ final class McpToolReferenceHandlerWritePreviewTest extends AbstractMcpToolRefer
             ],
             'access denied' => [new AccessDeniedException(), [], McpToolErrorResolver::ACCESS_DENIED_MESSAGE],
             'configured tool error exception' => [
-                new RuntimeException('backend down'),
+                new RuntimeException(self::HANDLED_EXCEPTION_MESSAGE),
                 [RuntimeException::class => self::BACKEND_ERROR_MESSAGE],
                 self::BACKEND_ERROR_MESSAGE,
             ],
@@ -171,13 +171,13 @@ final class McpToolReferenceHandlerWritePreviewTest extends AbstractMcpToolRefer
 
     public function testUnhandledPreviewExceptionIsRethrown(): void
     {
-        $handler = $this->createWriteHandler(previewException: new RuntimeException('boom'));
+        $handler = $this->createWriteHandler(previewException: new RuntimeException(self::UNHANDLED_EXCEPTION_MESSAGE));
 
         try {
             $this->callWriteTool($handler, $this->createModernArguments());
             self::fail('Expected ' . RuntimeException::class);
         } catch (RuntimeException $exception) {
-            self::assertSame('boom', $exception->getMessage());
+            self::assertSame(self::UNHANDLED_EXCEPTION_MESSAGE, $exception->getMessage());
         }
 
         self::assertSame(0, $this->writeRuns);
@@ -233,7 +233,7 @@ final class McpToolReferenceHandlerWritePreviewTest extends AbstractMcpToolRefer
     {
         $handler = $this->createHandler(
             tool: new ExampleWriteTool(static function (): McpLogsByContextResponse {
-                throw new OptimisticLockException('The row changed.', null);
+                throw new OptimisticLockException(self::OPTIMISTIC_LOCK_MESSAGE, null);
             }),
             readOnlyTool: false,
             previewTool: new ExampleWritePreviewTool(
