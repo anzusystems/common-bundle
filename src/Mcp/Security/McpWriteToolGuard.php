@@ -28,6 +28,7 @@ final readonly class McpWriteToolGuard
         private RequestStack $requestStack,
         private McpWriteConfirmation $writeConfirmation,
         private McpWriteRateLimiter $writeRateLimiter,
+        private McpPreviewHashReservation $previewHashReservation,
     ) {
     }
 
@@ -79,8 +80,16 @@ final readonly class McpWriteToolGuard
             return $this->writeConfirmation->createInputRequiredResult(input: $input, preview: $preview);
         }
         $this->writeRateLimiter->consume($toolName);
+        if (null === $preview->currentState) {
+            $this->previewHashReservation->reserve($toolName, $input);
+        }
 
         return null;
+    }
+
+    public function releasePreviewHash(McpPreviewHashAwareInterface $input): void
+    {
+        $this->previewHashReservation->release($input);
     }
 
     public function markWritten(): void

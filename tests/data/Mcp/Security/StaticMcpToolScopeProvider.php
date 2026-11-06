@@ -10,11 +10,11 @@ use AnzuSystems\CommonBundle\Mcp\Security\McpToolScopeProviderInterface;
 final readonly class StaticMcpToolScopeProvider implements McpToolScopeProviderInterface
 {
     public function __construct(
-        private ?McpToolScope $toolScope,
+        private McpToolScope $toolScope,
     ) {
     }
 
-    public function provideToolScope(): ?McpToolScope
+    public function provideToolScope(): McpToolScope
     {
         return $this->toolScope;
     }

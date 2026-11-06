@@ -5,8 +5,6 @@ declare(strict_types=1);
 namespace AnzuSystems\CommonBundle\Mcp\Security;
 
 use AnzuSystems\CommonBundle\Mcp\McpToolDefinitions;
-use AnzuSystems\CommonBundle\Mcp\Model\McpToolDefinition;
-use LogicException;
 use Symfony\Bundle\SecurityBundle\Security;
 
 final readonly class McpToolAccessChecker
@@ -49,8 +47,8 @@ final readonly class McpToolAccessChecker
 
         return in_array(
             needle: $toolName,
-            haystack: $this->toolScopeProvider?->provideToolScope()
-                ->writeToolNames ?? [],
+            haystack: $this->resolveToolScope()
+                ->writeToolNames,
             strict: true,
         );
     }
@@ -58,28 +56,9 @@ final readonly class McpToolAccessChecker
     /**
      * @return list<string>
      */
-    public function getToolNames(): array
-    {
-        return array_filter(
-            $this->toolDefinitions->all(),
-            static fn (McpToolDefinition $definition): bool => is_string($definition->permission),
-        ) |> array_keys(...);
-    }
-
-    /**
-     * @return list<string>
-     */
-    public function getWriteToolNames(): array
-    {
-        return array_filter($this->getToolNames(), $this->isWriteTool(...)) |> array_values(...);
-    }
-
-    /**
-     * @return list<string>
-     */
     public function getPermittedToolNames(): array
     {
-        return array_filter($this->getToolNames(), $this->isPermissionGranted(...)) |> array_values(...);
+        return array_filter($this->toolDefinitions->getToolNames(), $this->isPermissionGranted(...)) |> array_values(...);
     }
 
     /**
@@ -87,19 +66,7 @@ final readonly class McpToolAccessChecker
      */
     public function getPermittedWriteToolNames(): array
     {
-        return array_filter($this->getWriteToolNames(), $this->isPermissionGranted(...)) |> array_values(...);
-    }
-
-    public function getToolCategory(string $toolName): string
-    {
-        return $this->toolDefinitions->find($toolName)
-            ->category
-                        ?? throw new LogicException(sprintf('The MCP tool "%s" has no category.', $toolName));
-    }
-
-    public function getPreviewToolName(string $writeToolName): ?string
-    {
-        return $this->toolDefinitions->find($writeToolName)?->previewTool;
+        return array_filter($this->toolDefinitions->getWriteToolNames(), $this->isPermissionGranted(...)) |> array_values(...);
     }
 
     public function isWriteTool(string $toolName): bool
@@ -107,12 +74,18 @@ final readonly class McpToolAccessChecker
         return true !== $this->toolDefinitions->find($toolName)?->readOnly;
     }
 
+    private function resolveToolScope(): McpToolScope
+    {
+        return $this->toolScopeProvider?->provideToolScope() ?? new McpToolScope();
+    }
+
     private function isInReadScope(string $toolName): bool
     {
         if ($this->isWriteTool($toolName)) {
             return true;
         }
-        $readToolNames = $this->toolScopeProvider?->provideToolScope()?->readToolNames;
+        $readToolNames = $this->resolveToolScope()
+            ->readToolNames;
         if (null === $readToolNames) {
             return true;
         }

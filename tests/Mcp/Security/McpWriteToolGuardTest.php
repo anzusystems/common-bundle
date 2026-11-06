@@ -8,6 +8,7 @@ use AnzuSystems\CommonBundle\Domain\User\CurrentAnzuUserProvider;
 use AnzuSystems\CommonBundle\Mcp\Exception\McpToolCallRejectedException;
 use AnzuSystems\CommonBundle\Mcp\Exception\McpWriteRejectedException;
 use AnzuSystems\CommonBundle\Mcp\McpWriteRateLimiter;
+use AnzuSystems\CommonBundle\Mcp\Security\McpPreviewHashReservation;
 use AnzuSystems\CommonBundle\Mcp\Security\McpToolAccessChecker;
 use AnzuSystems\CommonBundle\Mcp\Security\McpToolScope;
 use AnzuSystems\CommonBundle\Mcp\Security\McpWriteConfirmation;
@@ -17,6 +18,7 @@ use AnzuSystems\CommonBundle\Tests\Data\Mcp\Security\StaticMcpToolScopeProvider;
 use AnzuSystems\Contracts\AnzuApp;
 use PHPUnit\Framework\TestCase;
 use Symfony\Bundle\SecurityBundle\Security;
+use Symfony\Component\Cache\Adapter\ArrayAdapter;
 use Symfony\Component\DependencyInjection\ServiceLocator;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\RequestStack;
@@ -131,6 +133,7 @@ final class McpWriteToolGuardTest extends TestCase
                 toolDefinitions: McpToolDefinitionsFactory::create(),
                 currentUserProvider: $this->createStub(CurrentAnzuUserProvider::class),
             ),
+            previewHashReservation: new McpPreviewHashReservation(new ArrayAdapter(), $this->createStub(CurrentAnzuUserProvider::class)),
         );
     }
 

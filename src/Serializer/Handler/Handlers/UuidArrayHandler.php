@@ -9,6 +9,7 @@ use AnzuSystems\SerializerBundle\Context\SerializationContext;
 use AnzuSystems\SerializerBundle\Exception\SerializerException;
 use AnzuSystems\SerializerBundle\Handler\Handlers\AbstractHandler;
 use AnzuSystems\SerializerBundle\Metadata\Metadata;
+use InvalidArgumentException;
 use Symfony\Component\TypeInfo\TypeIdentifier;
 use Symfony\Component\Uid\Uuid;
 
@@ -48,10 +49,15 @@ final class UuidArrayHandler extends AbstractHandler
 
         $uuids = [];
         foreach ($value as $item) {
-            if (false === is_string($item) || false === Uuid::isValid($item)) {
+            if (false === is_string($item)) {
                 throw new SerializerException(ValidationException::ERROR_FIELD_INVALID);
             }
-            $uuids[] = Uuid::fromString($item);
+
+            try {
+                $uuids[] = Uuid::fromString($item);
+            } catch (InvalidArgumentException) {
+                throw new SerializerException(ValidationException::ERROR_FIELD_INVALID);
+            }
         }
 
         return $uuids;

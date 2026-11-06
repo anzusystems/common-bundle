@@ -10,6 +10,7 @@ use AnzuSystems\CommonBundle\Mcp\Handler\McpToolReferenceHandler;
 use AnzuSystems\CommonBundle\Mcp\McpRateLimiter;
 use AnzuSystems\CommonBundle\Mcp\Security\McpDeleteDependencyProviderInterface;
 use AnzuSystems\CommonBundle\Mcp\Security\McpDeleteGuard;
+use AnzuSystems\CommonBundle\Mcp\Security\McpPreviewHashReservation;
 use AnzuSystems\CommonBundle\Mcp\Security\McpWriteConfirmation;
 use LogicException;
 use PHPUnit\Framework\TestCase;
@@ -98,6 +99,16 @@ final class AnzuSystemsCommonExtensionTest extends TestCase
             'default is the locale of the translator' => [[], null],
             'configured locale' => [['confirmation_fallback_locale' => self::FALLBACK_LOCALE], self::FALLBACK_LOCALE],
         ];
+    }
+
+    public function testPreviewHashReservationUsesTheCachePoolOfTheRateLimiter(): void
+    {
+        $container = $this->buildContainer(rateLimiter: ['cache_pool' => 'example.cache']);
+
+        self::assertEquals(
+            new Reference('example.cache'),
+            $container->getDefinition(McpPreviewHashReservation::class)->getArgument('$cachePool'),
+        );
     }
 
     public function testMcpWithoutTheLogToolsPermissionFailsAtCompileTime(): void

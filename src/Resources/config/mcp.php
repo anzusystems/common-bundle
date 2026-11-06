@@ -29,6 +29,7 @@ use AnzuSystems\CommonBundle\Mcp\Resolver\McpPageWindowResolver;
 use AnzuSystems\CommonBundle\Mcp\Resolver\McpToolErrorResolver;
 use AnzuSystems\CommonBundle\Mcp\Security\McpDeleteGuard;
 use AnzuSystems\CommonBundle\Mcp\Security\McpInputEnricherInterface;
+use AnzuSystems\CommonBundle\Mcp\Security\McpPreviewHashReservation;
 use AnzuSystems\CommonBundle\Mcp\Security\McpToolAccessChecker;
 use AnzuSystems\CommonBundle\Mcp\Security\McpToolScopeProviderInterface;
 use AnzuSystems\CommonBundle\Mcp\Security\McpWriteConfirmation;
@@ -102,6 +103,12 @@ return static function (ContainerConfigurator $configurator): void {
         ->arg('$requestStack', service('request_stack'))
         ->arg('$writeConfirmation', service(McpWriteConfirmation::class))
         ->arg('$writeRateLimiter', service(McpWriteRateLimiter::class))
+        ->arg('$previewHashReservation', service(McpPreviewHashReservation::class))
+    ;
+
+    $services->set(McpPreviewHashReservation::class)
+        ->arg('$cachePool', null)
+        ->arg('$currentUserProvider', service(CurrentAnzuUserProvider::class))
     ;
 
     $services->set(McpDeleteGuard::class)
@@ -153,7 +160,7 @@ return static function (ContainerConfigurator $configurator): void {
         ->arg('$streamFactory', service('mcp.psr17_factory'))
         ->arg('$rateLimiter', service(McpRateLimiter::class))
         ->arg('$logger', service('logger'))
-        ->arg('$allowedHosts', null)
+        ->arg('$hostResolver', service(McpHostResolver::class))
         ->tag('controller.service_arguments')
         ->tag('monolog.logger', ['channel' => 'mcp'])
         ->public()

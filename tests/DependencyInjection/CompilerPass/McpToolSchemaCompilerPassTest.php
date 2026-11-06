@@ -8,6 +8,7 @@ use AnzuSystems\CommonBundle\DependencyInjection\CompilerPass\McpCompilerPass;
 use AnzuSystems\CommonBundle\DependencyInjection\CompilerPass\McpToolSchemaCompilerPass;
 use AnzuSystems\CommonBundle\Mcp\Factory\McpOutputDescriptionFactory;
 use AnzuSystems\CommonBundle\Mcp\Factory\McpSchemaFactory;
+use AnzuSystems\CommonBundle\Mcp\Model\Decorator\McpAuditLogDecorator;
 use AnzuSystems\CommonBundle\Mcp\Model\Request\SearchAppLogsRequest;
 use AnzuSystems\CommonBundle\Mcp\Model\Response\McpLogsByContextResponse;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Tool\ExampleContextTool;
@@ -15,10 +16,13 @@ use AnzuSystems\CommonBundle\Tests\Data\Mcp\Tool\ExampleSearchTool;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Tool\ExampleWithoutInputTool;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Tool\InvalidParameterExampleTool;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Tool\InvalidReturnExampleTool;
+use AnzuSystems\CommonBundle\Tests\Data\Mcp\Tool\PlainMcpToolExampleTool;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Tool\RateLimitedExampleTool;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Tool\SharedRateLimitedExampleTool;
 use LogicException;
 use PHPUnit\Framework\TestCase;
+use ReflectionClass;
+use Symfony\Component\Config\Resource\FileResource;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\DependencyInjection\Definition;
 
@@ -114,6 +118,34 @@ final class McpToolSchemaCompilerPassTest extends TestCase
             sprintf('Writes through %s, %s share one limit per user.', RateLimitedExampleTool::NAME, SharedRateLimitedExampleTool::NAME),
             $this->getAddToolArguments($container)[self::DESCRIPTION_ARGUMENT],
         );
+    }
+
+    public function testToolWithoutAsMcpToolKeepsItsDescriptionAndSchema(): void
+    {
+        $container = $this->createContainer(PlainMcpToolExampleTool::class);
+
+        new McpToolSchemaCompilerPass()
+            ->process($container);
+
+        $arguments = $this->getAddToolArguments($container);
+        self::assertSame(self::DESCRIPTION, $arguments[self::DESCRIPTION_ARGUMENT]);
+        self::assertSame(self::PARAMETER_SCHEMA, $arguments[self::INPUT_SCHEMA_ARGUMENT]);
+    }
+
+    public function testDescribedClassesAreResourcesOfTheContainer(): void
+    {
+        $container = $this->createContainer(ExampleSearchTool::class);
+
+        new McpToolSchemaCompilerPass()
+            ->process($container);
+
+        foreach ([SearchAppLogsRequest::class, McpLogsByContextResponse::class, McpAuditLogDecorator::class] as $class) {
+            self::assertContainsEquals(
+                new FileResource((string) new ReflectionClass($class)->getFileName()),
+                $container->getResources(),
+                $class,
+            );
+        }
     }
 
     /**

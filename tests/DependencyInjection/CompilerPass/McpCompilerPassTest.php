@@ -7,10 +7,12 @@ namespace AnzuSystems\CommonBundle\Tests\DependencyInjection\CompilerPass;
 use AnzuSystems\CommonBundle\DependencyInjection\CompilerPass\McpCompilerPass;
 use AnzuSystems\CommonBundle\Mcp\Attribute\AsMcpTool;
 use AnzuSystems\CommonBundle\Mcp\Controller\McpController;
+use AnzuSystems\CommonBundle\Mcp\Exception\McpConfigurationException;
 use LogicException;
 use Mcp\Schema\ServerCapabilities;
 use PHPUnit\Framework\TestCase;
 use stdClass;
+use Symfony\Component\Config\Resource\FileResource;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\DependencyInjection\Definition;
 
@@ -21,6 +23,9 @@ final class McpCompilerPassTest extends TestCase
     private const string BUILDER_ID = 'mcp.server.core_cms.builder';
     private const string TAGGED_SERVICE_ID = 'tagged_service';
     private const string TOOL_PERMISSION = 'cms_example_read';
+    private const string SET_INSTRUCTIONS_METHOD = 'setInstructions';
+    private const string INSTRUCTIONS_FILE = __DIR__ . '/../../data/Mcp/instructions.md';
+    private const string OWN_INSTRUCTIONS = 'The instructions of the bundle config.';
 
     public function testDoesNothingWhenMcpIsDisabled(): void
     {
@@ -111,6 +116,49 @@ final class McpCompilerPassTest extends TestCase
 
         self::assertFalse($container->hasDefinition(self::BUILDER_ID));
         self::assertTrue($container->hasAlias(self::CONTROLLER_ID));
+    }
+
+    public function testInstructionsFileReplacesTheInstructionsOfTheBuilderAndBecomesAResource(): void
+    {
+        $container = $this->createMcpContainer();
+        $container->setParameter(McpCompilerPass::INSTRUCTIONS_FILE_PARAM, self::INSTRUCTIONS_FILE);
+        $container->register(self::BUILDER_ID)
+            ->addMethodCall(self::SET_INSTRUCTIONS_METHOD, [self::OWN_INSTRUCTIONS]);
+
+        new McpCompilerPass()
+            ->process($container);
+
+        $instructions = array_filter(
+            $container->getDefinition(self::BUILDER_ID)->getMethodCalls(),
+            static fn (array $methodCall): bool => self::SET_INSTRUCTIONS_METHOD === $methodCall[0],
+        );
+        self::assertCount(1, $instructions);
+        self::assertSame([file_get_contents(self::INSTRUCTIONS_FILE)], array_first($instructions)[1]);
+        self::assertContainsEquals(new FileResource(self::INSTRUCTIONS_FILE), $container->getResources());
+    }
+
+    public function testNoInstructionsFileLeavesTheInstructionsOfTheBuilder(): void
+    {
+        $container = $this->createMcpContainer();
+        $container->setParameter(McpCompilerPass::INSTRUCTIONS_FILE_PARAM, null);
+        $container->register(self::BUILDER_ID)
+            ->addMethodCall(self::SET_INSTRUCTIONS_METHOD, [self::OWN_INSTRUCTIONS]);
+
+        new McpCompilerPass()
+            ->process($container);
+
+        self::assertSame([self::OWN_INSTRUCTIONS], $container->getDefinition(self::BUILDER_ID)->getMethodCalls()[0][1]);
+    }
+
+    public function testInstructionsFileWithoutABuilderFailsAtCompileTime(): void
+    {
+        $container = $this->createMcpContainer();
+        $container->setParameter(McpCompilerPass::INSTRUCTIONS_FILE_PARAM, self::INSTRUCTIONS_FILE);
+
+        $this->expectExceptionObject(McpConfigurationException::createServerNotConfigured(self::SERVER_NAME, McpCompilerPass::SERVER_NAME_PARAM));
+
+        new McpCompilerPass()
+            ->process($container);
     }
 
     public function testServerNameThatIsNotAStringFailsAtCompileTime(): void

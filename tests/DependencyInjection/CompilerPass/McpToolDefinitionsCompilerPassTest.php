@@ -47,14 +47,14 @@ final class McpToolDefinitionsCompilerPassTest extends TestCase
 {
     private const string SERVER_NAME = 'core_cms';
     private const string DEFINITIONS_ARGUMENT = '$definitions';
-    private const int PERMISSION_INDEX = 0;
-    private const int INPUT_PERMISSION_INDEX = 1;
-    private const int READ_ONLY_INDEX = 2;
-    private const int CATEGORY_INDEX = 3;
-    private const int PREVIEW_OF_INDEX = 4;
-    private const int PREVIEW_TOOL_INDEX = 5;
-    private const int RATE_LIMITER_INDEX = 6;
-    private const int SIGNATURE_INDEX = 7;
+    private const string PERMISSION_ARGUMENT = '$permission';
+    private const string INPUT_PERMISSION_ARGUMENT = '$inputPermission';
+    private const string READ_ONLY_ARGUMENT = '$readOnly';
+    private const string CATEGORY_ARGUMENT = '$category';
+    private const string PREVIEW_OF_ARGUMENT = '$previewOf';
+    private const string PREVIEW_TOOL_ARGUMENT = '$previewTool';
+    private const string RATE_LIMITER_ARGUMENT = '$rateLimiter';
+    private const string SIGNATURE_ARGUMENT = '$signature';
     private const string TOOL_PERMISSION = 'cms_example_read';
     private const string RATE_LIMITER_ID = 'limiter.example_write';
     private const string TOOL_TAG_METHOD = 'method';
@@ -75,7 +75,7 @@ final class McpToolDefinitionsCompilerPassTest extends TestCase
 
         self::assertSame(
             [SearchAppLogsTool::NAME, self::READ_TOOL_METHOD],
-            array_keys(array_filter($this->getDefinitionField($container, self::READ_ONLY_INDEX))),
+            array_keys(array_filter($this->getDefinitionField($container, self::READ_ONLY_ARGUMENT))),
         );
     }
 
@@ -97,7 +97,7 @@ final class McpToolDefinitionsCompilerPassTest extends TestCase
                 ExampleWriteTool::NAME => ExampleToolCategory::EXAMPLES,
                 ExampleWritePreviewTool::NAME => ExampleToolCategory::EXAMPLES,
             ],
-            $this->getDefinitionField($container, self::CATEGORY_INDEX),
+            $this->getDefinitionField($container, self::CATEGORY_ARGUMENT),
         );
         self::assertSame(
             [
@@ -105,7 +105,7 @@ final class McpToolDefinitionsCompilerPassTest extends TestCase
                 ExampleWriteTool::NAME => null,
                 ExampleWritePreviewTool::NAME => ExampleWriteTool::NAME,
             ],
-            $this->getDefinitionField($container, self::PREVIEW_OF_INDEX),
+            $this->getDefinitionField($container, self::PREVIEW_OF_ARGUMENT),
         );
         self::assertSame(
             [
@@ -113,11 +113,11 @@ final class McpToolDefinitionsCompilerPassTest extends TestCase
                 ExampleWriteTool::NAME => ExampleWritePreviewTool::NAME,
                 ExampleWritePreviewTool::NAME => null,
             ],
-            $this->getDefinitionField($container, self::PREVIEW_TOOL_INDEX),
+            $this->getDefinitionField($container, self::PREVIEW_TOOL_ARGUMENT),
         );
         self::assertSame(
             [SearchAppLogsTool::NAME, ExampleWritePreviewTool::NAME],
-            array_keys(array_filter($this->getDefinitionField($container, self::READ_ONLY_INDEX))),
+            array_keys(array_filter($this->getDefinitionField($container, self::READ_ONLY_ARGUMENT))),
         );
     }
 
@@ -134,7 +134,7 @@ final class McpToolDefinitionsCompilerPassTest extends TestCase
                 SearchAppLogsTool::NAME => self::TOOL_PERMISSION,
                 ExamplePermissionTool::NAME => ExamplePermissionTool::PERMISSION,
             ],
-            $this->getDefinitionField($container, self::PERMISSION_INDEX),
+            $this->getDefinitionField($container, self::PERMISSION_ARGUMENT),
         );
     }
 
@@ -146,7 +146,7 @@ final class McpToolDefinitionsCompilerPassTest extends TestCase
         new McpToolDefinitionsCompilerPass()
             ->process($container);
 
-        $signature = $this->getDefinitionField($container, self::SIGNATURE_INDEX)[SearchAppLogsTool::NAME];
+        $signature = $this->getDefinitionField($container, self::SIGNATURE_ARGUMENT)[SearchAppLogsTool::NAME];
         self::assertInstanceOf(Definition::class, $signature);
         self::assertSame(McpToolSignature::class, $signature->getClass());
     }
@@ -162,7 +162,7 @@ final class McpToolDefinitionsCompilerPassTest extends TestCase
 
         self::assertSame(
             InputPermissionExampleTool::INPUT_PERMISSION,
-            $this->getDefinitionField($container, self::INPUT_PERMISSION_INDEX)[InputPermissionExampleTool::NAME],
+            $this->getDefinitionField($container, self::INPUT_PERMISSION_ARGUMENT)[InputPermissionExampleTool::NAME],
         );
     }
 
@@ -200,7 +200,7 @@ final class McpToolDefinitionsCompilerPassTest extends TestCase
         new McpToolDefinitionsCompilerPass()
             ->process($container);
 
-        self::assertNull($this->getDefinitionField($container, self::SIGNATURE_INDEX)[self::READ_TOOL_METHOD]);
+        self::assertNull($this->getDefinitionField($container, self::SIGNATURE_ARGUMENT)[self::READ_TOOL_METHOD]);
     }
 
     public function testToolRateLimitersReachTheirDefinitions(): void
@@ -214,7 +214,7 @@ final class McpToolDefinitionsCompilerPassTest extends TestCase
 
         self::assertSame(
             RateLimitedExampleTool::RATE_LIMITER,
-            $this->getDefinitionField($container, self::RATE_LIMITER_INDEX)[RateLimitedExampleTool::NAME],
+            $this->getDefinitionField($container, self::RATE_LIMITER_ARGUMENT)[RateLimitedExampleTool::NAME],
         );
     }
 
@@ -360,10 +360,10 @@ final class McpToolDefinitionsCompilerPassTest extends TestCase
     /**
      * @return array<string, mixed> tool name => the field of its definition
      */
-    private function getDefinitionField(ContainerBuilder $container, int $index): array
+    private function getDefinitionField(ContainerBuilder $container, string $argument): array
     {
         return array_map(
-            static fn (Definition $definition): mixed => $definition->getArgument($index),
+            static fn (Definition $definition): mixed => $definition->getArgument($argument),
             $container->getDefinition(McpToolDefinitions::class)->getArgument(self::DEFINITIONS_ARGUMENT),
         );
     }

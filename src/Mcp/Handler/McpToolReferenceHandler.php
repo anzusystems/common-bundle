@@ -159,7 +159,7 @@ final readonly class McpToolReferenceHandler implements ReferenceHandlerInterfac
      */
     private function guardWrite(string $toolName, ?object $input, array $arguments): ?InputRequiredResult
     {
-        $previewToolName = $this->toolAccessChecker->getPreviewToolName($toolName);
+        $previewToolName = $this->toolDefinitions->getPreviewToolName($toolName);
         if (null === $previewToolName) {
             return null;
         }
@@ -279,7 +279,7 @@ final readonly class McpToolReferenceHandler implements ReferenceHandlerInterfac
         try {
             $result = $this->inner->handle($reference, $toolArguments);
             if ($result instanceof CallToolResult && $result->isError) {
-                $this->excludeFailedWriteFromAuditLogs();
+                $this->revertFailedWrite($input);
 
                 return $result;
             }
@@ -287,11 +287,11 @@ final readonly class McpToolReferenceHandler implements ReferenceHandlerInterfac
 
             return $this->createResult($toolName, $result);
         } catch (OptimisticLockException) {
-            $this->excludeFailedWriteFromAuditLogs();
+            $this->revertFailedWrite($input);
 
-            throw McpWriteRejectedException::createPreviewStale((string) $this->toolAccessChecker->getPreviewToolName($toolName));
+            throw McpWriteRejectedException::createPreviewStale((string) $this->toolDefinitions->getPreviewToolName($toolName));
         } catch (Throwable $exception) {
-            $this->excludeFailedWriteFromAuditLogs();
+            $this->revertFailedWrite($input);
 
             throw $exception;
         }
@@ -319,8 +319,11 @@ final readonly class McpToolReferenceHandler implements ReferenceHandlerInterfac
         }
     }
 
-    private function excludeFailedWriteFromAuditLogs(): void
+    private function revertFailedWrite(?object $input): void
     {
+        if ($input instanceof McpPreviewHashAwareInterface) {
+            $this->writeToolGuard->releasePreviewHash($input);
+        }
         $request = $this->requestStack->getMainRequest();
         if ($request instanceof Request && false === AuditLogResourceHelper::hasResourceId($request)) {
             AuditLogResourceHelper::excludeFromAuditLogs($request);

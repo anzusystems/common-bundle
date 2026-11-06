@@ -9,7 +9,6 @@ use AnzuSystems\CommonBundle\Mcp\Security\McpToolScope;
 use AnzuSystems\CommonBundle\Mcp\Security\McpToolScopeProviderInterface;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\McpToolDefinitionsFactory;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Security\StaticMcpToolScopeProvider;
-use LogicException;
 use PHPUnit\Framework\TestCase;
 use Symfony\Bundle\SecurityBundle\Security;
 
@@ -66,20 +65,6 @@ final class McpToolAccessCheckerTest extends TestCase
                 false,
             ],
         ];
-    }
-
-    public function testToolNamesListEveryMappedToolWithoutPermissionCheck(): void
-    {
-        $checker = $this->createChecker([self::GRANTED_TOOL], []);
-
-        self::assertSame([self::GRANTED_TOOL, self::DENIED_TOOL, self::SECOND_GRANTED_TOOL], $checker->getToolNames());
-    }
-
-    public function testWriteToolNamesListOnlyMappedToolsWithoutReadOnlyHint(): void
-    {
-        $checker = $this->createChecker([self::GRANTED_TOOL, self::SECOND_GRANTED_TOOL], []);
-
-        self::assertSame([self::DENIED_TOOL], $checker->getWriteToolNames());
     }
 
     public function testPermittedWriteToolNamesListOnlyWriteToolsWithGrantedToolPermission(): void
@@ -175,7 +160,7 @@ final class McpToolAccessCheckerTest extends TestCase
     {
         return [
             'no provider' => [null],
-            'provider without a scope' => [new StaticMcpToolScopeProvider(null)],
+            'provider without a scope' => [new StaticMcpToolScopeProvider(new McpToolScope())],
         ];
     }
 
@@ -249,39 +234,8 @@ final class McpToolAccessCheckerTest extends TestCase
         );
 
         self::assertTrue($checker->isToolGranted(self::PREVIEW_TOOL));
-        self::assertNotContains(self::PREVIEW_TOOL, $checker->getToolNames());
-        self::assertNotContains(self::PREVIEW_TOOL, $checker->getWriteToolNames());
         self::assertNotContains(self::PREVIEW_TOOL, $checker->getPermittedToolNames());
         self::assertNotContains(self::PREVIEW_TOOL, $checker->getPermittedWriteToolNames());
-    }
-
-    public function testPreviewToolNameIsFoundByItsWriteTool(): void
-    {
-        $checker = $this->createChecker(
-            readOnlyToolNames: [self::PREVIEW_TOOL],
-            grantedWriteTools: [],
-            writeToolNamesByPreview: [self::PREVIEW_TOOL => self::GRANTED_TOOL],
-        );
-
-        self::assertSame(self::PREVIEW_TOOL, $checker->getPreviewToolName(self::GRANTED_TOOL));
-        self::assertNull($checker->getPreviewToolName(self::DENIED_TOOL));
-        self::assertNull($checker->getPreviewToolName(self::UNMAPPED_TOOL));
-    }
-
-    public function testToolCategoryIsReturnedAndAToolWithoutCategoryFails(): void
-    {
-        $checker = $this->createChecker(
-            readOnlyToolNames: [self::PREVIEW_TOOL],
-            grantedWriteTools: [],
-            toolCategories: [self::GRANTED_TOOL => self::TOOL_CATEGORY, self::PREVIEW_TOOL => self::TOOL_CATEGORY],
-        );
-
-        self::assertSame(self::TOOL_CATEGORY, $checker->getToolCategory(self::GRANTED_TOOL));
-        self::assertSame(self::TOOL_CATEGORY, $checker->getToolCategory(self::PREVIEW_TOOL));
-
-        $this->expectException(LogicException::class);
-
-        $checker->getToolCategory(self::UNMAPPED_TOOL);
     }
 
     /**

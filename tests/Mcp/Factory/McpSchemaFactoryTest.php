@@ -5,14 +5,25 @@ declare(strict_types=1);
 namespace AnzuSystems\CommonBundle\Tests\Mcp\Factory;
 
 use AnzuSystems\CommonBundle\Mcp\Factory\McpSchemaFactory;
+use AnzuSystems\CommonBundle\Mcp\Model\Decorator\McpToolCallLogDecorator;
 use AnzuSystems\CommonBundle\Mcp\Model\Response\McpLogsByContextResponse;
+use AnzuSystems\CommonBundle\Tests\Data\Mcp\Model\Request\ArrayExampleRequest;
+use AnzuSystems\CommonBundle\Tests\Data\Mcp\Model\Request\BareArrayExampleRequest;
+use AnzuSystems\CommonBundle\Tests\Data\Mcp\Model\Request\ChildExampleRequest;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Model\Request\CollectionExampleRequest;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Model\Request\CompoundExampleRequest;
+use AnzuSystems\CommonBundle\Tests\Data\Mcp\Model\Request\ConstraintExampleRequest;
+use AnzuSystems\CommonBundle\Tests\Data\Mcp\Model\Request\DateExampleRequest;
+use AnzuSystems\CommonBundle\Tests\Data\Mcp\Model\Request\EnumExampleRequest;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Model\Request\HookedExampleRequest;
+use AnzuSystems\CommonBundle\Tests\Data\Mcp\Model\Request\NullableBareArrayExampleRequest;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Model\Request\UntypedCollectionExampleRequest;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Model\Request\UuidExampleRequest;
+use AnzuSystems\CommonBundle\Tests\Data\Mcp\Model\Response\BareArrayExampleResponse;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Model\Response\UntypedCollectionExampleResponse;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Validator\Constraints\ExampleIdFilter;
+use AnzuSystems\CommonBundle\Tests\Data\Model\Enum\DummyEnum;
+use DateTimeImmutable;
 use LogicException;
 use PHPUnit\Framework\TestCase;
 
@@ -41,7 +52,7 @@ final class McpSchemaFactoryTest extends TestCase
         $schema = new McpSchemaFactory()
             ->createForClass(CompoundExampleRequest::class);
 
-        self::assertSame(ExampleIdFilter::MAX, $schema['properties']['ids']['maxItems']);
+        self::assertSame(ExampleIdFilter::MAX, $schema[McpSchemaFactory::PROPERTIES]['ids']['maxItems']);
     }
 
     /**
@@ -143,6 +154,144 @@ final class McpSchemaFactoryTest extends TestCase
         return [
             'property without a docblock' => [UntypedCollectionExampleRequest::class, 'items'],
             'getter with a bare @return' => [UntypedCollectionExampleResponse::class, 'getItems'],
+        ];
+    }
+
+    /**
+     * @dataProvider arrayPropertyProvider
+     *
+     * @param array<string, mixed> $expectedSchema
+     */
+    public function testArrayIsAnObjectOnlyWithAStringKey(string $property, array $expectedSchema): void
+    {
+        $schema = new McpSchemaFactory()
+            ->createForClass(ArrayExampleRequest::class);
+
+        self::assertSame($expectedSchema, $schema[McpSchemaFactory::PROPERTIES][$property]);
+    }
+
+    /**
+     * @return array<string, array{string, array<string, mixed>}>
+     */
+    public static function arrayPropertyProvider(): array
+    {
+        $stringList = ['type' => 'array', 'items' => ['type' => 'string'], 'default' => []];
+
+        return [
+            'array<X>' => ['arrayOfStrings', $stringList],
+            'list<X>' => ['listOfStrings', $stringList],
+            'array<int, X>' => ['stringsByInt', $stringList],
+            'array<array-key, X>' => ['stringsByArrayKey', $stringList],
+            'array<mixed> has no item schema' => ['arrayOfMixed', ['type' => 'array', 'default' => []]],
+            'array<string, mixed>' => ['mixedByString', ['type' => 'object', 'additionalProperties' => true, 'default' => []]],
+            'array<string, X>' => ['stringsByString', ['type' => 'object', 'additionalProperties' => ['type' => 'string'], 'default' => []]],
+        ];
+    }
+
+    public function testParamsOfAToolCallLogStayAnObject(): void
+    {
+        $schema = new McpSchemaFactory()
+            ->createForClass(McpToolCallLogDecorator::class);
+
+        self::assertSame(
+            ['type' => 'object', 'additionalProperties' => true],
+            $schema[McpSchemaFactory::PROPERTIES]['params'],
+        );
+    }
+
+    /**
+     * @dataProvider untypedArrayProvider
+     *
+     * @param class-string $class
+     */
+    public function testUntypedArrayFailsWithItsMemberName(string $class, string $member): void
+    {
+        $this->expectException(LogicException::class);
+        $this->expectExceptionMessage(sprintf(McpSchemaFactory::UNTYPED_ARRAY_MESSAGE, $class, $member));
+
+        new McpSchemaFactory()
+            ->createForClass($class);
+    }
+
+    /**
+     * @return array<string, array{class-string, string}>
+     */
+    public static function untypedArrayProvider(): array
+    {
+        return [
+            'property' => [BareArrayExampleRequest::class, 'items'],
+            'nullable property' => [NullableBareArrayExampleRequest::class, 'items'],
+            'getter' => [BareArrayExampleResponse::class, 'getItems'],
+        ];
+    }
+
+    public function testClassWithoutSerializeMembersFailsWithItsName(): void
+    {
+        $this->expectException(LogicException::class);
+        $this->expectExceptionMessage(sprintf(McpSchemaFactory::UNDESCRIBED_CLASS_MESSAGE, DateTimeImmutable::class));
+
+        new McpSchemaFactory()
+            ->createForClass(DateExampleRequest::class);
+    }
+
+    public function testPrivatePropertiesOfAParentAreDescribedAndTheChildWins(): void
+    {
+        $schema = new McpSchemaFactory()
+            ->createForClass(ChildExampleRequest::class);
+
+        self::assertSame(['own', 'shared', 'parentOnly'], array_keys($schema[McpSchemaFactory::PROPERTIES]));
+        self::assertSame('child', $schema[McpSchemaFactory::PROPERTIES]['shared']['default']);
+        self::assertSame('parent', $schema[McpSchemaFactory::PROPERTIES]['parentOnly']['default']);
+    }
+
+    public function testDescribedClassesListNestedClassesEnumsAndCompoundConstraints(): void
+    {
+        $factory = new McpSchemaFactory();
+
+        $factory->createForClass(CollectionExampleRequest::class);
+        $factory->createForClass(CompoundExampleRequest::class);
+        $factory->createForClass(EnumExampleRequest::class);
+
+        self::assertContains(CollectionExampleRequest::class, $factory->getDescribedClasses());
+        self::assertContains(HookedExampleRequest::class, $factory->getDescribedClasses());
+        self::assertContains(ExampleIdFilter::class, $factory->getDescribedClasses());
+        self::assertContains(DummyEnum::class, $factory->getDescribedClasses());
+    }
+
+    /**
+     * @dataProvider constraintProvider
+     *
+     * @param array<string, mixed> $expectedSchema
+     */
+    public function testConstraintBecomesItsSchemaKeyword(string $property, array $expectedSchema): void
+    {
+        $schema = new McpSchemaFactory()
+            ->createForClass(ConstraintExampleRequest::class);
+
+        self::assertSame($expectedSchema, $schema[McpSchemaFactory::PROPERTIES][$property]);
+    }
+
+    /**
+     * @return array<string, array{string, array<string, mixed>}>
+     */
+    public static function constraintProvider(): array
+    {
+        return [
+            'All' => ['all', [
+                'type' => 'array',
+                'items' => ['type' => 'string', 'maxLength' => 5, 'minLength' => 1],
+                'default' => [],
+            ]],
+            'Range' => ['range', ['type' => 'integer', 'minimum' => 1, 'maximum' => 5, 'default' => 1]],
+            'GreaterThan on an integer is the next inclusive bound' => ['greaterThanInteger', ['type' => 'integer', 'minimum' => 1, 'default' => 1]],
+            'GreaterThan on a number stays exclusive' => ['greaterThanNumber', ['type' => 'number', 'exclusiveMinimum' => 0, 'default' => 1.0]],
+            'GreaterThan with a fraction' => ['greaterThanFraction', ['type' => 'number', 'exclusiveMinimum' => 0.5, 'default' => 1.0]],
+            'Positive' => ['positive', ['type' => 'integer', 'minimum' => 1, 'default' => 1]],
+            'GreaterThanOrEqual' => ['greaterThanOrEqual', ['type' => 'integer', 'minimum' => 1, 'default' => 1]],
+            'LessThan on an integer is the previous inclusive bound' => ['lessThanInteger', ['type' => 'integer', 'maximum' => 9, 'default' => 1]],
+            'LessThan on a number stays exclusive' => ['lessThanNumber', ['type' => 'number', 'exclusiveMaximum' => 10, 'default' => 1.0]],
+            'LessThanOrEqual' => ['lessThanOrEqual', ['type' => 'integer', 'maximum' => 10, 'default' => 1]],
+            'Choice' => ['choice', ['type' => 'string', 'enum' => ['first', 'second'], 'default' => 'first']],
         ];
     }
 

@@ -15,6 +15,7 @@ final readonly class McpOutputDescriptionFactory
     private const string LINE_FORMAT = '%s- %s';
     private const string DESCRIBED_LINE_FORMAT = '%s- %s: %s';
     private const string LIST_SUFFIX = '[]';
+    private const string MAP_SUFFIX = '{}';
 
     public function __construct(
         private McpSchemaFactory $schemaFactory = new McpSchemaFactory(),
@@ -43,6 +44,10 @@ final readonly class McpOutputDescriptionFactory
             if (McpSchemaFactory::isOfType($field, McpSchemaFactory::TYPE_ARRAY)) {
                 $name .= self::LIST_SUFFIX;
                 $nested = (array) ($field[McpSchemaFactory::ITEMS] ?? []);
+            }
+            if (is_array($field[McpSchemaFactory::ADDITIONAL_PROPERTIES] ?? null)) {
+                $name .= self::MAP_SUFFIX;
+                $nested = $field[McpSchemaFactory::ADDITIONAL_PROPERTIES];
             }
             $description = $field[McpSchemaFactory::DESCRIPTION] ?? null;
             $lines[] = is_string($description)

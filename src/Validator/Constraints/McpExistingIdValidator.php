@@ -47,7 +47,7 @@ final class McpExistingIdValidator extends ConstraintValidator
         $this->context
             ->buildViolation($constraint->message)
             ->setParameter('{{ id }}', (string) $value)
-            ->setParameter('{{ resolverTool }}', $constraint->resolverTool)
+            ->setParameter(McpExistingId::RESOLVER_TOOL_PLACEHOLDER, $constraint->resolverTool)
             ->addViolation()
         ;
     }
@@ -71,7 +71,7 @@ final class McpExistingIdValidator extends ConstraintValidator
         $this->context
             ->buildViolation($constraint->listMessage)
             ->setParameter('{{ ids }}', $this->formatIds($missingIds))
-            ->setParameter('{{ resolverTool }}', $constraint->resolverTool)
+            ->setParameter(McpExistingId::RESOLVER_TOOL_PLACEHOLDER, $constraint->resolverTool)
             ->addViolation()
         ;
     }

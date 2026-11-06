@@ -80,6 +80,7 @@ use AnzuSystems\CommonBundle\Mcp\McpRateLimiter;
 use AnzuSystems\CommonBundle\Mcp\Resolver\McpHostResolver;
 use AnzuSystems\CommonBundle\Mcp\Resolver\McpToolErrorResolver;
 use AnzuSystems\CommonBundle\Mcp\Security\McpDeleteDependencyProviderInterface;
+use AnzuSystems\CommonBundle\Mcp\Security\McpPreviewHashReservation;
 use AnzuSystems\CommonBundle\Mcp\Security\McpWriteConfirmation;
 use AnzuSystems\CommonBundle\Messenger\Message\AuditLogMessage;
 use AnzuSystems\CommonBundle\Messenger\Message\JournalLogMessage;
@@ -689,8 +690,7 @@ final class AnzuSystemsCommonExtension extends Extension implements PrependExten
         $serverName = $mcp['server_name'];
         $container
             ->getDefinition(McpController::class)
-            ->replaceArgument('$server', new Reference(sprintf('mcp.server.%s', $serverName)))
-            ->replaceArgument('$allowedHosts', $mcp['allowed_hosts']);
+            ->replaceArgument('$server', new Reference(sprintf('mcp.server.%s', $serverName)));
 
         $container
             ->getDefinition(McpHostResolver::class)
@@ -713,6 +713,10 @@ final class AnzuSystemsCommonExtension extends Extension implements PrependExten
         $container
             ->getDefinition(McpToolReferenceHandler::class)
             ->replaceArgument('$registry', $registryReference);
+
+        $container
+            ->getDefinition(McpPreviewHashReservation::class)
+            ->replaceArgument('$cachePool', new Reference($mcp['rate_limiter']['cache_pool']));
 
         $container
             ->getDefinition(McpWriteConfirmation::class)

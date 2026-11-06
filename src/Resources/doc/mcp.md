@@ -169,8 +169,8 @@ final readonly class ListKeywordsTool
   only.
 * `category` (required) names the group the tool belongs to, e.g. in the tool list of a token form. It is camelCase
   (`^[a-z][a-zA-Z0-9]*$`), so a client can build a translation key from it; categories come in the order of their first
-  tool in `McpToolAccessChecker::getToolNames()`. The bundle log tools are in `AsMcpTool::CATEGORY_DIAGNOSTICS` (`diagnostics`).
-  `McpToolAccessChecker::getToolCategory()` returns the category of a tool and throws a `LogicException` for a tool
+  tool in `McpToolDefinitions::getToolNames()`. The bundle log tools are in `AsMcpTool::CATEGORY_DIAGNOSTICS` (`diagnostics`).
+  `McpToolDefinitions::getToolCategory()` returns the category of a tool and throws a `LogicException` for a tool
   without one.
 * `previewOf` makes the tool the preview of a write tool, see "Preview tools" below.
 * `descriptionValues` replace the `{{ name }}` placeholders of the description, like the parameters of a validation message;
@@ -184,7 +184,9 @@ final readonly class ListKeywordsTool
   `Collection<int, X>` (from its `@var`, or the `@return` of a getter, also nullable) is an array of `X`, the same schema
   as `list<X>`. A `Collection<string, X>` is an object with `additionalProperties`; a response writes it as an object
   only with `strategy: Serialize::KEYS_VALUES`. A `Collection` without its key and item types fails the container
-  compilation with a `LogicException` naming the member.
+  compilation with a `LogicException` naming the member. An array follows the same rule: only `array<string, X>` is an
+  object, `array<X>` is a list, and a bare `array` fails the compilation the same way. A class without a `#[Serialize]`
+  member, e.g. `DateTimeImmutable`, fails it too, because its schema would refuse every value.
 * The return class is the response: the pass appends a `Returns:` list of its `#[Serialize]` properties to the
   description, because clients hand the model the description and the input schema, not necessarily an output schema.
 * `#[McpField(description: …, descriptionValues: […])]` describes a DTO property, a response property or a case of a backed
@@ -373,8 +375,8 @@ write tool. A tool without an explicit `name` is matched by the name the SDK der
 
 A write tool additionally has to be in the write tools of the request's scope (*Token scope* below), so it is hidden
 from `tools/list` and denied on `tools/call` without it. Without a scope every write tool is denied, for super admins
-too. `McpToolAccessChecker::getWriteToolNames()` lists the tools with a permission that are write tools, in
-the order of the tools, and `getPermittedWriteToolNames()` narrows them to the tools whose permission the current user holds. A call
+too. `McpToolDefinitions::getWriteToolNames()` lists the tools with a permission that are write tools, in
+the order of the tools, and `McpToolAccessChecker::getPermittedWriteToolNames()` narrows them to the tools whose permission the current user holds. A call
 denied only for the scope answers `Access denied — the write tool "<tool>" is not granted to this token. Create a new personal access token with this write tool.` Annotate
 every read tool, or it disappears for clients without the write grant:
 
@@ -415,6 +417,14 @@ with the one the call sent. A different hash answers `McpWriteRejectedException:
 hash has nothing to write, so the tool runs and reports its own result. An `OptimisticLockException` of a write tool, a
 record changed in between, answers the same, so a host has neither a check nor a catch of its own.
 
+The hash of a preview without a `$currentState` covers only the tool and the arguments, so a write does not invalidate it.
+`McpPreviewHashReservation` therefore lets one user use such a hash once in `McpPreviewHashReservation::LIFETIME_SECONDS`
+(300), in the pool of `rate_limiter.cache_pool`. It reserves the hash after the confirmation and the write limit, before
+the tool runs, and releases it when the tool fails, so the same hash works again after an error. A repeated call answers
+`McpWriteRejectedException::createPreviewHashUsed()` and takes a token of the write limit. So the same user cannot create
+two identical records in that time, and two calls at the same moment can still both pass, because the pool has no atomic
+reservation.
+
 `McpPreviewHashTrait` adds the `previewHash` field to the input of a write tool; the class declares the constant
 `PREVIEW_TOOL` with the name of its preview, which the error and the field description use.
 
@@ -426,9 +436,9 @@ repeat it.
 
 A preview has no permission of its own: `McpToolAccessChecker` grants it exactly when it grants its write tool —
 the write tools of the scope and the permission of the write tool — in `tools/list` and on
-`tools/call`; otherwise the call gets the usual tool access error. `getToolNames()`, `getWriteToolNames()`,
-`getPermittedToolNames()` and `getPermittedWriteToolNames()` read the tools with a permission, so they never list a
-preview. As a read tool it skips the write grant check of its own, read-only mode, the one write per request and the
+`tools/call`; otherwise the call gets the usual tool access error. `McpToolDefinitions::getToolNames()` and
+`getWriteToolNames()`, and `McpToolAccessChecker::getPermittedToolNames()` and `getPermittedWriteToolNames()` read the
+tools with a permission, so they never list a preview. As a read tool it skips the write grant check of its own, read-only mode, the one write per request and the
 audit log.
 
 The response class of a preview implements `McpWritePreviewInterface`. The input class of the write tool implements
@@ -531,7 +541,7 @@ A host says what a request may use by registering a service under the id `McpToo
 - `readToolNames`: the read tools the request may use, `null` keeps every read tool.
 - `writeToolNames`: the write tools the request may use.
 
-Without such a service, or when it returns `null`, read tools are not narrowed and write tools are denied. The scope only
+Without such a service, or when it returns an empty `new McpToolScope()`, read tools are not narrowed and write tools are denied. The scope only
 narrows: a tool in the scope still needs its permission. A tool outside the scope is hidden from `tools/list` and
 denied on `tools/call`. `McpToolAccessChecker::getPermittedToolNames()` lists every tool whose
 permission the current user holds, in the order of the tools, without the scope, so a host can offer them for a new token. A preview
@@ -620,7 +630,8 @@ deleted between the check and the first read throws `EntityNotFoundException`, s
 
 With the section enabled, `McpHostRouteListener` answers 404 to every main request that comes to a host of
 `allowed_hosts` or to a pod with `pod: true`, unless its route has the `McpHostRouteListener::ALLOWED_ON_MCP_HOST`
-default. It runs on `kernel.request` with priority 24, after the router. core-cms runs the MCP endpoint on its own pods
+default. It runs on `kernel.request` with priority 24, after the router. `McpHostResolver` trims the hosts and leaves out
+empty ones, and `McpController` reads them from it, so both see one list. core-cms runs the MCP endpoint on its own pods
 and hosts:
 
 ```php

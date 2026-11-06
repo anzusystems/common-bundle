@@ -41,10 +41,12 @@ final class McpSchemaFactory
     public const string DESCRIPTION = 'description';
     public const string TYPE_OBJECT = 'object';
     public const string TYPE_ARRAY = 'array';
+    public const string ADDITIONAL_PROPERTIES = 'additionalProperties';
     public const string UNTYPED_COLLECTION_MESSAGE = 'The MCP schema cannot describe %s::%s, a Collection without its key and item types: declare Collection<int, X> (Collection<string, X> for a keyed map) in its @var, or in its @return for a getter.';
+    public const string UNTYPED_ARRAY_MESSAGE = 'The MCP schema cannot describe %s::%s, an array without its item type: declare list<X> (array<string, X> for a keyed map) in its @var, or in its @return for a getter.';
+    public const string UNDESCRIBED_CLASS_MESSAGE = 'The MCP schema cannot describe the class %s, it has no #[Serialize] member: use a scalar, a Uuid, a backed enum or a class with #[Serialize] members.';
 
     private const string REQUIRED = 'required';
-    private const string ADDITIONAL_PROPERTIES = 'additionalProperties';
     private const string ENUM = 'enum';
     private const string DEFAULT = 'default';
     private const string MIN_LENGTH = 'minLength';
@@ -74,6 +76,11 @@ final class McpSchemaFactory
 
     private readonly TypeResolver $typeResolver;
 
+    /**
+     * @var array<class-string, true>
+     */
+    private array $describedClasses = [];
+
     public function __construct()
     {
         $this->typeResolver = TypeResolver::create();
@@ -86,17 +93,18 @@ final class McpSchemaFactory
      */
     public function createForClass(string $class): array
     {
+        $this->describedClasses[$class] = true;
         $properties = [];
         $required = [];
         $reflection = new ReflectionClass($class);
-        foreach ([...$reflection->getProperties(), ...$reflection->getMethods()] as $member) {
+        foreach ([...$this->collectProperties($reflection), ...$reflection->getMethods()] as $member) {
             $serialize = $this->resolveAttribute($member, Serialize::class);
             if (null === $serialize) {
                 continue;
             }
             $name = $serialize->serializedName ?? $this->resolveSerializedName($member);
             $constraints = $this->resolveConstraints($member);
-            $schema = $this->applyConstraints($this->createForMember($member, $serialize), $constraints);
+            $schema = $this->applyConstraints($this->createForMember($member), $constraints);
             $default = $member instanceof ReflectionProperty && $member->hasDefaultValue() ? $member->getDefaultValue() : null;
             $description = $this->createDescription($member, $default);
             if (is_string($description)) {
@@ -118,6 +126,36 @@ final class McpSchemaFactory
         $schema[self::ADDITIONAL_PROPERTIES] = false;
 
         return $schema;
+    }
+
+    /**
+     * The classes every createForClass() of this instance went through, nested ones, enums and compound constraints
+     * included: their files decide the schema, so a container that holds it has to depend on them.
+     *
+     * @return list<class-string>
+     */
+    public function getDescribedClasses(): array
+    {
+        return array_keys($this->describedClasses);
+    }
+
+    /**
+     * ReflectionClass::getProperties() leaves out the private properties of parent classes, which the serializer reads.
+     *
+     * @param ReflectionClass<object> $reflection
+     *
+     * @return array<string, ReflectionProperty>
+     */
+    private function collectProperties(ReflectionClass $reflection): array
+    {
+        $properties = [];
+        for ($class = $reflection; false !== $class; $class = $class->getParentClass()) {
+            foreach ($class->getProperties() as $property) {
+                $properties[$property->getName()] ??= $property;
+            }
+        }
+
+        return $properties;
     }
 
     /**
@@ -163,22 +201,17 @@ final class McpSchemaFactory
     /**
      * @return array<string, mixed>
      */
-    private function createForMember(ReflectionProperty|ReflectionMethod $member, Serialize $serialize): array
+    private function createForMember(ReflectionProperty|ReflectionMethod $member): array
     {
         $type = $this->typeResolver->resolve($member);
         if ($this->isUntypedCollection($type)) {
             throw new LogicException(sprintf(self::UNTYPED_COLLECTION_MESSAGE, $member->class, $member->getName()));
         }
-        $schema = $this->createForType($type);
-        $itemClass = $serialize->type;
-        if (false === self::isOfType($schema, self::TYPE_ARRAY) || isset($schema[self::ITEMS]) || false === is_string($itemClass)) {
-            return $schema;
-        }
-        if (enum_exists($itemClass) || class_exists($itemClass)) {
-            $schema[self::ITEMS] = $this->createForType(Type::object($itemClass));
+        if ($this->isUntypedArray($type)) {
+            throw new LogicException(sprintf(self::UNTYPED_ARRAY_MESSAGE, $member->class, $member->getName()));
         }
 
-        return $schema;
+        return $this->createForType($type);
     }
 
     private function isUntypedCollection(Type $type): bool
@@ -189,6 +222,13 @@ final class McpSchemaFactory
         }
 
         return $innerType instanceof ObjectType && is_a(object_or_class: $innerType->getClassName(), class: Collection::class, allow_string: true);
+    }
+
+    private function isUntypedArray(Type $type): bool
+    {
+        $innerType = $type instanceof NullableType ? $type->getWrappedType() : $type;
+
+        return $innerType instanceof CollectionType && $innerType->getWrappedType() instanceof BuiltinType;
     }
 
     /**
@@ -211,25 +251,33 @@ final class McpSchemaFactory
         }
         if ($type instanceof BackedEnumType) {
             $enumClass = $type->getClassName();
+            $this->describedClasses[$enumClass] = true;
 
             return [
                 self::TYPE => $this->createForType($type->getBackingType())[self::TYPE],
                 self::ENUM => array_map(static fn (BackedEnum $case): int|string => $case->value, $enumClass::cases()),
             ];
         }
-        if ($type instanceof CollectionType && $type->getCollectionKeyType()->isIdentifiedBy(TypeIdentifier::STRING)) {
+        if ($type instanceof CollectionType && $this->isKeyedByString($type)) {
             $valueSchema = $this->createForType($type->getCollectionValueType());
 
             return [self::TYPE => self::TYPE_OBJECT, self::ADDITIONAL_PROPERTIES => empty($valueSchema) ? true : $valueSchema];
         }
         if ($type instanceof CollectionType) {
-            return [self::TYPE => self::TYPE_ARRAY, self::ITEMS => $this->createForType($type->getCollectionValueType())];
+            $valueSchema = $this->createForType($type->getCollectionValueType());
+
+            return empty($valueSchema) ? [self::TYPE => self::TYPE_ARRAY] : [self::TYPE => self::TYPE_ARRAY, self::ITEMS => $valueSchema];
         }
         if ($type instanceof ObjectType && is_a(object_or_class: $type->getClassName(), class: Uuid::class, allow_string: true)) {
             return [self::TYPE => self::TYPE_STRING, self::FORMAT => self::FORMAT_UUID];
         }
         if ($type instanceof ObjectType) {
-            return $this->createForClass($type->getClassName());
+            $schema = $this->createForClass($type->getClassName());
+            if (empty($schema[self::PROPERTIES])) {
+                throw new LogicException(sprintf(self::UNDESCRIBED_CLASS_MESSAGE, $type->getClassName()));
+            }
+
+            return $schema;
         }
         if ($type instanceof BuiltinType && isset(self::JSON_TYPES[$type->getTypeIdentifier()->value])) {
             return [self::TYPE => self::JSON_TYPES[$type->getTypeIdentifier()->value]];
@@ -239,6 +287,16 @@ final class McpSchemaFactory
         }
 
         throw new LogicException(sprintf('The type "%s" cannot be described in an MCP tool schema, use a scalar, a backed enum, a list or a class.', $type));
+    }
+
+    /**
+     * The key of array<X> is the union int|string, which isIdentifiedBy() takes for a string too, but such a value is a list.
+     */
+    private function isKeyedByString(CollectionType $type): bool
+    {
+        $keyType = $type->getCollectionKeyType();
+
+        return $keyType instanceof BuiltinType && $keyType->isIdentifiedBy(TypeIdentifier::STRING);
     }
 
     /**
@@ -399,6 +457,7 @@ final class McpSchemaFactory
         foreach ($member->getAttributes(Constraint::class, ReflectionAttribute::IS_INSTANCEOF) as $attribute) {
             $constraint = $attribute->newInstance();
             if ($constraint instanceof Assert\Compound) {
+                $this->describedClasses[$constraint::class] = true;
                 array_push($constraints, ...$constraint->constraints);
 
                 continue;

@@ -57,7 +57,7 @@ final class McpExistingIdValidatorTest extends AnzuKernelTestCase
         self::assertSame(
             strtr(McpExistingId::MESSAGE, [
                 '{{ id }}' => (string) self::UNKNOWN_ID,
-                '{{ resolverTool }}' => ExistingIdExampleRequest::RESOLVER_TOOL,
+                McpExistingId::RESOLVER_TOOL_PLACEHOLDER => ExistingIdExampleRequest::RESOLVER_TOOL,
             ]),
             $violations[0]->getMessage(),
         );
@@ -77,7 +77,7 @@ final class McpExistingIdValidatorTest extends AnzuKernelTestCase
         self::assertSame(
             strtr(McpExistingId::LIST_MESSAGE, [
                 '{{ ids }}' => sprintf('"%d", "%d"', self::UNKNOWN_ID, self::OTHER_UNKNOWN_ID),
-                '{{ resolverTool }}' => ExistingIdExampleRequest::RESOLVER_TOOL,
+                McpExistingId::RESOLVER_TOOL_PLACEHOLDER => ExistingIdExampleRequest::RESOLVER_TOOL,
             ]),
             $violations[0]->getMessage(),
         );

@@ -7,7 +7,7 @@ namespace AnzuSystems\CommonBundle\Mcp\Security;
 interface McpToolScopeProviderInterface
 {
     /**
-     * @return McpToolScope|null null when the request has no scope: read tools are not narrowed, write tools are denied
+     * A request without a scope gets new McpToolScope(): read tools are not narrowed, write tools are denied.
      */
-    public function provideToolScope(): ?McpToolScope;
+    public function provideToolScope(): McpToolScope;
 }

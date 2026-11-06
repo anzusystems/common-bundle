@@ -32,6 +32,17 @@ final class UuidArrayHandlerTest extends TestCase
         self::assertSame([self::DOC_ID, self::OTHER_DOC_ID], $serializer->toArray($request)['docIds']);
     }
 
+    public function testItemTheSingleUuidFieldReadsPasses(): void
+    {
+        $request = McpSerializerFactory::create()->fromArray(
+            ['docId' => self::DOC_ID, 'docIds' => [Uuid::fromString(self::DOC_ID)->toBase58()]],
+            UuidExampleRequest::class,
+        );
+
+        self::assertInstanceOf(UuidExampleRequest::class, $request);
+        self::assertEquals([Uuid::fromString(self::DOC_ID)], $request->docIds);
+    }
+
     public function testInvalidItemFailsTheDeserialization(): void
     {
         $this->expectException(SerializerException::class);

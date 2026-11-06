@@ -16,6 +16,7 @@ final readonly class McpField
 {
     private const string PLACEHOLDER_FORMAT = '{{ %s }}';
     private const string PLACEHOLDER_PATTERN = '/{{ (\w+) }}/';
+    private const string NAME_SEPARATOR = '", "';
 
     public string $description;
 
@@ -40,7 +41,7 @@ final readonly class McpField
         if (false === empty($missingNames)) {
             throw new LogicException(sprintf(
                 'Placeholders "%s" have no value in the MCP description "%s".',
-                implode('", "', $missingNames),
+                implode(self::NAME_SEPARATOR, $missingNames),
                 $description,
             ));
         }
@@ -48,7 +49,7 @@ final readonly class McpField
         if (false === empty($unusedNames)) {
             throw new LogicException(sprintf(
                 'Values "%s" have no placeholder in the MCP description "%s".',
-                implode('", "', $unusedNames),
+                implode(self::NAME_SEPARATOR, $unusedNames),
                 $description,
             ));
         }

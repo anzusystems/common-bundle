@@ -103,14 +103,14 @@ final class McpToolDefinitionsCompilerPass implements CompilerPassInterface
         foreach ($toolsByName as $toolName => $tools) {
             $tool = array_first($tools);
             $definitions[$toolName] = new Definition(McpToolDefinition::class, [
-                $toolPermissions[$toolName] ?? null,
-                $tool instanceof AsMcpTool ? $tool->inputPermission : null,
-                in_array(needle: $toolName, haystack: $readOnlyToolNames, strict: true),
-                $toolCategories[$toolName] ?? null,
-                $writeToolNamesByPreview[$toolName] ?? null,
-                $previewToolNames[$toolName] ?? null,
-                $toolRateLimiters[$toolName] ?? null,
-                $tool instanceof AsMcpTool ? $this->createSignatureDefinition($tools) : null,
+                '$permission' => $toolPermissions[$toolName] ?? null,
+                '$inputPermission' => $tool instanceof AsMcpTool ? $tool->inputPermission : null,
+                '$readOnly' => in_array(needle: $toolName, haystack: $readOnlyToolNames, strict: true),
+                '$category' => $toolCategories[$toolName] ?? null,
+                '$previewOf' => $writeToolNamesByPreview[$toolName] ?? null,
+                '$previewTool' => $previewToolNames[$toolName] ?? null,
+                '$rateLimiter' => $toolRateLimiters[$toolName] ?? null,
+                '$signature' => $tool instanceof AsMcpTool ? $this->createSignatureDefinition($tools) : null,
             ]);
         }
 

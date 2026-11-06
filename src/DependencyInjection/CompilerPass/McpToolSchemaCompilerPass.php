@@ -71,6 +71,9 @@ final class McpToolSchemaCompilerPass implements CompilerPassInterface
         }
 
         $builder->setMethodCalls($methodCalls);
+        foreach ($schemaFactory->getDescribedClasses() as $describedClass) {
+            $container->addObjectResource($describedClass);
+        }
     }
 
     /**

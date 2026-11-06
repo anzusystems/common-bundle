@@ -19,6 +19,11 @@ final readonly class McpToolCallLogger
 
     private const string SESSION_CLIENT_INFO_KEY = 'client_info';
     private const string CLIENT_NAME_KEY = 'name';
+    private const string CONTEXT_TOOL = 'tool';
+    private const string CONTEXT_USER_ID = 'userId';
+    private const string CONTEXT_PARAMS = 'params';
+    private const string CONTEXT_DURATION_MS = 'durationMs';
+    private const string CONTEXT_EXCEPTION = 'exception';
 
     public function __construct(
         private CurrentAnzuUserProvider $currentUserProvider,
@@ -35,12 +40,12 @@ final readonly class McpToolCallLogger
         $userId = $this->resolveCurrentUserId();
         $client = $this->resolveClientName($session);
         $this->logger->info(self::CALL_LOG_MESSAGE, [
-            'tool' => $toolName,
-            'userId' => $userId,
+            self::CONTEXT_TOOL => $toolName,
+            self::CONTEXT_USER_ID => $userId,
             'client' => $client,
-            'params' => $params,
+            self::CONTEXT_PARAMS => $params,
             'error' => $error,
-            'durationMs' => $durationMs,
+            self::CONTEXT_DURATION_MS => $durationMs,
         ]);
         try {
             $this->mcpLogger->log(
@@ -53,8 +58,8 @@ final readonly class McpToolCallLogger
             );
         } catch (Throwable $exception) {
             $this->logger->error('Mcp tool call mongo log failed.', [
-                'tool' => $toolName,
-                'exception' => $exception,
+                self::CONTEXT_TOOL => $toolName,
+                self::CONTEXT_EXCEPTION => $exception,
             ]);
         }
     }
@@ -65,18 +70,18 @@ final readonly class McpToolCallLogger
     public function logConfirmationAsked(string $toolName, array $params, int $durationMs): void
     {
         $this->logger->info(self::CONFIRMATION_ASKED_LOG_MESSAGE, [
-            'tool' => $toolName,
-            'userId' => $this->resolveCurrentUserId(),
-            'params' => $params,
-            'durationMs' => $durationMs,
+            self::CONTEXT_TOOL => $toolName,
+            self::CONTEXT_USER_ID => $this->resolveCurrentUserId(),
+            self::CONTEXT_PARAMS => $params,
+            self::CONTEXT_DURATION_MS => $durationMs,
         ]);
     }
 
     public function logBackendFailure(string $toolName, Throwable $exception): void
     {
         $this->logger->error('Mcp tool call failed on backend.', [
-            'tool' => $toolName,
-            'exception' => $exception,
+            self::CONTEXT_TOOL => $toolName,
+            self::CONTEXT_EXCEPTION => $exception,
         ]);
     }
 

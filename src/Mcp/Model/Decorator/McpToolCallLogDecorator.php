@@ -21,7 +21,7 @@ final class McpToolCallLogDecorator extends AbstractMcpLogDecorator
     }
 
     /**
-     * @var array<array-key, mixed>
+     * @var array<string, mixed>
      */
     #[Serialize(handler: RawArrayHandler::class)]
     public array $params {

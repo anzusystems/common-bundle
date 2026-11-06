@@ -31,6 +31,7 @@ final readonly class McpObjectArrayRule implements Rule
     public const string MESSAGE = '%s is %s. Use Collection<int, %s> (Collection<string, …> for a keyed map) instead of an array of objects (anzu-php-style: objects go in a Collection, arrays hold only ids and scalars).';
 
     private const string NAMESPACE_SEPARATOR = '\\';
+    private const string PROPERTY_SUBJECT_FORMAT = 'Property %s::$%s';
 
     private ClassNamespaceMatcher $classNamespaceMatcher;
     private string $objectNamespacePrefix;
@@ -86,7 +87,7 @@ final readonly class McpObjectArrayRule implements Rule
                 $propertyName = $propertyItem->name->toString();
 
                 yield [
-                    sprintf('Property %s::$%s', $className, $propertyName),
+                    sprintf(self::PROPERTY_SUBJECT_FORMAT, $className, $propertyName),
                     $classReflection->getNativeProperty($propertyName)
                         ->getReadableType(),
                     $property->getStartLine(),
@@ -103,7 +104,7 @@ final readonly class McpObjectArrayRule implements Rule
                 $paramName = $param->var->name;
                 if ($param->isPromoted()) {
                     yield [
-                        sprintf('Property %s::$%s', $className, $paramName),
+                        sprintf(self::PROPERTY_SUBJECT_FORMAT, $className, $paramName),
                         $classReflection->getNativeProperty($paramName)
                             ->getReadableType(),
                         $param->getStartLine(),
