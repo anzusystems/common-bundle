@@ -15,6 +15,7 @@ use AnzuSystems\Contracts\Entity\Traits\TimeTrackingTrait;
 use AnzuSystems\Contracts\Entity\Traits\UserTrackingTrait;
 use AnzuSystems\SerializerBundle\Attributes\Serialize;
 use DateTimeImmutable;
+use Doctrine\DBAL\Schema\DefaultExpression\CurrentTimestamp;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 
@@ -33,7 +34,7 @@ abstract class Job implements UserTrackingInterface, TimeTrackingInterface, JobI
     /**
      * Time after which the job can be processed.
      */
-    #[ORM\Column(type: Types::DATETIME_IMMUTABLE, options: ['default' => 'CURRENT_TIMESTAMP'])]
+    #[ORM\Column(type: Types::DATETIME_IMMUTABLE, options: ['default' => new CurrentTimestamp()])]
     #[Serialize]
     protected DateTimeImmutable $scheduledAt;
 

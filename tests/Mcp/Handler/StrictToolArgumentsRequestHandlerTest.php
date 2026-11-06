@@ -88,7 +88,7 @@ final class StrictToolArgumentsRequestHandlerTest extends TestCase
             new Tool(
                 name: self::TOOL_NAME,
                 title: null,
-                inputSchema: ['type' => 'object', 'properties' => [self::ALLOWED_ARGUMENT => ['type' => 'string']]],
+                inputSchema: ['type' => 'object', 'properties' => [self::ALLOWED_ARGUMENT => ['type' => 'string']], 'required' => null],
                 description: null,
                 annotations: null,
             ),

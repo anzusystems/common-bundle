@@ -201,7 +201,7 @@ final class McpToolDefinitionsCompilerPassTest extends TestCase
         return [
             'category that is not camelCase' => [
                 [InvalidCategoryExampleTool::class],
-                McpConfigurationException::createInvalidCategory('example.tools', InvalidCategoryExampleTool::NAME, '/^[a-z][a-zA-Z0-9]*$/')->getMessage(),
+                McpConfigurationException::createInvalidCategory(category: 'example.tools', toolName: InvalidCategoryExampleTool::NAME, pattern: '/^[a-z][a-zA-Z0-9]*$/')->getMessage(),
             ],
             'preview of an unknown tool' => [
                 [ExamplePreviewTool::class],
@@ -241,9 +241,9 @@ final class McpToolDefinitionsCompilerPassTest extends TestCase
             'preview in another category than its write tool' => [
                 [ExampleWithoutInputTool::class, OtherCategoryExamplePreviewTool::class],
                 McpConfigurationException::createPreviewInOtherCategory(
-                    OtherCategoryExamplePreviewTool::NAME,
-                    ExampleWithoutInputTool::NAME,
-                    ExampleToolCategory::EXAMPLES
+                    previewToolName: OtherCategoryExamplePreviewTool::NAME,
+                    writeToolName: ExampleWithoutInputTool::NAME,
+                    category: ExampleToolCategory::EXAMPLES
                 )->getMessage(),
             ],
             'write tool without a preview' => [

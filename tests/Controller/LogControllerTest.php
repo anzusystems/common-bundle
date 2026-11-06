@@ -69,7 +69,7 @@ final class LogControllerTest extends AbstractControllerTest
             ->setPath('/some/fe/page#showList')
             ->setContextId(uuid_create())
         ;
-        $log = $this->post('/log', $logDto, Log::class);
+        $log = $this->post(uri: '/log', content: $logDto, deserializationClass: Log::class);
         self::assertResponseStatusCodeSame(Response::HTTP_CREATED);
         self::assertEquals($logDto->getMessage(), $log->getMessage());
         self::assertEquals($logDto->getAppSystem(), $log->getContext()->getAppSystem());
@@ -81,7 +81,7 @@ final class LogControllerTest extends AbstractControllerTest
         $filterLog = [
             'filter_eq' => ['context.contextId' => $log->getContext()->getContextId()],
         ];
-        $logs = $this->getList('/log/journal', Log::class, $filterLog);
+        $logs = $this->getList(uri: '/log/journal', deserializationClass: Log::class, params: $filterLog);
         /** @var Log $foundLog */
         $foundLog = $logs->getData()[0];
         self::assertEquals($logDto->getMessage(), $foundLog->getMessage());
@@ -104,7 +104,7 @@ final class LogControllerTest extends AbstractControllerTest
             ->setPath('/some/fe/page#showList')
             ->setContextId(uuid_create())
         ;
-        $this->post('/log', $logDto, Log::class);
+        $this->post(uri: '/log', content: $logDto, deserializationClass: Log::class);
 
         self::assertResponseStatusCodeSame(Response::HTTP_CREATED);
     }

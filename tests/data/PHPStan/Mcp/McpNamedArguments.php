@@ -38,6 +38,7 @@ final class McpNamedArguments
         $this->takeTwo(1, 2);
         sprintf('%d %d', 1, 2);
         $this->takeVariadic(1, 2, 3);
+        array_udiff($numbers, $numbers, static fn (int $first, int $second): int => $first <=> $second);
         $this->takeThree(...$numbers);
         $closure(1, 2, 3);
         $this->takeWithoutNames(1, 2, 3);

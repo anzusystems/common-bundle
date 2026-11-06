@@ -71,7 +71,7 @@ abstract class AbstractAnzuTapNode implements AnzuTapNodeInterface
         }
 
         foreach ($marks as $mark) {
-            if (in_array($mark['type'] ?? '', $marksAllowList, true)) {
+            if (in_array(needle: $mark['type'] ?? '', haystack: $marksAllowList, strict: true)) {
                 $this->marks[] = $mark;
             }
         }

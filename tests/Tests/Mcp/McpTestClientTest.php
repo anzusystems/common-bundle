@@ -126,7 +126,7 @@ final class McpTestClientTest extends TestCase
         $browser->method('request')
             ->willReturnCallback(function (string $method, string $uri, array $parameters = [], array $files = [], array $server = [], ?string $content = null) use ($browser): mixed {
                 self::assertSame(self::PATH, $uri);
-                $this->requests[] = ['server' => $server, 'body' => json_decode((string) $content, true, flags: JSON_THROW_ON_ERROR)];
+                $this->requests[] = ['server' => $server, 'body' => json_decode(json: (string) $content, associative: true, flags: JSON_THROW_ON_ERROR)];
 
                 return $browser->getCrawler();
             });
@@ -140,7 +140,7 @@ final class McpTestClientTest extends TestCase
 
     private function createInitializeResponse(): Response
     {
-        return new Response('{}', Response::HTTP_OK, ['Mcp-Session-Id' => self::SESSION_ID]);
+        return new Response(content: '{}', status: Response::HTTP_OK, headers: ['Mcp-Session-Id' => self::SESSION_ID]);
     }
 
     /**

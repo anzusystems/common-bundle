@@ -20,7 +20,7 @@ final class McpPageWindowResolverTest extends TestCase
 
     public function testWindowWithinCapsIsNotClamped(): void
     {
-        $window = $this->resolver->resolve(3, 20, self::LIMIT_MAX);
+        $window = $this->resolver->resolve(page: 3, limit: 20, limitMax: self::LIMIT_MAX);
 
         self::assertSame(3, $window->page);
         self::assertSame(20, $window->limit);
@@ -30,7 +30,7 @@ final class McpPageWindowResolverTest extends TestCase
 
     public function testPageAndLimitAboveMaxAreClampedAndReported(): void
     {
-        $window = $this->resolver->resolve(999, 999, self::LIMIT_MAX);
+        $window = $this->resolver->resolve(page: 999, limit: 999, limitMax: self::LIMIT_MAX);
 
         self::assertSame(McpPageWindowResolver::PAGE_MAX, $window->page);
         self::assertSame(self::LIMIT_MAX, $window->limit);
@@ -41,7 +41,7 @@ final class McpPageWindowResolverTest extends TestCase
 
     public function testPageBelowMinIsRaisedToFirstPageAndSaysSo(): void
     {
-        $window = $this->resolver->resolve(0, 0, self::LIMIT_MAX);
+        $window = $this->resolver->resolve(page: 0, limit: 0, limitMax: self::LIMIT_MAX);
 
         self::assertSame(1, $window->page);
         self::assertSame(1, $window->limit);

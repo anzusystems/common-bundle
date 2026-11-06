@@ -25,6 +25,9 @@ use PHPStan\Reflection\ReflectionProvider;
 use PHPStan\Rules\Rule;
 use PHPStan\Rules\RuleErrorBuilder;
 use PHPStan\Type\Type;
+use ReflectionFunction;
+use ReflectionMethod;
+use ReflectionParameter;
 
 /**
  * @implements Rule<CallLike>
@@ -71,28 +74,68 @@ final readonly class NamedArgumentsRule implements Rule
         if (null === $callee || false === $callee->acceptsNamedArguments()->yes()) {
             return [];
         }
-        $parameters = ParametersAcceptorSelector::selectFromArgs(
-            scope: $scope,
-            args: $arguments,
-            parametersAcceptors: $callee->getVariants(),
-            namedArgumentsVariants: $callee->getNamedArgumentsVariants(),
-        )->getParameters();
-        $nameableParameters = array_filter($parameters, static fn (ParameterReflection $parameter): bool => false === $parameter->isVariadic());
+        $nameableParameterNames = $this->resolveNameableParameterNames(callee: $callee, arguments: $arguments, scope: $scope);
         // PHP refuses a named argument before a positional one, so a value for a variadic parameter keeps the whole call positional.
-        if (count($unnamedArguments) > count($nameableParameters)) {
+        if (count($unnamedArguments) > count($nameableParameterNames)) {
             return [];
         }
 
-        $parameterNames = array_map(
-            static fn (ParameterReflection $parameter): string => $parameter->getName(),
-            array_slice($nameableParameters, 0, count($unnamedArguments)),
-        );
+        $parameterNames = array_slice(array: $nameableParameterNames, offset: 0, length: count($unnamedArguments));
 
         return [
             RuleErrorBuilder::message(sprintf(self::MESSAGE, $callee->getName(), count($arguments), implode(', ', $parameterNames)))
                 ->identifier('anzu.namedArguments')
                 ->build(),
         ];
+    }
+
+    /**
+     * @param array<int, Arg> $arguments
+     *
+     * @return list<string>
+     */
+    private function resolveNameableParameterNames(ExtendedMethodReflection|FunctionReflection $callee, array $arguments, Scope $scope): array
+    {
+        $parameters = $this->findNativeParameters($callee) ?? ParametersAcceptorSelector::selectFromArgs(
+            scope: $scope,
+            args: $arguments,
+            parametersAcceptors: $callee->getVariants(),
+            namedArgumentsVariants: $callee->getNamedArgumentsVariants(),
+        )->getParameters();
+        $nameableParameters = array_filter(
+            $parameters,
+            static fn (ParameterReflection|ReflectionParameter $parameter): bool => false === $parameter->isVariadic(),
+        );
+
+        return array_values(array_map(
+            static fn (ParameterReflection|ReflectionParameter $parameter): string => $parameter->getName(),
+            $nameableParameters,
+        ));
+    }
+
+    /**
+     * The stubs of PHPStan can differ from PHP: array_udiff() takes `arr1, arr2, data_comp_func` there and
+     * `$array, ...$rest` in PHP, where those names fail at run time.
+     *
+     * @return list<ReflectionParameter>|null
+     */
+    private function findNativeParameters(ExtendedMethodReflection|FunctionReflection $callee): ?array
+    {
+        if ($callee instanceof FunctionReflection) {
+            return $callee->isBuiltin() && function_exists($callee->getName())
+                // @phpstan-ignore phpstanApi.runtimeReflection (the names must be those of the running PHP, not of the stubs)
+                ? new ReflectionFunction($callee->getName())
+                    ->getParameters()
+                : null;
+        }
+
+        $class = $callee->getDeclaringClass();
+
+        return $class->isBuiltin() && method_exists($class->getName(), $callee->getName())
+            // @phpstan-ignore phpstanApi.runtimeReflection (the names must be those of the running PHP, not of the stubs)
+            ? new ReflectionMethod($class->getName(), $callee->getName())
+                ->getParameters()
+            : null;
     }
 
     private function isCheckedClass(Scope $scope): bool

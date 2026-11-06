@@ -5,9 +5,9 @@ declare(strict_types=1);
 namespace AnzuSystems\CommonBundle\Doctrine\Walker;
 
 use Doctrine\ORM\Query\AST\FromClause;
-use Doctrine\ORM\Query\SqlWalker;
+use Doctrine\ORM\Query\SqlOutputWalker;
 
-final class ForceIndexWalker extends SqlWalker
+final class ForceIndexWalker extends SqlOutputWalker
 {
     public const string HINT_FORCE_INDEX_FOR_FROM = 'ForceIndexWalker.ForceIndex';
     public const string HINT_FORCE_INDEX_FOR_JOIN = 'ForceIndexWalker.ForceIndexForJoin';

@@ -29,8 +29,8 @@ final class McpPreviewHashFactoryTest extends TestCase
         $writeInput->previewHash = 'sent by the client';
 
         self::assertSame(
-            $factory->create(self::TOOL, $this->createPreviewInput(self::TITLE), null),
-            $factory->create(self::TOOL, $writeInput, null),
+            $factory->create(writeToolName: self::TOOL, input: $this->createPreviewInput(self::TITLE), currentState: null),
+            $factory->create(writeToolName: self::TOOL, input: $writeInput, currentState: null),
         );
     }
 
@@ -38,12 +38,12 @@ final class McpPreviewHashFactoryTest extends TestCase
     {
         $factory = $this->createFactory();
         $input = $this->createPreviewInput(self::TITLE);
-        $hash = $factory->create(self::TOOL, $input, null);
+        $hash = $factory->create(writeToolName: self::TOOL, input: $input, currentState: null);
 
-        self::assertNotSame($hash, $factory->create(self::OTHER_TOOL, $input, null));
-        self::assertNotSame($hash, $factory->create(self::TOOL, $this->createPreviewInput('Other'), null));
-        self::assertNotSame($hash, $factory->create(self::TOOL, $input, $this->createPreviewInput(self::TITLE)));
-        self::assertNotSame($hash, new McpPreviewHashFactory(McpSerializerFactory::create(), 'other')->create(self::TOOL, $input, null));
+        self::assertNotSame($hash, $factory->create(writeToolName: self::OTHER_TOOL, input: $input, currentState: null));
+        self::assertNotSame($hash, $factory->create(writeToolName: self::TOOL, input: $this->createPreviewInput('Other'), currentState: null));
+        self::assertNotSame($hash, $factory->create(writeToolName: self::TOOL, input: $input, currentState: $this->createPreviewInput(self::TITLE)));
+        self::assertNotSame($hash, new McpPreviewHashFactory(McpSerializerFactory::create(), 'other')->create(writeToolName: self::TOOL, input: $input, currentState: null));
         self::assertMatchesRegularExpression(McpPreviewHashFactory::PREVIEW_HASH_PATTERN, $hash);
     }
 
@@ -52,12 +52,12 @@ final class McpPreviewHashFactoryTest extends TestCase
         $factory = $this->createFactory();
 
         self::assertSame(
-            $factory->createStateHash(new ExampleState(1, self::FIRST_DATE, new ExampleStateItem(1, self::TITLE))),
-            $factory->createStateHash(new ExampleState(2, self::SECOND_DATE, new ExampleStateItem(null, self::TITLE))),
+            $factory->createStateHash(new ExampleState(id: 1, modifiedAt: self::FIRST_DATE, item: new ExampleStateItem(1, self::TITLE))),
+            $factory->createStateHash(new ExampleState(id: 2, modifiedAt: self::SECOND_DATE, item: new ExampleStateItem(null, self::TITLE))),
         );
         self::assertNotSame(
-            $factory->createStateHash(new ExampleState(1, self::FIRST_DATE, new ExampleStateItem(1, self::TITLE))),
-            $factory->createStateHash(new ExampleState(1, self::FIRST_DATE, new ExampleStateItem(1, 'Other'))),
+            $factory->createStateHash(new ExampleState(id: 1, modifiedAt: self::FIRST_DATE, item: new ExampleStateItem(1, self::TITLE))),
+            $factory->createStateHash(new ExampleState(id: 1, modifiedAt: self::FIRST_DATE, item: new ExampleStateItem(1, 'Other'))),
         );
     }
 

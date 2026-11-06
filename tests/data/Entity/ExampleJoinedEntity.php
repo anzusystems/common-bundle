@@ -24,6 +24,7 @@ class ExampleJoinedEntity
     private string $name;
 
     #[ORM\ManyToOne]
+    #[ORM\JoinColumn(nullable: false)]
     private ExampleJoinedEntity $joinedEntity;
 
     public function __construct()

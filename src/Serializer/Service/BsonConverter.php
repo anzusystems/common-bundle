@@ -46,7 +46,7 @@ final class BsonConverter
                 continue;
             }
             try {
-                $this->propertyAccessor->setValue($object, $metadata, $value);
+                $this->propertyAccessor->setValue(object: $object, metadata: $metadata, value: $value);
             } catch (Throwable) {
                 throw new SerializerException('Unable to deserialize "' . $name . '". Check type.');
             }

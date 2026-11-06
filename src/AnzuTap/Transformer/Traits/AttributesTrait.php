@@ -17,7 +17,7 @@ trait AttributesTrait
             }
             $attributeValue = $element->getAttribute($srcAttributeName);
             if ($attributeValue) {
-                if (isset($validValues[$dstAttributeName]) && false === in_array($attributeValue, $validValues[$dstAttributeName], true)) {
+                if (isset($validValues[$dstAttributeName]) && false === in_array(needle: $attributeValue, haystack: $validValues[$dstAttributeName], strict: true)) {
                     continue;
                 }
                 $attrs[$dstAttributeName] = $attributeValue;

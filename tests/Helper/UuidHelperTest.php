@@ -21,7 +21,7 @@ final class UuidHelperTest extends AnzuKernelTestCase
         int $id,
         int $groupId = 0,
     ): void {
-        self::assertSame($expectedResult, UuidHelper::getAnzuId($resourceName, $system, $id, $groupId));
+        self::assertSame($expectedResult, UuidHelper::getAnzuId(resourceName: $resourceName, system: $system, id: $id, groupId: $groupId));
     }
 
     /**

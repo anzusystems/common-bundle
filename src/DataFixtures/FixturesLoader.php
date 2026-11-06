@@ -25,7 +25,7 @@ final class FixturesLoader
     public function load(OutputInterface $output): void
     {
         foreach ($this->fixtures as $fixtures) {
-            if (false === in_array($this->env, $fixtures->getEnvironments(), true)) {
+            if (false === in_array(needle: $this->env, haystack: $fixtures->getEnvironments(), strict: true)) {
                 continue;
             }
             if ($fixtures->useCustomId()) {

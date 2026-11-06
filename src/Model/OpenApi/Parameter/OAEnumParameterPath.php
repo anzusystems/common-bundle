@@ -20,7 +20,7 @@ final class OAEnumParameterPath extends PathParameter
      */
     public function __construct(string $name, string $class, ?string $description = null)
     {
-        if (is_a($class, EnumInterface::class, true)) {
+        if (is_a(object_or_class: $class, class: EnumInterface::class, allow_string: true)) {
             /** @var list<scalar> $enum */
             $enum = array_values($class::values());
             parent::__construct(

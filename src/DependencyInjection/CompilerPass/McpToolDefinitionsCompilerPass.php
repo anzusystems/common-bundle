@@ -65,7 +65,7 @@ final class McpToolDefinitionsCompilerPass implements CompilerPassInterface
             writeToolNamesByPreview: $writeToolNamesByPreview,
         );
         $this->assertToolsHavePermission($toolsByName, $toolPermissions);
-        $toolRateLimiters = $this->configureWriteRateLimiter($container, $toolsByName, $readOnlyToolNames);
+        $toolRateLimiters = $this->configureWriteRateLimiter(container: $container, toolsByName: $toolsByName, readOnlyToolNames: $readOnlyToolNames);
         $container
             ->getDefinition(McpToolDefinitions::class)
             ->replaceArgument(self::DEFINITIONS_ARGUMENT, $this->createToolDefinitions(
@@ -434,7 +434,7 @@ final class McpToolDefinitionsCompilerPass implements CompilerPassInterface
         McpToolSignature $previewSignature,
     ): void {
         $previewOutputClass = $previewSignature->outputClass;
-        if (false === is_string($previewOutputClass) || false === is_a($previewOutputClass, McpWritePreviewInterface::class, true)) {
+        if (false === is_string($previewOutputClass) || false === is_a(object_or_class: $previewOutputClass, class: McpWritePreviewInterface::class, allow_string: true)) {
             throw McpConfigurationException::createPreviewResponseWithoutConfirmation($previewName, $toolName);
         }
         $inputClass = $signature->inputClass;
@@ -442,8 +442,8 @@ final class McpToolDefinitionsCompilerPass implements CompilerPassInterface
         if (
             false === is_string($inputClass)
             || false === is_string($previewInputClass)
-            || false === is_a($inputClass, McpPreviewHashAwareInterface::class, true)
-            || false === is_a($inputClass, $previewInputClass, true)
+            || false === is_a(object_or_class: $inputClass, class: McpPreviewHashAwareInterface::class, allow_string: true)
+            || false === is_a(object_or_class: $inputClass, class: $previewInputClass, allow_string: true)
         ) {
             throw McpConfigurationException::createWriteInputNotPreviewInput($toolName, $previewName);
         }

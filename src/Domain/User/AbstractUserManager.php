@@ -14,7 +14,7 @@ abstract class AbstractUserManager extends AbstractManager
     public function createAnzuUser(AnzuUser $user, UserDto $userDto, bool $flush = true): AnzuUser
     {
         $user->setId($userDto->getId());
-        $this->updateAnzuUser($user, $userDto, false);
+        $this->updateAnzuUser(user: $user, userDto: $userDto, flush: false);
         $this->trackCreation($user);
         $this->entityManager->persist($user);
         $this->flush($flush);
@@ -51,7 +51,7 @@ abstract class AbstractUserManager extends AbstractManager
             ->setEnabled($userDto->isEnabled())
         ;
         $this->colUpdate($user->getPermissionGroups(), $userDto->getPermissionGroups());
-        $this->updateBaseAnzuUser($user, $userDto, $flush);
+        $this->updateBaseAnzuUser(user: $user, userDto: $userDto, flush: $flush);
 
         return $user;
     }

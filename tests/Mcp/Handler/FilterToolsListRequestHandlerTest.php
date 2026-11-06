@@ -66,7 +66,7 @@ final class FilterToolsListRequestHandlerTest extends TestCase
             self::NOT_GRANTED_PREVIEW_TOOL_NAME,
         ];
         foreach ($toolNames as $toolName) {
-            $tools[$toolName] = new Tool($toolName, null, ['type' => 'object'], null, null);
+            $tools[$toolName] = new Tool(name: $toolName, title: null, inputSchema: ['type' => 'object', 'properties' => [], 'required' => null], description: null, annotations: null);
         }
         $registry = $this->createMock(RegistryInterface::class);
         $registry->method('getTools')
@@ -101,6 +101,6 @@ final class FilterToolsListRequestHandlerTest extends TestCase
             ),
         );
 
-        return new FilterToolsListRequestHandler($registry, $toolAccessChecker, self::PAGE_SIZE);
+        return new FilterToolsListRequestHandler(registry: $registry, toolAccessChecker: $toolAccessChecker, pageSize: self::PAGE_SIZE);
     }
 }

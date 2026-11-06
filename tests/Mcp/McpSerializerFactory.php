@@ -24,14 +24,15 @@ final class McpSerializerFactory
 {
     public static function create(): Serializer
     {
-        $metadataRegistry = new MetadataRegistry(new ArrayAdapter(), new NullLogger(), new MetadataFactory(new ParameterBag()));
+        $metadataRegistry = new MetadataRegistry(appCache: new ArrayAdapter(), appLogger: new NullLogger(), metadataFactory: new MetadataFactory(new ParameterBag()));
         $objectHandler = null;
         $handlerLocator = new ServiceLocator([
             BasicHandler::class => static fn (): BasicHandler => new BasicHandler(),
             RawArrayHandler::class => static fn (): RawArrayHandler => new RawArrayHandler(),
-            UuidArrayHandler::class => static fn (): UuidArrayHandler => new UuidArrayHandler(),
+            UuidArrayHandler::class => static fn (): UuidArrayHandler => new UuidArrayHandler(new UuidHandler()),
             UuidHandler::class => static fn (): UuidHandler => new UuidHandler(),
             ObjectHandler::class => static function () use (&$objectHandler): ObjectHandler {
+                /** @var ObjectHandler $objectHandler */
                 return $objectHandler;
             },
         ]);

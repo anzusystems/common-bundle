@@ -46,7 +46,7 @@ final class McpLogRepositoryTest extends TestCase
             )
             ->willReturn($cursor);
 
-        $documents = (new McpLogRepository($collection))->findLatestByContextId(self::CONTEXT_ID, $from, self::LIMIT);
+        $documents = (new McpLogRepository($collection))->findLatestByContextId(contextId: self::CONTEXT_ID, from: $from, limit: self::LIMIT);
 
         self::assertSame(['newer', 'older'], array_column($documents, 'id'));
     }

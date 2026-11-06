@@ -72,7 +72,7 @@ abstract class AbstractMcpTestCase extends AnzuWebTestCase
 
     protected static function assertToolUnknownId(string $field, int $id, string $resolverTool, McpToolResult $result): void
     {
-        self::assertToolError(self::createUnknownIdError($field, $id, $resolverTool), $result);
+        self::assertToolError(self::createUnknownIdError(field: $field, id: $id, resolverTool: $resolverTool), $result);
     }
 
     /**
@@ -80,7 +80,7 @@ abstract class AbstractMcpTestCase extends AnzuWebTestCase
      */
     protected static function assertToolUnknownIds(string $field, array $ids, string $resolverTool, McpToolResult $result): void
     {
-        self::assertToolError(self::createUnknownIdsError($field, $ids, $resolverTool), $result);
+        self::assertToolError(self::createUnknownIdsError(field: $field, ids: $ids, resolverTool: $resolverTool), $result);
     }
 
     protected static function createInvalidArgumentError(string $field, string $message): string

@@ -20,7 +20,7 @@
 * `McpSchemaFactory` reads the private `#[Serialize]` properties of parent classes, like the serializer.
 * `McpToolSchemaCompilerPass` registers the classes behind a tool schema as container resources, so a changed DTO rebuilds the container in dev.
 * The `Returns:` list of a tool description names the fields of a keyed collection as `name{}`.
-* `UuidArrayHandler` serializer handler for a `list<Uuid>` property (`#[Serialize(handler: UuidArrayHandler::class)]`): the serializer-bundle `ObjectHandler` builds the items of a typed array only as objects from arrays, so it cannot turn a list of UUID strings into `Uuid` objects; an invalid item fails the deserialization.
+* `UuidArrayHandler` serializer handler for a `list<Uuid>` property (`#[Serialize(handler: UuidArrayHandler::class)]`): the serializer-bundle `ObjectHandler` builds the items of a typed array only as objects from arrays, so it cannot turn a list of UUID strings into `Uuid` objects. An item goes through `UuidHandler` and reads like a single `Uuid` field: `''` and the nil UUID give `NilUuid`, the max UUID gives `MaxUuid`, and every form of `Uuid::fromString()` passes, base58 and base32 too. A value it does not read fails the deserialization, and so does a `null` item.
 * `#[McpExistingId(entity: Site::class, resolverTool: ListSitesTool::NAME)]` checks that an `int` or a `list<int>` property of a tool request holds ids of existing rows of the entity, with one query through `AnzuRepositoryInterface::findExistingIds()` of the entity's repository; `null` and `[]` pass without a query. An unknown id fails with `Unknown id "5" — no such record exists. Resolve it via list_sites instead of guessing the id.`, unknown ids of a list with one violation `Unknown ids "5", "7" — no such records exist. Resolve them via list_sites instead of guessing the ids.` An entity whose repository does not implement `AnzuRepositoryInterface` throws a `LogicException`.
 * MCP host guard: with the `mcp` section enabled, `McpHostRouteListener` answers 404 to a main request on a host of `mcp.allowed_hosts` or on a pod with the new `mcp.pod: true` (default `false`) unless its route has the `McpHostRouteListener::ALLOWED_ON_MCP_HOST` default. `McpHostResolver` is the routing condition service `mcp_host` with `isMcpHost(request)` and `isNotMcpHost(request)`.
 * `McpHostResolver` trims `mcp.allowed_hosts` and leaves out empty values, and `McpController` reads the hosts from it: a host written with a space in the env variable no longer passes the guard of `McpHostRouteListener`.
@@ -47,6 +47,7 @@
 * Log tools return null instead of `''` and `0` for a value the record does not have, `get_logs_by_context` returns the `client` of a tool call, and the output schema lists the fields of a record through the new `McpAuditLogDecorator`, `McpAppLogDecorator` and `McpToolCallLogDecorator`.
 
 ### Changes
+* BC change: the deprecated `ApiFilterParamConverter`, `EnumParamConverter` and `ValueObjectParamConverter` and the support of `sensio/framework-extra-bundle` are gone. Use `ApiFilterParamValueResolver`, `ValueObjectValueResolver` and the `BackedEnumValueResolver` of Symfony.
 * `#[McpField(requiredBySchema: false)]` leaves a field the validator requires out of the schema's `required`. `McpPreviewHashTrait` uses it, so a write without `previewHash` is answered by the validator with the name of the preview tool, not by the generic error of the SDK.
 * BC change: `AnzuRepositoryInterface` declares `findExistingIds()`. A repository that extends `AbstractAnzuRepository` has it, any other implementation of the interface adds it.
 * BC change: `#[AsMcpTool]` takes `permission`, the permission of the host the tool needs, instead of the removed `mcp.tool_permissions` map. The log tools of the bundle take theirs from the new required `mcp.log_tools_permission`. A tool declared by `#[AsMcpTool]` without a permission or a preview now fails the container compilation instead of staying hidden. Tools and their categories come in the order of the tool services, no longer in the order of the map.
@@ -79,6 +80,9 @@
 * BC change: McpToolDefinitionsCompilerPass fails the container compilation for a write tool without a preview, a preview response without McpWritePreviewInterface and a write input that does not extend the preview input and implement McpPreviewHashAwareInterface.
 * McpCompilerPass sets explicit server capabilities without listChanged and subscribe, a subscription lifetime of 1 ms and no input required shim.
 * New dependency `symfony/translation-contracts` (`^3`).
+* `doctrine/dbal` needs `^4.4` and `doctrine/orm` needs `^3.3`, for `CurrentTimestamp` and `SqlOutputWalker`.
+* `ForceIndexWalker` extends `SqlOutputWalker`. The SQL stays the same.
+* `Job::$scheduledAt` declares its default as `new CurrentTimestamp()`. The schema stays the same, no migration is needed.
 * BC change: `McpPageWindow` exposes `$clamped`, `$raisedToMinimum`, `$offset` and `$reachableRows` as virtual properties instead of `isClamped()`, `isRaisedToMinimum()`, `getOffset()` and `getReachableRows()`; the class is no longer `readonly`, its constructor properties still are.
 * BC change: `#[AsMcpTool]` requires `category`. Add `category:` to every tool before upgrading.
 * BC change: `McpObjectArrayRule` reports `#[Serialize]` arrays of host objects too; declare them as `Collection<int, X>`.

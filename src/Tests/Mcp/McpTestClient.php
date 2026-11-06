@@ -129,7 +129,7 @@ final class McpTestClient
 
         return $this->post($method, $params)
             ->getContent()
-            |> (static fn (string|false $content): array => json_decode((string) $content, true, flags: JSON_THROW_ON_ERROR));
+            |> (static fn (string|false $content): array => json_decode(json: (string) $content, associative: true, flags: JSON_THROW_ON_ERROR));
     }
 
     private function initialize(): void

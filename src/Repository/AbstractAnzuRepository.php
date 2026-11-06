@@ -164,7 +164,7 @@ abstract class AbstractAnzuRepository extends ServiceEntityRepository implements
                 count($data) > $apiParams->getLimit()
             )
             ->setData(
-                array_slice($data, 0, $apiParams->getLimit())
+                array_slice(array: $data, offset: 0, length: $apiParams->getLimit())
             )
             ->setTotalCount($totalCount)
         ;
@@ -197,7 +197,7 @@ abstract class AbstractAnzuRepository extends ServiceEntityRepository implements
 
     public function getTouchedByUserQuery(AnzuUser $user): QueryBuilder
     {
-        if (false === is_a($this->getEntityClass(), UserTrackingInterface::class, true)) {
+        if (false === is_a(object_or_class: $this->getEntityClass(), class: UserTrackingInterface::class, allow_string: true)) {
             throw new DomainException(
                 sprintf(
                     'The class `%s` is not of `%s`. Forgot to override `%s`?',

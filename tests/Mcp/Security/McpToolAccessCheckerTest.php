@@ -19,7 +19,6 @@ final class McpToolAccessCheckerTest extends TestCase
     private const string UNMAPPED_TOOL = 'list_authors';
     private const string SECOND_GRANTED_TOOL = 'list_site_groups';
     private const string PREVIEW_TOOL = 'preview_site_update';
-    private const string TOOL_CATEGORY = 'sites';
     private const string GRANTED_PERMISSION = 'cms_site_read';
     private const string DENIED_PERMISSION = 'cms_log_read';
 

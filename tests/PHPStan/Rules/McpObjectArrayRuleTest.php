@@ -31,14 +31,14 @@ final class McpObjectArrayRuleTest extends RuleTestCase
                 self::DATA_DIR . '/Domain/Example/ObjectArraysOutsideMcp.php',
             ],
             [
-                [$this->createMessage('Property ' . McpObjectArrays::class . '::$examples', 'list<' . Example::class . '>', Example::class), 17],
-                [$this->createMessage('Property ' . McpObjectArrays::class . '::$dtos', 'array<' . DummyDto::class . '>|null', DummyDto::class), 22],
-                [$this->createMessage('Property ' . McpObjectArrays::class . '::$serializedDtos', 'list<' . DummyDto::class . '>', DummyDto::class), 27],
-                [$this->createMessage('Property ' . McpObjectArrays::class . '::$examplesByGroupId', 'array<int, list<' . Example::class . '>>', Example::class), 35],
-                [$this->createMessage('Property ' . McpObjectArrays::class . '::$serializedExamples', 'list<' . DummyDto::class . '>', DummyDto::class), 36],
-                [$this->createMessage('Parameter $usersByEmail of method ' . McpObjectArrays::class . '::mapExamples()', 'array<string, ' . User::class . '>', User::class), 46],
-                [$this->createMessage('Return type of method ' . McpObjectArrays::class . '::mapExamples()', 'list<' . DummyDto::class . '>', DummyDto::class), 46],
-                [$this->createMessage('Return type of method ' . McpSharedObjectArrays::class . '::findExamples()', 'list<' . Example::class . '>', Example::class), 14],
+                [$this->createMessage(subject: 'Property ' . McpObjectArrays::class . '::$examples', type: 'list<' . Example::class . '>', objectClassName: Example::class), 17],
+                [$this->createMessage(subject: 'Property ' . McpObjectArrays::class . '::$dtos', type: 'array<' . DummyDto::class . '>|null', objectClassName: DummyDto::class), 22],
+                [$this->createMessage(subject: 'Property ' . McpObjectArrays::class . '::$serializedDtos', type: 'list<' . DummyDto::class . '>', objectClassName: DummyDto::class), 27],
+                [$this->createMessage(subject: 'Property ' . McpObjectArrays::class . '::$examplesByGroupId', type: 'array<int, list<' . Example::class . '>>', objectClassName: Example::class), 35],
+                [$this->createMessage(subject: 'Property ' . McpObjectArrays::class . '::$serializedExamples', type: 'list<' . DummyDto::class . '>', objectClassName: DummyDto::class), 36],
+                [$this->createMessage(subject: 'Parameter $usersByEmail of method ' . McpObjectArrays::class . '::mapExamples()', type: 'array<string, ' . User::class . '>', objectClassName: User::class), 46],
+                [$this->createMessage(subject: 'Return type of method ' . McpObjectArrays::class . '::mapExamples()', type: 'list<' . DummyDto::class . '>', objectClassName: DummyDto::class), 46],
+                [$this->createMessage(subject: 'Return type of method ' . McpSharedObjectArrays::class . '::findExamples()', type: 'list<' . Example::class . '>', objectClassName: Example::class), 14],
             ],
         );
     }

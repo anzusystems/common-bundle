@@ -29,8 +29,6 @@ final class McpWriteToolGuardTest extends TestCase
     private const string READ_TOOL_NAME = 'list_examples';
     private const string WRITE_TOOL_NAME = 'create_example';
     private const string TOOL_PERMISSION = 'cms_example_read';
-    private const int FIRST_USER_ID = 7;
-    private const int SECOND_USER_ID = 8;
 
     /**
      * @dataProvider writeGrantProvider

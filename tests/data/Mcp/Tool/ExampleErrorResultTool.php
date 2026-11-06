@@ -19,7 +19,7 @@ final readonly class ExampleErrorResultTool
     public function __invoke(RequestContext $context): CallToolResult
     {
         return new CallToolResult(
-            [new TextContent(self::ERROR)],
+            content: [new TextContent(self::ERROR)],
             isError: true,
             structuredContent: [McpToolReferenceHandler::ERROR_KEY => self::ERROR],
         );

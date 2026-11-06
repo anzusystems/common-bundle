@@ -8,8 +8,8 @@ use AnzuSystems\CommonBundle\Exception\ValidationException;
 use AnzuSystems\SerializerBundle\Context\SerializationContext;
 use AnzuSystems\SerializerBundle\Exception\SerializerException;
 use AnzuSystems\SerializerBundle\Handler\Handlers\AbstractHandler;
+use AnzuSystems\SerializerBundle\Handler\Handlers\UuidHandler;
 use AnzuSystems\SerializerBundle\Metadata\Metadata;
-use InvalidArgumentException;
 use Symfony\Component\TypeInfo\TypeIdentifier;
 use Symfony\Component\Uid\Uuid;
 
@@ -19,6 +19,11 @@ use Symfony\Component\Uid\Uuid;
 final class UuidArrayHandler extends AbstractHandler
 {
     private const string FORMAT_UUID = 'uuid';
+
+    public function __construct(
+        private readonly UuidHandler $uuidHandler,
+    ) {
+    }
 
     /**
      * @return list<string>|null
@@ -49,15 +54,12 @@ final class UuidArrayHandler extends AbstractHandler
 
         $uuids = [];
         foreach ($value as $item) {
-            if (false === is_string($item)) {
-                throw new SerializerException(ValidationException::ERROR_FIELD_INVALID);
+            $uuid = $this->uuidHandler->deserialize($item, $metadata);
+            if (false === $uuid instanceof Uuid) {
+                throw $this->invalidValue($item, $metadata);
             }
 
-            try {
-                $uuids[] = Uuid::fromString($item);
-            } catch (InvalidArgumentException) {
-                throw new SerializerException(ValidationException::ERROR_FIELD_INVALID);
-            }
+            $uuids[] = $uuid;
         }
 
         return $uuids;
@@ -65,7 +67,7 @@ final class UuidArrayHandler extends AbstractHandler
 
     public static function supportsDescribe(string $property, Metadata $metadata): bool
     {
-        return is_a($metadata->customHandler, self::class, true);
+        return is_a(object_or_class: $metadata->customHandler, class: self::class, allow_string: true);
     }
 
     public function describe(string $property, Metadata $metadata): array

@@ -29,7 +29,7 @@ final class AuditLogRepository extends AbstractLogRepository
         protected BsonConverter $bsonConverter,
         protected int $queryMaxTimeMs = ApiQueryMongo::DEFAULT_QUERY_MAX_TIME_MS,
     ) {
-        parent::__construct($auditLogCollection, $serializer, $this->bsonConverter, $queryMaxTimeMs);
+        parent::__construct(collection: $auditLogCollection, serializer: $serializer, bsonConverter: $this->bsonConverter, queryMaxTimeMs: $queryMaxTimeMs);
     }
 
     /**

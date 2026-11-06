@@ -40,7 +40,7 @@ class LinkNodeTransformer extends AbstractMarkNodeTransformer
 
     public function transform(DOMElement $element): array|null
     {
-        if (in_array($element->nodeName, [self::NODE_A, self::NODE_URL], true)) {
+        if (in_array(needle: $element->nodeName, haystack: [self::NODE_A, self::NODE_URL], strict: true)) {
             $attrs = $this->getAnchorAttrs($element);
             if (is_array($attrs)) {
                 return $this->getMarkNode(
@@ -75,9 +75,9 @@ class LinkNodeTransformer extends AbstractMarkNodeTransformer
     public function getAnchorAttrs(DOMElement $element): ?array
     {
         $attrs = $this->getAttrs(
-            ['href', 'clickthrough', 'size', 'target', 'rel'],
-            $element,
-            [
+            attributes: ['href', 'clickthrough', 'size', 'target', 'rel'],
+            element: $element,
+            validValues: [
                 'size' => ['large', 'small'],
                 'target' => ['_blank'],
                 'rel' => ['nofollow'],

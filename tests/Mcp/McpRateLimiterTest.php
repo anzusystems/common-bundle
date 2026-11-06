@@ -104,14 +104,14 @@ final class McpRateLimiterTest extends TestCase
             ->willReturn($elevated);
 
         return new McpRateLimiter(
-            self::LIMIT,
-            self::INTERVAL,
-            new InMemoryStorage(),
-            $currentUserProvider,
-            $security,
-            self::ELEVATED_ROLE,
-            self::ELEVATED_LIMIT,
-            new LockFactory(new InMemoryStore()),
+            limit: self::LIMIT,
+            interval: self::INTERVAL,
+            storage: new InMemoryStorage(),
+            currentUserProvider: $currentUserProvider,
+            security: $security,
+            elevatedRole: self::ELEVATED_ROLE,
+            elevatedLimit: self::ELEVATED_LIMIT,
+            lockFactory: new LockFactory(new InMemoryStore()),
         );
     }
 }

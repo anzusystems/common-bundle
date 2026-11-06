@@ -47,7 +47,7 @@ final class LogDto
 
     public function setMessage(string $message): self
     {
-        $this->message = mb_substr($message, 0, 250);
+        $this->message = mb_substr(string: $message, start: 0, length: 250);
 
         return $this;
     }
@@ -59,7 +59,7 @@ final class LogDto
 
     public function setAppSystem(string $appSystem): self
     {
-        $this->appSystem = mb_substr($appSystem, 0, 50);
+        $this->appSystem = mb_substr(string: $appSystem, start: 0, length: 50);
 
         return $this;
     }
@@ -71,7 +71,7 @@ final class LogDto
 
     public function setContent(string $content): self
     {
-        $this->content = mb_substr($content, 0, 2_000);
+        $this->content = mb_substr(string: $content, start: 0, length: 2_000);
 
         return $this;
     }
@@ -83,7 +83,7 @@ final class LogDto
 
     public function setPath(string $path): self
     {
-        $this->path = mb_substr($path, 0, 500);
+        $this->path = mb_substr(string: $path, start: 0, length: 500);
 
         return $this;
     }

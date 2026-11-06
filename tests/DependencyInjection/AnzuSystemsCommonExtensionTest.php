@@ -71,8 +71,8 @@ final class AnzuSystemsCommonExtensionTest extends TestCase
             ->getArgument('$dependencyProviders');
         self::assertInstanceOf(ServiceLocatorArgument::class, $dependencyProviders);
         $taggedIterator = $dependencyProviders->getTaggedIteratorArgument();
-        self::assertSame(AnzuSystemsCommonBundle::TAG_MCP_DELETE_DEPENDENCY_PROVIDER, $taggedIterator?->getTag());
-        self::assertSame('getSupportedEntity', $taggedIterator?->getDefaultIndexMethod(false));
+        self::assertSame(AnzuSystemsCommonBundle::TAG_MCP_DELETE_DEPENDENCY_PROVIDER, $taggedIterator->getTag());
+        self::assertSame('getSupportedEntity', $taggedIterator->getDefaultIndexMethod(false));
     }
 
     /**

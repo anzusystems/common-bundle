@@ -37,7 +37,7 @@ final class ApiQueryMongo
         foreach ($this->params->getFilter() as $filterVariant => $filterFieldValue) {
             foreach ($filterFieldValue as $field => $value) {
                 $persistedName = $this->getPersistedName($field);
-                $value = $this->getFilterValue($filterVariant, $field, $value);
+                $value = $this->getFilterValue(filterVariant: $filterVariant, field: $field, value: $value);
                 switch ($filterVariant) {
                     case ApiParams::FILTER_GT:
                         $filter[$persistedName]['$gt'] = $value;
@@ -123,7 +123,7 @@ final class ApiQueryMongo
     private function getFilterValue(string $filterVariant, string $field, mixed $value): mixed
     {
         $type = $this->getPropertyType($field);
-        if (in_array($filterVariant, ApiParams::ARRAY_FILTERS, true)) {
+        if (in_array(needle: $filterVariant, haystack: ApiParams::ARRAY_FILTERS, strict: true)) {
             return array_map(
                 static fn (mixed $val): mixed => self::castValue($type, $val),
                 explode(',', $value)

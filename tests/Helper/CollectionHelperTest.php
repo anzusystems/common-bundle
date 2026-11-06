@@ -47,7 +47,7 @@ final class CollectionHelperTest extends TestCase
         ?Closure $compareAction,
         Collection $expectedResult,
     ): void {
-        $dif = CollectionHelper::colDiff($collectionOne, $collectionTwo, $compareAction);
+        $dif = CollectionHelper::colDiff(collectionOne: $collectionOne, collectionTwo: $collectionTwo, colDiffFn: $compareAction);
         self::assertSame($expectedResult->getValues(), $dif->getValues());
     }
 
@@ -157,7 +157,7 @@ final class CollectionHelperTest extends TestCase
         return new ArrayCollection(array_map(
             static fn (int $id): User => new User()
                 ->setId($id),
-            $ids,
+            array_values($ids),
         ));
     }
 }

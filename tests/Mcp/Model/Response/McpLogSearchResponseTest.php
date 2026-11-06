@@ -68,14 +68,14 @@ final class McpLogSearchResponseTest extends TestCase
     private function createSearchResult(bool $truncated, int $limit, bool $hasMore, ?AbstractMcpLogDecorator $log = null): McpLogSearchResult
     {
         return new McpLogSearchResult(
-            new ArrayCollection([$log ?? new McpAppLogDecorator(['message' => self::MESSAGE])]),
-            new McpDateWindow(
-                new DateTimeImmutable('2026-07-19T00:00:00+00:00'),
-                new DateTimeImmutable('2026-07-20T00:00:00+00:00'),
-                $truncated,
+            logs: new ArrayCollection([$log ?? new McpAppLogDecorator(['message' => self::MESSAGE])]),
+            window: new McpDateWindow(
+                from: new DateTimeImmutable('2026-07-19T00:00:00+00:00'),
+                until: new DateTimeImmutable('2026-07-20T00:00:00+00:00'),
+                truncated: $truncated,
             ),
-            $limit,
-            $hasMore,
+            limit: $limit,
+            hasMore: $hasMore,
         );
     }
 }

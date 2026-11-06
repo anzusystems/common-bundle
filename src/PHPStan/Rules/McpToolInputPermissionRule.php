@@ -66,7 +66,7 @@ final readonly class McpToolInputPermissionRule implements Rule
 
         $errors = [];
         foreach ($this->inputPermissions as $interface => $permission) {
-            if (false === $request->implementsInterface($interface) || $this->checksRequest($method, $permission, $parameterName, $scope)) {
+            if (false === $request->implementsInterface($interface) || $this->checksRequest(method: $method, permission: $permission, parameterName: $parameterName, scope: $scope)) {
                 continue;
             }
             $errors[] = RuleErrorBuilder::message(sprintf(self::MESSAGE, $classReflection->getName(), $interface, $permission, $parameterName))
@@ -81,7 +81,7 @@ final readonly class McpToolInputPermissionRule implements Rule
     private function checksRequest(ClassMethod $method, string $permission, string $parameterName, Scope $scope): bool
     {
         foreach ($method->getStmts() ?? [] as $statement) {
-            if ($statement instanceof Expression && $this->isCheck($statement->expr, $permission, $parameterName, $scope)) {
+            if ($statement instanceof Expression && $this->isCheck(expression: $statement->expr, permission: $permission, parameterName: $parameterName, scope: $scope)) {
                 return true;
             }
         }
@@ -94,7 +94,7 @@ final readonly class McpToolInputPermissionRule implements Rule
         if (false === $expression instanceof MethodCall || false === $expression->name instanceof Identifier || self::CHECK_METHOD !== $expression->name->toString()) {
             return false;
         }
-        [$attribute, $subject] = array_pad($expression->getArgs(), 2, null);
+        [$attribute, $subject] = array_pad(array: $expression->getArgs(), length: 2, value: null);
 
         if (null === $attribute || false === $subject?->value instanceof Variable || $parameterName !== $subject->value->name) {
             return false;
