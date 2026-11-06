@@ -13,7 +13,7 @@ use AnzuSystems\CommonBundle\Mcp\Model\Response\McpLogsByContextResponse;
     name: GetLogsByContextTool::NAME,
     description: <<<'TXT'
         Returns all logs correlated to one request by its contextId: a UUID present on every audit log record, application log record and MCP tool call.
-        The same contextId correlates the logs of the other services of this platform, so it can also be looked up there.
+        The same contextId correlates the logs of the other services of this platform, so look it up there to follow the request end to end.
         TXT
     ,
     category: AsMcpTool::CATEGORY_DIAGNOSTICS,

@@ -26,13 +26,12 @@ final class McpLogSearchResponseTest extends TestCase
         $response = McpSerializerFactory::create()
             ->toArray(new McpAppLogSearchResponse($this->createSearchResult(truncated: false, limit: 20, hasMore: false)));
 
-        self::assertSame(['appLogs', 'from', 'until', 'limit', 'hint', 'warnings'], array_keys($response));
+        self::assertSame(['appLogs', 'from', 'until', 'limit', 'warnings'], array_keys($response));
         self::assertSame(self::MESSAGE, $response['appLogs'][0]['message']);
         self::assertNull($response['appLogs'][0]['userId']);
         self::assertSame('2026-07-19T00:00:00+00:00', $response['from']);
         self::assertSame('2026-07-20T00:00:00+00:00', $response['until']);
         self::assertSame(20, $response['limit']);
-        self::assertStringContainsString('get_logs_by_context', $response['hint']);
         self::assertSame([], $response['warnings']);
     }
 

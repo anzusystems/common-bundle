@@ -83,6 +83,16 @@ abstract class AbstractMcpTestCase extends AnzuWebTestCase
         self::assertToolError(self::createUnknownIdsError(field: $field, ids: $ids, resolverTool: $resolverTool), $result);
     }
 
+    protected static function assertToolWarning(string $expectedWarning, McpToolResult $result): void
+    {
+        self::assertContains($expectedWarning, $result->data['warnings'] ?? []);
+    }
+
+    protected static function assertToolNextStep(string $expectedNextStep, McpToolResult $result): void
+    {
+        self::assertContains($expectedNextStep, $result->data['nextSteps'] ?? []);
+    }
+
     protected static function createInvalidArgumentError(string $field, string $message): string
     {
         return sprintf(self::VIOLATION_FORMAT, McpToolErrorResolver::INVALID_ARGUMENTS_PREFIX, $field, $message);

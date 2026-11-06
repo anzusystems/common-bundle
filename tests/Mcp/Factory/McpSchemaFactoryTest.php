@@ -46,7 +46,7 @@ final class McpSchemaFactoryTest extends TestCase
         'additionalProperties' => false,
     ];
     private const string REQUIRED = 'required';
-    private const array LOGS_BY_CONTEXT_FIELDS = ['auditLogs', 'appLogs', 'mcpToolCalls', 'hint'];
+    private const array LOGS_BY_CONTEXT_FIELDS = ['auditLogs', 'appLogs', 'mcpToolCalls'];
 
     public function testPreviewHashIsLeftToTheValidator(): void
     {
@@ -324,6 +324,5 @@ final class McpSchemaFactoryTest extends TestCase
 
         self::assertSame(self::LOGS_BY_CONTEXT_FIELDS, $schema[self::REQUIRED]);
         self::assertSame(self::LOGS_BY_CONTEXT_FIELDS, array_keys($schema[McpSchemaFactory::PROPERTIES]));
-        self::assertSame(['type' => 'string'], $schema[McpSchemaFactory::PROPERTIES]['hint']);
     }
 }

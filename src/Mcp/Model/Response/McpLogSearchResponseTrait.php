@@ -16,11 +16,7 @@ use DateTimeInterface;
  */
 trait McpLogSearchResponseTrait
 {
-    private const string WINDOW_TRUNCATED_WARNING = 'The requested window was longer than the %d-day cap and was '
-        . 'shortened: only records between from and until were searched, the rest of the requested range was not. '
-        . 'Repeat the search on the remaining days.';
-    private const string MORE_RECORDS_WARNING = 'Only the first %d matching records were returned and more exist. '
-        . 'Narrow the filters or the window instead of raising the limit.';
+    use McpWarningsTrait;
 
     #[McpField(description: 'Start of the time window actually searched.')]
     #[Serialize]
@@ -39,34 +35,31 @@ trait McpLogSearchResponseTrait
         get => $this->result->limit;
     }
 
-    #[Serialize]
-    public string $hint {
-        get => self::HINT_CONTEXT_ID;
-    }
-
-    /**
-     * @var list<string>
-     */
-    #[Serialize]
-    public array $warnings {
-        get {
-            $warnings = [];
-            if ($this->result->window->truncated) {
-                $warnings[] = sprintf(self::WINDOW_TRUNCATED_WARNING, McpDateWindowResolver::LOG_WINDOW_MAX_DAYS);
-            }
-            if ($this->result->hasMore) {
-                $warnings[] = sprintf(self::MORE_RECORDS_WARNING, $this->result->limit);
-            }
-
-            return $warnings;
-        }
-    }
-
     /**
      * @param McpLogSearchResult<T> $result
      */
     public function __construct(
         private readonly McpLogSearchResult $result,
     ) {
+    }
+
+    private static function windowTruncatedWarning(): string
+    {
+        return sprintf(
+            'The requested window was longer than the %d-day cap and was shortened: only records between from and until were searched, the rest of the requested range was not. Repeat the search on the remaining days.',
+            McpDateWindowResolver::LOG_WINDOW_MAX_DAYS,
+        );
+    }
+
+    private static function moreRecordsWarning(int $limit): string
+    {
+        return sprintf('Only the first %d matching records were returned and more exist. Narrow the filters or the window instead of raising the limit.', $limit);
+    }
+
+    protected function getWarnings(): McpNotes
+    {
+        return new McpNotes()
+            ->addIf($this->result->window->truncated, self::windowTruncatedWarning())
+            ->addIf($this->result->hasMore, self::moreRecordsWarning($this->result->limit));
     }
 }

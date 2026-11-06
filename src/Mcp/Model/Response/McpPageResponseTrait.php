@@ -12,6 +12,8 @@ use AnzuSystems\SerializerBundle\Attributes\Serialize;
  */
 trait McpPageResponseTrait
 {
+    use McpWarningsTrait;
+
     #[Serialize]
     public int $page {
         get => $this->pageWindow->page;
@@ -22,17 +24,9 @@ trait McpPageResponseTrait
         get => $this->pageWindow->limit;
     }
 
-    /**
-     * @var list<string>
-     */
-    #[Serialize]
-    public array $warnings {
-        get {
-            if (false === $this->pageWindow->clamped) {
-                return [];
-            }
-
-            return [new McpPageWindowResolver()->getClampWarning($this->pageWindow)];
-        }
+    protected function getWarnings(): McpNotes
+    {
+        return new McpNotes()
+            ->addIf($this->pageWindow->clamped, new McpPageWindowResolver()->getClampWarning($this->pageWindow));
     }
 }

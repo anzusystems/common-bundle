@@ -25,7 +25,7 @@ final class McpToolReferenceHandlerCallTest extends AbstractMcpToolReferenceHand
         $result = $this->callTool(handler: $handler, toolClass: ExampleSearchTool::class, toolName: ExampleSearchTool::NAME, limit: self::LIMIT);
 
         self::assertFalse($result->isError);
-        self::assertSame(['auditLogs', 'appLogs', 'mcpToolCalls', 'hint'], array_keys($result->structuredContent));
+        self::assertSame(['auditLogs', 'appLogs', 'mcpToolCalls'], array_keys($result->structuredContent));
         self::assertSame([], $result->structuredContent['auditLogs']);
         self::assertCount(1, $this->insertedDocuments);
         $document = $this->insertedDocuments[0];

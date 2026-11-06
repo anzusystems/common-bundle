@@ -37,6 +37,7 @@ final class ListDesksToolTest extends AbstractMcpTestCase
   on the first call. `callTool()` returns `McpToolResult` with `isError`, `error` and `data`.
 * `assertToolSucceeded()`, `assertToolError()`, `assertToolAccessDenied()`, `assertToolInvalidArgument()`,
   `assertToolUnknownId()` and `assertToolUnknownIds()` compare the whole message, so another refusal cannot pass for this one.
+* `assertToolWarning()` and `assertToolNextStep()` check that the response has this exact text in `warnings` or `nextSteps`.
 * A value the input schema refuses never reaches the validator of the request: the test expects the error of the SDK.
 * The entity manager is cleared between requests. Load an entity after the call, and load it again to change it after a preview.
 * Services with a reset, such as an array cache pool, are emptied on the next request. A limit or a reservation that must

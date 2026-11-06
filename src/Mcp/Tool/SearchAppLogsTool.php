@@ -14,6 +14,7 @@ use AnzuSystems\CommonBundle\Mcp\Model\Response\McpAppLogSearchResponse;
     description: <<<'TXT'
         Searches the application log of this service: runtime records with a level, a message and the contextId of the request that produced them.
         Find the failed request with {{ search_audit_logs }} first, then look up the application errors behind it here by contextId or with {{ get_logs_by_context }}.
+        Pass a record's contextId to {{ get_logs_by_context }} to see the request and MCP tool calls behind it; the same contextId correlates logs across the services of this platform.
         TXT
     ,
     descriptionValues: [

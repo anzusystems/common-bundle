@@ -276,8 +276,8 @@ a `CallToolResult`) and when the server already has another reference handler.
 The serializer builds an input object without a constructor: a DTO with optional fields has public properties with
 defaults (it treats every promoted constructor parameter as required).
 The bundle tools follow this shape: `Mcp/Model/Request/*Request`, `McpLogFinder` returning a `McpLogSearchResult` /
-`McpLogsByContextResult` (facts only), and `Mcp/Model/Response/*Response` owning the JSON shape, the hint and the
-warning texts. Log rows that are already serialized arrays are exposed through
+`McpLogsByContextResult` (facts only), and `Mcp/Model/Response/*Response` owning the JSON shape and the warning
+texts. Log rows that are already serialized arrays are exposed through
 `#[Serialize(handler: RawArrayHandler::class)]`, which passes them through the serializer untouched (the default
 array handling re-indexes nested maps).
 
@@ -591,14 +591,40 @@ errors) and the log window (`resolveLogWindow()`) at `DATE_RANGE_MAX_DAYS` (31).
 `PAGE_MAX` (200) and the limit at the caller's maximum, and the returned `McpPageWindow` reports `$clamped` plus
 the offset and the number of rows still reachable through pagination.
 
-Tools must surface both. The single convention is the field `warnings`: a `list<string>` of
-plain-language sentences saying what was narrowed and what to do about it, always present (`[]` when nothing was).
-`McpAppLogSearchResponse` / `McpAuditLogSearchResponse` build the log tool response envelope that way from the
-`McpLogSearchResult` — rows, the effective `from`/`until`, the effective `limit`, the tool hint, and the `warnings`
-for a shortened window or for results that were actually cut off — so a client cannot mistake a partial result for a
-complete one. `McpLogFinder` fetches one row beyond the effective limit to tell the two apart, so the warning reports
-real truncation rather than a clamped `limit` argument. Host tools are expected to use the same key rather than
-inventing their own.
+Tools must surface both. A response gives advice in two `list<string>` fields of plain-language sentences:
+`warnings` says how the result is incomplete or adjusted, `nextSteps` says what the agent has to do next. A response has
+only the fields it can fill, and a field it has is always present (`[]` when there is nothing to say). Data stays in its
+own fields, and advice that is always true belongs in the description of the tool. `McpWarningsTrait` and
+`McpNextStepsTrait` declare one field each and ask the response for its texts through their own method, `getWarnings()`
+or `getNextSteps()`, so a next step cannot end up in a response that has only `warnings`. Both return `McpNotes`, whose
+texts come from named static methods, as the errors of a tool come from exception factories:
+
+```php
+final class McpExampleListResponse
+{
+    use McpNextStepsTrait;
+    use McpWarningsTrait;
+
+    protected function getWarnings(): McpNotes
+    {
+        return new McpNotes()
+            ->addIf($this->window->truncated, McpExampleNote::windowTruncated());
+    }
+
+    protected function getNextSteps(): McpNotes
+    {
+        return new McpNotes()
+            ->addIf($this->items->isEmpty(), McpExampleNote::changeFilters());
+    }
+}
+```
+
+`McpPageResponseTrait` uses `McpWarningsTrait` for a reduced page. A list response that needs more declares its own `getWarnings()` and
+calls `McpPageWindowResolver::getClampWarning()` in it. `McpAppLogSearchResponse` / `McpAuditLogSearchResponse`
+build the log tool response from the `McpLogSearchResult` — rows, the effective `from`/`until`, the effective `limit`,
+and the `warnings` for a shortened window or for results that were actually cut off — so a client cannot mistake a
+partial result for a complete one. `McpLogFinder` fetches one row beyond the effective limit to tell the two apart, so
+the warning reports real truncation rather than a clamped `limit` argument.
 
 ## Log query bounds
 

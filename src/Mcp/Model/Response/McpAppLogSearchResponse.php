@@ -16,9 +16,6 @@ final class McpAppLogSearchResponse
      */
     use McpLogSearchResponseTrait;
 
-    private const string HINT_CONTEXT_ID = 'Pass a record\'s contextId to get_logs_by_context to see the request and '
-        . 'MCP tool calls behind it; the same contextId correlates logs across the services of this platform.';
-
     /**
      * @var Collection<int, McpAppLogDecorator>
      */

@@ -13,7 +13,7 @@ use AnzuSystems\CommonBundle\Mcp\Model\Response\McpAuditLogSearchResponse;
     name: SearchAuditLogsTool::NAME,
     description: <<<'TXT'
         Searches the audit log of the API requests handled by this service; by default only failed requests.
-        When a user reports a failed action (e.g. a record that could not be saved), search with their userId and a time window around the incident, then pass the contextId of the failing record to {{ get_logs_by_context }} to see the application errors behind it.
+        When a user reports a failed action (e.g. a record that could not be saved), search with their userId and a time window around the incident, then pass the contextId of the failing record to {{ get_logs_by_context }} to see the application errors and MCP tool calls behind it. The same contextId correlates logs across the services of this platform.
         TXT
     ,
     descriptionValues: ['get_logs_by_context' => GetLogsByContextTool::NAME],

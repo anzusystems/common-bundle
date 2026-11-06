@@ -14,9 +14,6 @@ use Doctrine\Common\Collections\Collection;
 
 final class McpLogsByContextResponse
 {
-    private const string HINT_CROSS_SERVICE = 'The same contextId correlates logs across the services of this '
-        . 'platform; look it up in the logs of the other services to follow the request end to end.';
-
     /**
      * @var Collection<int, McpAuditLogDecorator>
      */
@@ -42,11 +39,6 @@ final class McpLogsByContextResponse
     #[Serialize(type: McpToolCallLogDecorator::class)]
     public Collection $mcpToolCalls {
         get => $this->result->mcpToolCalls;
-    }
-
-    #[Serialize]
-    public string $hint {
-        get => self::HINT_CROSS_SERVICE;
     }
 
     public function __construct(
