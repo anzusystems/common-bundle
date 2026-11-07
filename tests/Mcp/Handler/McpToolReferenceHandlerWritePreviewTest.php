@@ -159,7 +159,7 @@ final class McpToolReferenceHandlerWritePreviewTest extends AbstractMcpToolRefer
                 new ValidationException()
                     ->addFormattedError(self::TITLE_FIELD, ValidationException::ERROR_FIELD_EMPTY),
                 [],
-                McpToolErrorResolver::INVALID_ARGUMENTS_PREFIX . 'title: error_field_empty',
+                McpToolErrorResolver::INVALID_ARGUMENTS_PREFIX . sprintf(McpToolErrorResolver::VIOLATION_FORMAT, self::TITLE_FIELD, ValidationException::ERROR_FIELD_EMPTY),
             ],
             'access denied' => [new AccessDeniedException(), [], McpToolErrorResolver::ACCESS_DENIED_MESSAGE],
             'configured tool error exception' => [

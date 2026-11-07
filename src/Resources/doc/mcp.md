@@ -192,8 +192,9 @@ final readonly class ListLabelsTool
   with `#[Serialize(handler: McpDateTimeHandler::class)]` (also nullable) is a string, and the schema appends
   `McpDateTimeHandler::FORMAT_DESCRIPTION` to its description: the handler reads a calendar date `YYYY-MM-DD` with
   an optional time (`THH:MM`, seconds and a fraction optional) and an optional offset (`Z`, `+HH`, `+HHMM` or `+HH:MM`),
-  reads a value without an offset as UTC and returns it in UTC. The description asks the agent for the UTC offset of
-  the user's time zone, because the server cannot know it, and says that a date alone is the start of that day. The
+  reads a value without an offset as UTC and returns it in UTC. The description asks the agent for the UTC offset,
+  valid on that day, of the time zone the date is meant in, because the server cannot know it, and says that a date
+  alone is the start of that day. Which time zone that is (the user's, a site's) the instructions of the host say. The
   schema has no `format: date-time`, which requires an offset. An unreadable value is answered with
   `Invalid arguments: <field>: "<value>" is not an ISO 8601 date-time, …` before the validator runs.
 * A field that ends a period and is compared inclusively, such as `until`, declares
@@ -444,11 +445,11 @@ record changed in between, answers the same, so a host has neither a check nor a
 
 The hash of a preview without a `$currentState` covers only the tool and the arguments, so a write does not invalidate it.
 `McpPreviewHashReservation` therefore lets one user use such a hash once in `McpPreviewHashReservation::LIFETIME_SECONDS`
-(300), in the pool of `rate_limiter.cache_pool`. It reserves the hash after the confirmation and the write limit, before
-the tool runs, and releases it when the tool fails, so the same hash works again after an error. A repeated call answers
-`McpWriteRejectedException::createPreviewHashUsed()` and takes a token of the write limit. So the same user cannot create
-two identical records in that time, and two calls at the same moment can still both pass, because the pool has no atomic
-reservation.
+(300), in the pool of `rate_limiter.cache_pool`. It reserves the hash after the confirmation and before the write limit
+takes its token, and releases it when the write limit refuses the call or the tool fails, so the same hash works again
+after an error. A repeated call answers `McpWriteRejectedException::createPreviewHashUsed()` and takes no token of the
+write limit. So the same user cannot create two identical records in that time, and two calls at the same moment can
+still both pass, because the pool has no atomic reservation.
 
 `McpPreviewHashTrait` adds the `previewHash` field to the input of a write tool; the class declares the constant
 `PREVIEW_TOOL` with the name of its preview, which the error and the field description use.
@@ -618,7 +619,8 @@ final readonly class LabelDigestPrompt
   `tools/call`. Otherwise `prompts/get`, and `completion/complete` of an argument of that prompt, answer the JSON-RPC
   error `-32602` with `Access denied — the current MCP user is
   not allowed to use every tool of the prompt "<prompt>".` A prompt has no permission of its own. A prompt without
-  tools (`#[AsMcpPrompt(tools: [])]`) is seen by everyone.
+  tools (`#[AsMcpPrompt(tools: [])]`) is seen by everyone. `tools` has no default, so a prompt cannot leave it out
+  by accident.
 - **Tools in the text.** The text names a tool only as `{{ <tool name> }}`, e.g. `{{ list_labels }}`.
   `createUserMessage()` replaces every placeholder of a tool in `tools` by its name and every `{{ <argument> }}` by the
   value of that argument, in one pass, so an argument value is never read as a placeholder. A placeholder that is
@@ -628,7 +630,8 @@ final readonly class LabelDigestPrompt
   that renders every prompt keeps the texts right.
 - **Arguments.** Each parameter of `__invoke()` is an argument of the prompt, described by its `#[McpField]`
   (`descriptionValues` fill the description as for a tool field). It is `required` unless it is optional or has a
-  default. A parameter of a class type (`RequestContext`) is injected by the SDK and is no argument. The SDK reads an
+  default. A parameter of a type the SDK injects (`RequestContext`, `ClientGateway`) is no argument; a backed enum is
+  one, the SDK reads it from the client through `tryFrom()`. The SDK reads an
   argument description only from the `@param` tag of the handler, which drops it silently when the parameter is
   renamed, so `McpPromptLoaderCompilerPass` replaces the `addPrompt` call of every `#[AsMcpPrompt]` with
   `McpPromptLoader`, which registers the prompt with these arguments and keeps its title, description, icons, meta and
@@ -669,7 +672,10 @@ A message tells the model what to do next, so it is prose, not an error code.
 
 * `resolveDateRange()` — `true` when the resolved `until` is earlier than the requested one, or (when it was omitted)
   earlier than now, i.e. whenever the range was cut short at `from + 31 days`.
-* `resolveLogWindow()` — `true` when `from` was moved forward to `until - 31 days`.
+* `resolveLogWindow()` — `true` when `from` was moved forward to 31 days before `until`.
+
+`resolveLogWindow()` counts the default `from` (1 day) and the cap from `until`, or from now when `until` is in the
+future, so a future `until` still searches the last day instead of an empty window.
 
 The resolver does not check the order of the two dates. The request refuses an `until` before `from` itself with
 `#[Assert\GreaterThanOrEqual(propertyPath: 'from', message: McpDateWindowResolver::NOT_BEFORE_FROM_MESSAGE)]`, so the

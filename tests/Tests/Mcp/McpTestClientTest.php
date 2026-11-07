@@ -8,7 +8,9 @@ use AnzuSystems\CommonBundle\Mcp\Handler\McpToolReferenceHandler;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Tool\ExampleSearchTool;
 use AnzuSystems\CommonBundle\Tests\Data\Model\Enum\DummyEnum;
 use AnzuSystems\CommonBundle\Tests\Mcp\McpTestClient;
+use Mcp\Schema\JsonRpc\Error;
 use Mcp\Schema\JsonRpc\MessageInterface;
+use Mcp\Server\Transport\StreamableHttpTransport;
 use PHPUnit\Framework\TestCase;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 use Symfony\Component\HttpFoundation\Response;
@@ -88,7 +90,7 @@ final class McpTestClientTest extends TestCase
     {
         $client = $this->createClient([
             $this->createInitializeResponse(),
-            new Response(json_encode(['jsonrpc' => MessageInterface::JSONRPC_VERSION, 'id' => 2, 'error' => ['code' => -32_602, 'message' => self::ERROR_MESSAGE]], JSON_THROW_ON_ERROR)),
+            new Response(json_encode(['jsonrpc' => MessageInterface::JSONRPC_VERSION, 'id' => 2, 'error' => ['code' => Error::INVALID_PARAMS, 'message' => self::ERROR_MESSAGE]], JSON_THROW_ON_ERROR)),
         ]);
 
         $result = $client->callTool(ExampleSearchTool::class);
@@ -144,7 +146,7 @@ final class McpTestClientTest extends TestCase
 
     private function createInitializeResponse(): Response
     {
-        return new Response(content: '{}', status: Response::HTTP_OK, headers: ['Mcp-Session-Id' => self::SESSION_ID]);
+        return new Response(content: '{}', status: Response::HTTP_OK, headers: [StreamableHttpTransport::SESSION_HEADER => self::SESSION_ID]);
     }
 
     /**

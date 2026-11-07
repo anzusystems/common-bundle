@@ -348,6 +348,7 @@ final class Configuration implements ConfigurationInterface
                 ->scalarNode('server_name')->defaultValue('default')->end()
                 ->scalarNode('instructions_file')->defaultNull()->end()
                 ->variableNode('allowed_hosts')->defaultValue([])->end()
+                // prepend() processes this config before env placeholders exist, so a booleanNode refuses %env(bool:…)%.
                 ->scalarNode('pod')->defaultFalse()->end()
                 ->scalarNode('confirmation_fallback_locale')->defaultNull()->end()
                 ->arrayNode('tool_error_exceptions')

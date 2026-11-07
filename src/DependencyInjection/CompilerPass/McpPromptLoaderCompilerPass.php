@@ -12,9 +12,12 @@ use Mcp\Capability\Attribute\McpPrompt;
 use Mcp\Capability\Discovery\ElementMetadataResolver;
 use Mcp\Schema\Prompt;
 use Mcp\Schema\PromptArgument;
+use Mcp\Server\ClientGateway;
+use Mcp\Server\RequestContext;
 use ReflectionAttribute;
 use ReflectionMethod;
 use ReflectionNamedType;
+use ReflectionParameter;
 use Symfony\Component\DependencyInjection\Compiler\CompilerPassInterface;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\DependencyInjection\Definition;
@@ -38,6 +41,7 @@ final class McpPromptLoaderCompilerPass implements CompilerPassInterface
     private const int DESCRIPTION_ARGUMENT = 3;
     private const int ICONS_ARGUMENT = 4;
     private const int META_ARGUMENT = 5;
+    private const array SDK_INJECTED_TYPES = [RequestContext::class, ClientGateway::class];
 
     public function process(ContainerBuilder $container): void
     {
@@ -95,9 +99,7 @@ final class McpPromptLoaderCompilerPass implements CompilerPassInterface
     {
         $arguments = [];
         foreach ($reflection->getParameters() as $parameter) {
-            $type = $parameter->getType();
-            // The SDK injects a parameter of a class type (RequestContext, ClientGateway), so the client never sends it.
-            if ($type instanceof ReflectionNamedType && false === $type->isBuiltin()) {
+            if ($this->isInjectedBySdk($parameter)) {
                 continue;
             }
             $field = array_first($parameter->getAttributes(McpField::class, ReflectionAttribute::IS_INSTANCEOF))
@@ -111,5 +113,23 @@ final class McpPromptLoaderCompilerPass implements CompilerPassInterface
         }
 
         return $arguments;
+    }
+
+    /**
+     * Mirrors the @internal InjectableParameters of the SDK; any other class type, e.g. a backed enum, the client sends.
+     */
+    private function isInjectedBySdk(ReflectionParameter $parameter): bool
+    {
+        $type = $parameter->getType();
+        if (false === $type instanceof ReflectionNamedType || $type->isBuiltin()) {
+            return false;
+        }
+        foreach (self::SDK_INJECTED_TYPES as $injectedType) {
+            if (is_a(object_or_class: $type->getName(), class: $injectedType, allow_string: true)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 }

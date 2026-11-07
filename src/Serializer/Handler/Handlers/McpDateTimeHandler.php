@@ -20,7 +20,7 @@ use DateTimeZone;
  */
 final class McpDateTimeHandler extends AbstractHandler
 {
-    public const string FORMAT_DESCRIPTION = 'ISO 8601 date-time with the UTC offset of the user\'s time zone, e.g. "2026-07-09T06:00:00+02:00"; a value without an offset is read as UTC and a date alone as the start of that day.';
+    public const string FORMAT_DESCRIPTION = 'ISO 8601 date-time with the UTC offset, valid on that day, of the time zone the date is meant in, e.g. "2026-07-09T06:00:00+02:00"; a value without an offset is read as UTC and a date alone as the start of that day.';
     public const string END_OF_DAY_DESCRIPTION = 'Here a date alone means the end of that day.';
 
     /**

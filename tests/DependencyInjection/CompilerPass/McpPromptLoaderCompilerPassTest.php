@@ -91,6 +91,7 @@ final class McpPromptLoaderCompilerPassTest extends TestCase
                     description: sprintf('Number of examples, at most %d.', ArgumentsExamplePrompt::LIMIT_MAX),
                     required: false,
                 ),
+                new PromptArgument(name: 'status', description: 'Status of the examples.', required: false),
             ],
             $reference->prompt->arguments,
         );

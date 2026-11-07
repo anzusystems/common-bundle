@@ -16,7 +16,7 @@ final class AsMcpPrompt extends McpPrompt
     public function __construct(
         string $name,
         string $description,
-        public readonly array $tools = [],
+        public readonly array $tools,
         ?string $title = null,
     ) {
         parent::__construct(

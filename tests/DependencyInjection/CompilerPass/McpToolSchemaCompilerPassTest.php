@@ -18,9 +18,14 @@ use AnzuSystems\CommonBundle\Tests\Data\Mcp\Tool\ExampleSearchTool;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Tool\ExampleWithoutInputTool;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Tool\InvalidParameterExampleTool;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Tool\InvalidReturnExampleTool;
+use AnzuSystems\CommonBundle\Tests\Data\Mcp\Tool\NullableReturnExampleTool;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Tool\PlainMcpToolExampleTool;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Tool\RateLimitedExampleTool;
+use AnzuSystems\CommonBundle\Tests\Data\Mcp\Tool\ScalarInputExampleTool;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Tool\SharedRateLimitedExampleTool;
+use AnzuSystems\CommonBundle\Tests\Data\Mcp\Tool\TwoContextsExampleTool;
+use AnzuSystems\CommonBundle\Tests\Data\Mcp\Tool\VariadicInputExampleTool;
+use AnzuSystems\CommonBundle\Tests\Data\Mcp\Tool\WithoutInvokeExampleTool;
 use Mcp\Schema\Result\CallToolResult;
 use Mcp\Server\RequestContext;
 use PHPUnit\Framework\TestCase;
@@ -179,6 +184,46 @@ final class McpToolSchemaCompilerPassTest extends TestCase
                     contextClass: RequestContext::class,
                     parameter: 'groupId',
                 ),
+            ],
+            'scalar input' => [
+                ScalarInputExampleTool::class,
+                McpConfigurationException::createInvalidToolParameter(
+                    class: ScalarInputExampleTool::class,
+                    method: McpToolSignatureResolver::INVOKE_METHOD,
+                    contextClass: RequestContext::class,
+                    parameter: 'limit',
+                ),
+            ],
+            'variadic input' => [
+                VariadicInputExampleTool::class,
+                McpConfigurationException::createInvalidToolParameter(
+                    class: VariadicInputExampleTool::class,
+                    method: McpToolSignatureResolver::INVOKE_METHOD,
+                    contextClass: RequestContext::class,
+                    parameter: 'requests',
+                ),
+            ],
+            'request context as the input' => [
+                TwoContextsExampleTool::class,
+                McpConfigurationException::createInvalidToolParameter(
+                    class: TwoContextsExampleTool::class,
+                    method: McpToolSignatureResolver::INVOKE_METHOD,
+                    contextClass: RequestContext::class,
+                    parameter: 'context',
+                ),
+            ],
+            'nullable return type' => [
+                NullableReturnExampleTool::class,
+                McpConfigurationException::createInvalidToolReturn(
+                    class: NullableReturnExampleTool::class,
+                    method: McpToolSignatureResolver::INVOKE_METHOD,
+                    resultClass: CallToolResult::class,
+                    type: '?' . CallToolResult::class,
+                ),
+            ],
+            'without __invoke()' => [
+                WithoutInvokeExampleTool::class,
+                McpConfigurationException::createToolWithoutInvoke(WithoutInvokeExampleTool::class, McpToolSignatureResolver::INVOKE_METHOD),
             ],
             'array return type' => [
                 InvalidReturnExampleTool::class,

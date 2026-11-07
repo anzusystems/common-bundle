@@ -100,9 +100,14 @@ In the example, `pinned: null` uses `IDX_label_createdAt` and `pinned: true` use
 Only indexes with a name in the mapping count, because the optimizer hint needs the name.
 
 With class table inheritance (`InheritanceType('JOINED')`) the resolver reads the indexes of every table of the
-hierarchy, and takes one only when every field except the primary key is a column of its table. A child entity ordered by a field of its
-parent therefore uses the index of the parent table, and the hint goes to the alias of that table. The list of mapped
-indexes and their tables is `IndexHintWalker::resolveMappedIndexes()`, which the walker checks the hint against too.
+hierarchy, and takes one only from the table that holds every field. Doctrine reads a field from the table of the class
+that declares it, and the primary key from the table of the root entity, where `PRIMARY` is too. A child entity
+ordered by `name, id` of its parent therefore uses the index of the parent table, and the hint goes to the alias of
+that table. Fields on more than one table, such as a field of the child ordered by `id`, throw a `LogicException`
+before the query runs, because no index spans two tables and MySQL would sort the rows in a filesort. An index name
+mapped on two tables of the hierarchy throws a `LogicException` as well, because the hint could not tell which table
+it means. The list of mapped indexes and their tables is `IndexHintWalker::resolveMappedIndexes()` (a `MappedIndex`
+per name), which the walker checks the hint against too.
 
 Without such an index `paginate()` throws a `LogicException` before the query runs. It names the entity, the
 equality and order fields and the index to add:
@@ -133,6 +138,12 @@ values of the last row:
 * a date as ISO 8601 in UTC with microseconds (`KeysetCursorCodec::DATE_FORMAT`, e.g. `2026-08-21T08:00:00.123456Z`);
   it is read back into the default time zone, because DBAL writes a date parameter without converting it;
 * an integer or a string as it is.
+
+**Every value bound to the query builder is part of the fingerprint, so it must be the same on every page of the same
+arguments.** A value that changes by itself, such as the current time as the default of `until` or a list in an
+unstable order, gives the second page another fingerprint, and every `nextCursor` fails with `InvalidCursorException`.
+Leave such a default out of the query (no `until` condition when the caller sent none), or bind a value the caller
+sends again with the cursor.
 
 Reading it back checks base64, the JSON object, the fingerprint of the query, exactly the keys of the order fields and
 the type each field has in the Doctrine mapping. Anything else throws `InvalidCursorException`.

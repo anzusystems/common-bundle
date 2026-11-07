@@ -37,9 +37,12 @@ final class ListLabelsToolTest extends AbstractMcpTestCase
   on the first call. `callTool()` returns `McpToolResult` with `isError`, `error` and `data`.
 * `assertToolSucceeded()`, `assertToolError()`, `assertToolAccessDenied()`, `assertToolInvalidArgument()`,
   `assertToolUnknownId()` and `assertToolUnknownIds()` compare the whole message, so another refusal cannot pass for this one.
-* `assertToolArgumentAboveMaximum()` checks the refusal of a number above the `maximum` of the input schema, and
-  `assertToolArgumentHasTooManyItems()` (`createTooManyItemsError()` for a data provider) the refusal of a list with one
-  item more than its `maxItems`; the SDK adds a prefix to those messages, so they check only the part with the field.
+* `assertToolArgumentAboveMaximum()` and `assertToolArgumentBelowMinimum()` check the refusal of a number above the
+  `maximum` or below the `minimum` of the input schema. `assertToolArgumentHasTooManyItems()` and
+  `assertToolArgumentHasTooFewItems()` (`createTooManyItemsError()` and `createTooFewItemsError()` for a data provider)
+  check the refusal of a list with one item more than its `maxItems` or one fewer than its `minItems`, and
+  `assertToolArgumentIsTooLong()` (`createTooLongError()`) of a text one character longer than its `maxLength`. The SDK
+  adds a prefix to those messages, so they check only the part with the field.
 * `assertToolWarning()` and `assertToolNextStep()` check that the response has this exact text in `warnings` or `nextSteps`.
 * A value the input schema refuses never reaches the validator of the request: the test expects the error of the SDK.
 * The entity manager is cleared between requests. Load an entity after the call, and load it again to change it after a preview.

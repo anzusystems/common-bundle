@@ -9,7 +9,7 @@ use Mcp\Schema\Content\PromptMessage;
 use Mcp\Schema\Content\TextContent;
 use Mcp\Schema\Enum\Role;
 
-#[AsMcpPrompt(name: FieldlessArgumentExamplePrompt::NAME, description: 'Has an argument without #[McpField].')]
+#[AsMcpPrompt(name: FieldlessArgumentExamplePrompt::NAME, description: 'Has an argument without #[McpField].', tools: [])]
 final readonly class FieldlessArgumentExamplePrompt
 {
     public const string NAME = 'fieldless_argument_example';

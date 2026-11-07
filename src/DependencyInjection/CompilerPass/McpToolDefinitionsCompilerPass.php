@@ -177,7 +177,7 @@ final class McpToolDefinitionsCompilerPass implements CompilerPassInterface
         $toolPermissions = [];
         foreach ($toolsByName as $toolName => $tools) {
             $tool = array_first($tools);
-            if ($tool instanceof AsMcpTool && null !== $tool->permission) {
+            if ($tool instanceof AsMcpTool && is_string($tool->permission)) {
                 $toolPermissions[$toolName] = (string) $container->getParameterBag()->resolveValue($tool->permission);
             }
         }

@@ -6,6 +6,8 @@ namespace AnzuSystems\CommonBundle\Tests\Doctrine\Walker;
 
 use AnzuSystems\CommonBundle\Doctrine\Walker\IndexHintWalker;
 use AnzuSystems\CommonBundle\Tests\Data\Entity\Example;
+use AnzuSystems\CommonBundle\Tests\Data\Entity\ExampleAmbiguousIndexChild;
+use AnzuSystems\CommonBundle\Tests\Data\Entity\ExampleAmbiguousIndexParent;
 use AnzuSystems\CommonBundle\Tests\Data\Entity\ExampleInheritanceChild;
 use AnzuSystems\CommonBundle\Tests\Data\Entity\ExampleInheritanceParent;
 use AnzuSystems\CommonBundle\Tests\Data\Entity\ExampleJoinedEntity;
@@ -82,6 +84,42 @@ final class IndexHintWalkerQueryTest extends AbstractDoctrineQueryTestCase
         );
 
         self::assertStringStartsWith('SELECT /*+ INDEX(e0_ ' . ExampleInheritanceChild::IDX_CHILD_TITLE . ') */ ', $sql);
+    }
+
+    public function testIndexOfTheChildTableOfClassTableInheritanceTargetsTheChildTableFromTheParent(): void
+    {
+        $sql = $this->getSql(
+            dql: 'SELECT p.name FROM ' . ExampleInheritanceParent::class . ' p',
+            indexByAlias: ['p' => ExampleInheritanceChild::IDX_CHILD_TITLE],
+        );
+
+        self::assertStringStartsWith('SELECT /*+ INDEX(e1_ ' . ExampleInheritanceChild::IDX_CHILD_TITLE . ') */ ', $sql);
+        self::assertStringContainsString(' LEFT JOIN example_inheritance_child e1_ ', $sql);
+    }
+
+    public function testPrimaryKeyOfClassTableInheritanceTargetsTheRootTable(): void
+    {
+        $sql = $this->getSql(
+            dql: 'SELECT c.title FROM ' . ExampleInheritanceChild::class . ' c',
+            indexByAlias: ['c' => IndexHintWalker::PRIMARY_INDEX],
+        );
+
+        self::assertStringStartsWith('SELECT /*+ INDEX(e1_ ' . IndexHintWalker::PRIMARY_INDEX . ') */ ', $sql);
+        self::assertStringContainsString(' INNER JOIN example_inheritance_parent e1_ ', $sql);
+    }
+
+    public function testIndexNameOnTwoTablesOfClassTableInheritanceFails(): void
+    {
+        $this->expectExceptionObject(new LogicException(sprintf(
+            IndexHintWalker::AMBIGUOUS_INDEX_MESSAGE,
+            ExampleAmbiguousIndexParent::IDX_NAME,
+            ExampleAmbiguousIndexChild::class,
+        )));
+
+        $this->getSql(
+            dql: 'SELECT c.title FROM ' . ExampleAmbiguousIndexChild::class . ' c',
+            indexByAlias: ['c' => ExampleAmbiguousIndexParent::IDX_NAME],
+        );
     }
 
     /**

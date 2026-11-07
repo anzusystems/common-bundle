@@ -18,7 +18,7 @@ final class McpToolCallLogDecorator extends AbstractMcpLogDecorator
 
     #[Serialize]
     public ?string $tool {
-        get => $this->readString($this->document, 'tool');
+        get => $this->readString($this->document, McpLogger::TOOL_FIELD);
     }
 
     /**
@@ -26,28 +26,28 @@ final class McpToolCallLogDecorator extends AbstractMcpLogDecorator
      */
     #[Serialize(handler: RawArrayHandler::class)]
     public array $params {
-        get => $this->readArray($this->document, 'params');
+        get => $this->readArray($this->document, McpLogger::PARAMS_FIELD);
     }
 
     #[Serialize]
     public ?int $userId {
-        get => $this->readInt($this->document, 'userId');
+        get => $this->readInt($this->document, McpLogger::USER_ID_FIELD);
     }
 
     #[McpField(description: 'The name of the MCP client, null when it sent none.')]
     #[Serialize]
     public ?string $client {
-        get => $this->readString($this->document, 'client');
+        get => $this->readString($this->document, McpLogger::CLIENT_FIELD);
     }
 
     #[Serialize]
     public ?string $contextId {
-        get => $this->readString($this->document, 'contextId');
+        get => $this->readString($this->document, McpLogger::CONTEXT_ID_FIELD);
     }
 
     #[Serialize]
     public ?int $durationMs {
-        get => $this->readInt($this->document, 'durationMs');
+        get => $this->readInt($this->document, McpLogger::DURATION_MS_FIELD);
     }
 
     #[McpField(description: self::TRUNCATED_DESCRIPTION)]

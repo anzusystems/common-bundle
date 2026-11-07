@@ -15,6 +15,7 @@ use LogicException;
  */
 final readonly class KeysetIndexResolver
 {
+    public const string FIELDS_ON_SEVERAL_TABLES_MESSAGE = 'The equality and order fields [%s] of %s are columns of the tables [%s] of class table inheritance, and no index spans more than one table, so the keyset query would sort its rows in a filesort. Filter and order by fields of one table.';
     public const string MISSING_INDEX_MESSAGE = 'No named index of %s starts with the equality fields [%s] in any order followed by the order fields [%s], so the keyset query would sort its rows in a filesort. Add #[ORM\\Index(name: \'%s\', fields: [\'%s\'])].';
 
     private const string INDEX_NAME_PREFIX = 'IDX_';
@@ -30,17 +31,14 @@ final readonly class KeysetIndexResolver
      */
     public function resolve(EntityManagerInterface $entityManager, ClassMetadata $metadata, array $equalityFields, KeysetOrder $order): string
     {
-        $equalityColumns = array_map(fn (string $field): string => $this->resolveColumn($metadata, $field), $equalityFields);
-        $orderColumns = array_map(fn (string $field): string => $this->resolveColumn($metadata, $field), $order->fields);
-        $fieldTables = array_map(
-            fn (string $field): ?string => $this->resolveFieldTable(entityManager: $entityManager, metadata: $metadata, field: $field),
-            [...$equalityFields, ...$order->fields],
-        );
+        $equalityColumns = array_map(static fn (string $field): string => IndexHintWalker::resolveIndexColumn($metadata, $field), $equalityFields);
+        $orderColumns = array_map(static fn (string $field): string => IndexHintWalker::resolveIndexColumn($metadata, $field), $order->fields);
+        $fieldTable = $this->resolveFieldTable(entityManager: $entityManager, metadata: $metadata, fields: [...$equalityFields, ...$order->fields]);
         $primaryKeyColumn = $this->resolvePrimaryKeyColumn($metadata);
 
         foreach (IndexHintWalker::resolveMappedIndexes($entityManager, $metadata) as $indexName => $index) {
-            if ($this->isTableOfEveryField($index['table'], $fieldTables) && $this->isKeysetIndex(
-                indexColumns: $index['columns'],
+            if ($index->tableMetadata->getTableName() === $fieldTable && $this->isKeysetIndex(
+                indexColumns: $index->columns,
                 equalityColumns: $equalityColumns,
                 orderColumns: $orderColumns,
                 primaryKeyColumn: $primaryKeyColumn,
@@ -55,17 +53,6 @@ final readonly class KeysetIndexResolver
             order: $order,
             primaryKeyColumn: $primaryKeyColumn,
         ));
-    }
-
-    /**
-     * @param ClassMetadata<object> $tableMetadata
-     * @param list<?string> $fieldTables
-     */
-    private function isTableOfEveryField(ClassMetadata $tableMetadata, array $fieldTables): bool
-    {
-        $tableName = $tableMetadata->getTableName();
-
-        return array_all($fieldTables, static fn (?string $fieldTable): bool => null === $fieldTable || $fieldTable === $tableName);
     }
 
     /**
@@ -93,34 +80,30 @@ final readonly class KeysetIndexResolver
     }
 
     /**
-     * @param ClassMetadata<object> $metadata
-     */
-    private function resolveColumn(ClassMetadata $metadata, string $field): string
-    {
-        if ($metadata->hasField($field)) {
-            return $metadata->getColumnName($field);
-        }
-        if ($metadata->isSingleValuedAssociation($field)) {
-            return $metadata->getSingleAssociationJoinColumnName($field);
-        }
-
-        throw new LogicException(sprintf('"%s" is neither a field nor a to-one association of %s.', $field, $metadata->getName()));
-    }
-
-    /**
-     * @param ClassMetadata<object> $metadata
+     * Doctrine reads a field, the primary key too, from the table of the class that declares it, and no index spans two
+     * tables of class table inheritance.
      *
-     * @return string|null null for the primary key, which every table of class table inheritance holds
+     * @param ClassMetadata<object> $metadata
+     * @param non-empty-list<string> $fields
      */
-    private function resolveFieldTable(EntityManagerInterface $entityManager, ClassMetadata $metadata, string $field): ?string
+    private function resolveFieldTable(EntityManagerInterface $entityManager, ClassMetadata $metadata, array $fields): string
     {
-        if ($metadata->isIdentifier($field)) {
-            return null;
+        $fieldTables = array_map(
+            static fn (string $field): string => $entityManager->getClassMetadata(
+                ($metadata->fieldMappings[$field] ?? $metadata->associationMappings[$field])->inherited ?? $metadata->getName(),
+            )->getTableName(),
+            $fields,
+        ) |> array_unique(...);
+        if (1 < count($fieldTables)) {
+            throw new LogicException(sprintf(
+                self::FIELDS_ON_SEVERAL_TABLES_MESSAGE,
+                implode(self::LIST_SEPARATOR, $fields),
+                $metadata->getName(),
+                implode(self::LIST_SEPARATOR, $fieldTables),
+            ));
         }
-        $owningClass = ($metadata->fieldMappings[$field] ?? $metadata->associationMappings[$field])->inherited ?? $metadata->getName();
 
-        return $entityManager->getClassMetadata($owningClass)
-            ->getTableName();
+        return (string) array_first($fieldTables);
     }
 
     /**
@@ -140,7 +123,7 @@ final readonly class KeysetIndexResolver
     private function createMissingIndexMessage(ClassMetadata $metadata, array $equalityFields, KeysetOrder $order, ?string $primaryKeyColumn): string
     {
         $indexFields = [...$equalityFields, ...$order->fields];
-        if ($this->resolveColumn($metadata, (string) array_last($order->fields)) === $primaryKeyColumn) {
+        if (IndexHintWalker::resolveIndexColumn($metadata, (string) array_last($order->fields)) === $primaryKeyColumn) {
             array_pop($indexFields);
         }
 

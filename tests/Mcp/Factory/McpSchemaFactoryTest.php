@@ -260,7 +260,7 @@ final class McpSchemaFactoryTest extends TestCase
         $schema = $factory->createForClass(McpDateExampleRequest::class);
 
         self::assertSame($expectedSchema, $schema[McpSchemaFactory::PROPERTIES][$property]);
-        self::assertSame(['at'], $schema['required']);
+        self::assertSame(['at'], $schema[self::REQUIRED]);
         self::assertContains(McpDateTimeHandler::class, $factory->getDescribedClasses());
     }
 

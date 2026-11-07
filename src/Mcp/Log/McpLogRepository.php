@@ -12,8 +12,6 @@ use MongoDB\Collection;
 
 final readonly class McpLogRepository
 {
-    private const string FIELD_DATETIME = 'datetime';
-    private const string FIELD_CONTEXT_ID = 'contextId';
     private const string MONGO_GTE = '$gte';
     private const int LIMIT_MIN = 1;
     private const string ID_LOWER_BOUND_SLACK = '-1 minute';
@@ -35,8 +33,8 @@ final readonly class McpLogRepository
     public function findLatestByContextId(string $contextId, DateTimeImmutable $from, int $limit): array
     {
         $documents = $this->mcpLogCollection->find([
-            self::FIELD_CONTEXT_ID => $contextId,
-            self::FIELD_DATETIME => [
+            McpLogger::CONTEXT_ID_FIELD => $contextId,
+            McpLogger::DATETIME_FIELD => [
                 self::MONGO_GTE => new UTCDateTime($from),
             ],
             MongoHelper::FIELD_ID => [
@@ -51,6 +49,6 @@ final readonly class McpLogRepository
             'typeMap' => self::RAW_ARRAY_TYPE_MAP,
         ]);
 
-        return MongoHelper::sortNewestFirst(array_values($documents->toArray()), self::FIELD_DATETIME);
+        return MongoHelper::sortNewestFirst(array_values($documents->toArray()), McpLogger::DATETIME_FIELD);
     }
 }

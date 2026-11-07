@@ -48,7 +48,8 @@ final class KeysetIndexResolverTest extends AnzuKernelTestCase
             'index by columns' => [ExampleJoinedEntity::class, ['joinedEntity'], ['name', 'id'], ExampleJoinedEntity::IDX_JOINED_ENTITY_NAME],
             'unique constraint' => [ExampleJoinedEntity::class, ['name'], ['joinedEntity', 'id'], ExampleJoinedEntity::UNIQ_NAME_JOINED_ENTITY],
             'field of the parent table of class table inheritance' => [ExampleInheritanceChild::class, [], ['name', 'id'], ExampleInheritanceParent::IDX_PARENT_NAME],
-            'field of the child table of class table inheritance' => [ExampleInheritanceChild::class, [], ['title', 'id'], ExampleInheritanceChild::IDX_CHILD_TITLE],
+            'field of the child table of class table inheritance' => [ExampleInheritanceChild::class, [], ['title'], ExampleInheritanceChild::IDX_CHILD_TITLE],
+            'primary key of class table inheritance' => [ExampleInheritanceChild::class, [], ['id'], IndexHintWalker::PRIMARY_INDEX],
         ];
     }
 
@@ -84,6 +85,38 @@ final class KeysetIndexResolverTest extends AnzuKernelTestCase
         return [
             'equality that no index starts with' => [['dummyEnum'], ['createdAt', 'id'], 'IDX_dummyEnum_createdAt', "dummyEnum', 'createdAt"],
             'another column before the appended primary key' => [[], ['name', 'id'], 'IDX_name', 'name'],
+        ];
+    }
+
+    /**
+     * @dataProvider severalTablesProvider
+     *
+     * @param list<string> $equalityFields
+     * @param non-empty-list<string> $orderFields
+     */
+    public function testFieldsOfSeveralTablesOfClassTableInheritanceAreALogicException(
+        array $equalityFields,
+        array $orderFields,
+        string $expectedTables,
+    ): void {
+        $this->expectExceptionObject(new LogicException(sprintf(
+            KeysetIndexResolver::FIELDS_ON_SEVERAL_TABLES_MESSAGE,
+            implode(', ', [...$equalityFields, ...$orderFields]),
+            ExampleInheritanceChild::class,
+            $expectedTables,
+        )));
+
+        $this->resolve(entityClass: ExampleInheritanceChild::class, equalityFields: $equalityFields, orderFields: $orderFields);
+    }
+
+    /**
+     * @return array<string, array{list<string>, non-empty-list<string>, string}>
+     */
+    public static function severalTablesProvider(): array
+    {
+        return [
+            'child field ordered by the primary key of the parent table' => [[], ['title', 'id'], 'example_inheritance_child, example_inheritance_parent'],
+            'child equality with a parent order' => [['title'], ['name'], 'example_inheritance_child, example_inheritance_parent'],
         ];
     }
 

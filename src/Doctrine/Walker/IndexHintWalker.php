@@ -23,6 +23,8 @@ final class IndexHintWalker extends SqlOutputWalker
     public const string PRIMARY_INDEX = 'PRIMARY';
     public const string UNKNOWN_ALIAS_MESSAGE = 'The query has no entity alias "%s" to force the index "%s" on.';
     public const string UNKNOWN_INDEX_MESSAGE = 'The index "%s" is not mapped on any table of %s, so MySQL would ignore the hint forcing it.';
+    public const string AMBIGUOUS_INDEX_MESSAGE = 'The index "%s" is mapped on more than one table of %s, so the hint cannot tell which table to force it on. Rename one of the indexes.';
+    public const string UNKNOWN_FIELD_MESSAGE = '"%s" is neither a field nor a to-one association of %s.';
 
     private const string SELECT_KEYWORD = 'SELECT';
     private const string OPTIMIZER_HINT_FORMAT = 'SELECT /*+ %s */';
@@ -47,33 +49,52 @@ final class IndexHintWalker extends SqlOutputWalker
     /**
      * @param ClassMetadata<object> $metadata
      *
-     * @return array<string, array{table: ClassMetadata<object>, columns: list<string>}> every index the alias of the
-     *         entity can force by its name, with the metadata of the table that maps it; PRIMARY is on the entity's table
+     * @return array<string, MappedIndex> every index the alias of the entity can force by its name; PRIMARY is on the
+     *         table of the root entity, which Doctrine reads the primary key from
      */
     public static function resolveMappedIndexes(EntityManagerInterface $entityManager, ClassMetadata $metadata): array
     {
         $mappedIndexes = [
-            self::PRIMARY_INDEX => [
-                'table' => $metadata,
-                'columns' => $metadata->getIdentifierColumnNames(),
-            ],
+            self::PRIMARY_INDEX => new MappedIndex(
+                tableMetadata: $entityManager->getClassMetadata($metadata->rootEntityName),
+                columns: $metadata->getIdentifierColumnNames(),
+            ),
         ];
         foreach (self::getTableMetadata($entityManager, $metadata) as $tableMetadata) {
             $indexes = [...$tableMetadata->table['indexes'] ?? [], ...$tableMetadata->table['uniqueConstraints'] ?? []];
             foreach ($indexes as $name => $index) {
-                if (is_string($name)) {
-                    $mappedIndexes[$name] ??= [
-                        'table' => $tableMetadata,
-                        'columns' => $index['columns'] ?? array_map(
-                            static fn (string $field): string => self::resolveIndexColumn($tableMetadata, $field),
-                            $index['fields'] ?? [],
-                        ),
-                    ];
+                if (false === is_string($name)) {
+                    continue;
                 }
+                if (isset($mappedIndexes[$name])) {
+                    throw new LogicException(sprintf(self::AMBIGUOUS_INDEX_MESSAGE, $name, $metadata->getName()));
+                }
+                $mappedIndexes[$name] = new MappedIndex(
+                    tableMetadata: $tableMetadata,
+                    columns: $index['columns'] ?? array_map(
+                        static fn (string $field): string => self::resolveIndexColumn($tableMetadata, $field),
+                        $index['fields'] ?? [],
+                    ),
+                );
             }
         }
 
         return $mappedIndexes;
+    }
+
+    /**
+     * @param ClassMetadata<object> $metadata
+     */
+    public static function resolveIndexColumn(ClassMetadata $metadata, string $field): string
+    {
+        if ($metadata->hasField($field)) {
+            return $metadata->getColumnName($field);
+        }
+        if ($metadata->isSingleValuedAssociation($field)) {
+            return $metadata->getSingleAssociationJoinColumnName($field);
+        }
+
+        throw new LogicException(sprintf(self::UNKNOWN_FIELD_MESSAGE, $field, $metadata->getName()));
     }
 
     protected function createSqlForFinalizer(SelectStatement $selectStatement): string
@@ -107,7 +128,7 @@ final class IndexHintWalker extends SqlOutputWalker
         $mappedIndex = self::resolveMappedIndexes($this->getEntityManager(), $metadata)[$index]
             ?? throw new LogicException(sprintf(self::UNKNOWN_INDEX_MESSAGE, $index, $metadata->getName()));
 
-        return $this->getSQLTableAlias($mappedIndex['table']->getTableName(), $dqlAlias);
+        return $this->getSQLTableAlias($mappedIndex->tableMetadata->getTableName(), $dqlAlias);
     }
 
     /**
@@ -128,17 +149,5 @@ final class IndexHintWalker extends SqlOutputWalker
                 [...$metadata->parentClasses, ...$metadata->subClasses],
             ),
         ];
-    }
-
-    /**
-     * @param ClassMetadata<object> $metadata
-     */
-    private static function resolveIndexColumn(ClassMetadata $metadata, string $field): string
-    {
-        if ($metadata->hasField($field)) {
-            return $metadata->getColumnName($field);
-        }
-
-        return $metadata->getSingleAssociationJoinColumnName($field);
     }
 }

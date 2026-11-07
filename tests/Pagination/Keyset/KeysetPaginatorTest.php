@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace AnzuSystems\CommonBundle\Tests\Pagination\Keyset;
 
 use AnzuSystems\CommonBundle\Doctrine\Walker\IndexHintWalker;
+use AnzuSystems\CommonBundle\Helper\CollectionHelper;
 use AnzuSystems\CommonBundle\Pagination\Keyset\Exception\InvalidCursorException;
 use AnzuSystems\CommonBundle\Pagination\Keyset\KeysetCursorCodec;
 use AnzuSystems\CommonBundle\Pagination\Keyset\KeysetIndexResolver;
@@ -309,8 +310,13 @@ final class KeysetPaginatorTest extends AnzuKernelTestCase
      */
     private function toIds(KeysetPage $page): array
     {
-        return $page->items->map(static fn (Example $example): int => $example->getId())
-            ->getValues();
+        /** @var list<int> $ids */
+        $ids = CollectionHelper::traversableToIds(
+            $page->items,
+            static fn (Example $example): int => $example->getId(),
+        );
+
+        return $ids;
     }
 
     private function createCursor(Order $direction, ?DummyEnum $dummyEnum): string

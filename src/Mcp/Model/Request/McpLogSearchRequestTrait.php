@@ -19,7 +19,7 @@ trait McpLogSearchRequestTrait
     public ?string $contextId = null;
 
     #[Assert\LessThanOrEqual(value: 'now', message: McpDateWindowResolver::NOT_IN_FUTURE_MESSAGE)]
-    #[McpField(description: 'Only records at or after this date-time. Defaults to 1 day before until.')]
+    #[McpField(description: 'Only records at or after this date-time. Defaults to 1 day before until, or before now when until is later.')]
     #[Serialize(handler: McpDateTimeHandler::class)]
     public ?DateTimeImmutable $from = null;
 

@@ -13,8 +13,10 @@ use AnzuSystems\CommonBundle\Mcp\Security\McpToolAccessChecker;
 use AnzuSystems\CommonBundle\Mcp\Security\McpToolScope;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\McpToolDefinitionsFactory;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Security\StaticMcpToolScopeProvider;
+use Closure;
 use Mcp\Capability\RegistryInterface;
 use Mcp\Schema\JsonRpc\Error;
+use Mcp\Schema\JsonRpc\Request;
 use Mcp\Schema\JsonRpc\Response;
 use Mcp\Schema\Page;
 use Mcp\Schema\Prompt;
@@ -77,21 +79,11 @@ final class PromptRequestHandlersTest extends TestCase
      */
     public function testGetRejectsPromptsWhoseToolsAreNotAllGranted(McpToolScope $toolScope, array $expectedPromptNames): void
     {
-        $handler = new RejectUngrantedPromptRequestHandler($this->createPromptAccessChecker($toolScope));
-
-        foreach (array_keys(self::TOOL_NAMES_BY_PROMPT) as $promptName) {
-            $request = new GetPromptRequest($promptName)
-                ->withId(self::REQUEST_ID);
-            $granted = in_array(needle: $promptName, haystack: $expectedPromptNames, strict: true);
-
-            self::assertSame(false === $granted, $handler->supports($request), $promptName);
-            if ($granted) {
-                continue;
-            }
-            $error = $handler->handle($request, $this->createStub(SessionInterface::class));
-            self::assertSame(Error::INVALID_PARAMS, $error->code);
-            self::assertSame(McpToolAccessRejectedException::createPromptNotGranted($promptName)->getMessage(), $error->message);
-        }
+        $this->assertUngrantedPromptsAreRejected(
+            toolScope: $toolScope,
+            expectedPromptNames: $expectedPromptNames,
+            createRequest: static fn (string $promptName): Request => new GetPromptRequest($promptName),
+        );
     }
 
     /**
@@ -101,21 +93,14 @@ final class PromptRequestHandlersTest extends TestCase
      */
     public function testCompletionRejectsArgumentsOfPromptsWhoseToolsAreNotAllGranted(McpToolScope $toolScope, array $expectedPromptNames): void
     {
-        $handler = new RejectUngrantedPromptRequestHandler($this->createPromptAccessChecker($toolScope));
-
-        foreach (array_keys(self::TOOL_NAMES_BY_PROMPT) as $promptName) {
-            $request = new CompletionCompleteRequest(ref: new PromptReference($promptName), argument: self::COMPLETION_ARGUMENT)
-                ->withId(self::REQUEST_ID);
-            $granted = in_array(needle: $promptName, haystack: $expectedPromptNames, strict: true);
-
-            self::assertSame(false === $granted, $handler->supports($request), $promptName);
-            if ($granted) {
-                continue;
-            }
-            $error = $handler->handle($request, $this->createStub(SessionInterface::class));
-            self::assertSame(Error::INVALID_PARAMS, $error->code);
-            self::assertSame(McpToolAccessRejectedException::createPromptNotGranted($promptName)->getMessage(), $error->message);
-        }
+        $this->assertUngrantedPromptsAreRejected(
+            toolScope: $toolScope,
+            expectedPromptNames: $expectedPromptNames,
+            createRequest: static fn (string $promptName): Request => new CompletionCompleteRequest(
+                ref: new PromptReference($promptName),
+                argument: self::COMPLETION_ARGUMENT,
+            ),
+        );
     }
 
     public function testCompletionOfAResourceIsLeftToTheSdk(): void
@@ -171,6 +156,29 @@ final class PromptRequestHandlersTest extends TestCase
             promptAccessChecker: $this->createPromptAccessChecker($toolScope),
             pageSize: self::PAGE_SIZE,
         );
+    }
+
+    /**
+     * @param list<string> $expectedPromptNames
+     * @param Closure(string): Request $createRequest
+     */
+    private function assertUngrantedPromptsAreRejected(McpToolScope $toolScope, array $expectedPromptNames, Closure $createRequest): void
+    {
+        $handler = new RejectUngrantedPromptRequestHandler($this->createPromptAccessChecker($toolScope));
+
+        foreach (array_keys(self::TOOL_NAMES_BY_PROMPT) as $promptName) {
+            $request = $createRequest($promptName)
+                ->withId(self::REQUEST_ID);
+            $granted = in_array(needle: $promptName, haystack: $expectedPromptNames, strict: true);
+
+            self::assertSame(false === $granted, $handler->supports($request), $promptName);
+            if ($granted) {
+                continue;
+            }
+            $error = $handler->handle($request, $this->createStub(SessionInterface::class));
+            self::assertSame(Error::INVALID_PARAMS, $error->code);
+            self::assertSame(McpToolAccessRejectedException::createPromptNotGranted($promptName)->getMessage(), $error->message);
+        }
     }
 
     private function createPromptAccessChecker(McpToolScope $toolScope): McpPromptAccessChecker

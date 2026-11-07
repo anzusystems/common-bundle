@@ -32,9 +32,11 @@ final readonly class McpDateWindowResolver
 
     public function resolveLogWindow(?DateTimeImmutable $from, ?DateTimeImmutable $until): McpDateWindow
     {
-        $resolvedUntil = $until ?? AnzuApp::date();
-        $resolvedFrom = $from ?? $resolvedUntil->modify(sprintf('-%d day', self::LOG_WINDOW_DEFAULT_DAYS));
-        $clampedFrom = $this->clampLogFrom($resolvedFrom, $resolvedUntil);
+        $now = AnzuApp::date();
+        $resolvedUntil = $until ?? $now;
+        $lastLoggedAt = min($resolvedUntil, $now);
+        $resolvedFrom = $from ?? $lastLoggedAt->modify(sprintf('-%d day', self::LOG_WINDOW_DEFAULT_DAYS));
+        $clampedFrom = $this->clampLogFrom($resolvedFrom, $lastLoggedAt);
 
         return new McpDateWindow(
             from: $clampedFrom,

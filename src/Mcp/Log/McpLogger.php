@@ -11,8 +11,16 @@ use MongoDB\Collection;
 final readonly class McpLogger
 {
     public const string COLLECTION_NAME = 'mcpLogs';
+    public const string DATETIME_FIELD = 'datetime';
     public const string LEVEL_NAME_FIELD = 'levelName';
+    public const string TOOL_FIELD = 'tool';
+    public const string PARAMS_FIELD = 'params';
+    public const string USER_ID_FIELD = 'userId';
+    public const string CLIENT_FIELD = 'client';
+    public const string CONTEXT_ID_FIELD = 'contextId';
+    public const string DURATION_MS_FIELD = 'durationMs';
     public const string ERROR_FIELD = 'error';
+    public const string HINT_FIELD = 'hint';
 
     public const string LEVEL_NAME_INFO = 'info';
     public const string LEVEL_NAME_ERROR = 'error';
@@ -29,16 +37,16 @@ final readonly class McpLogger
     public function log(string $tool, array $params, ?int $userId, int $durationMs, ?string $error, ?string $client): void
     {
         $this->mcpLogCollection->insertOne([
-            'datetime' => new UTCDateTime(AnzuApp::date()),
+            self::DATETIME_FIELD => new UTCDateTime(AnzuApp::date()),
             self::LEVEL_NAME_FIELD => $this->resolveLevelName($error),
-            'tool' => $tool,
-            'params' => $params,
-            'userId' => $userId,
-            'client' => $client,
-            'contextId' => AnzuApp::getContextId(),
-            'durationMs' => $durationMs,
+            self::TOOL_FIELD => $tool,
+            self::PARAMS_FIELD => $params,
+            self::USER_ID_FIELD => $userId,
+            self::CLIENT_FIELD => $client,
+            self::CONTEXT_ID_FIELD => AnzuApp::getContextId(),
+            self::DURATION_MS_FIELD => $durationMs,
             self::ERROR_FIELD => $error,
-            'hint' => self::HINT,
+            self::HINT_FIELD => self::HINT,
         ]);
     }
 

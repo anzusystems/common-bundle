@@ -6,6 +6,7 @@ namespace AnzuSystems\CommonBundle\Tests\Mcp\Resolver;
 
 use AnzuSystems\CommonBundle\Mcp\Model\McpDateWindow;
 use AnzuSystems\CommonBundle\Mcp\Resolver\McpDateWindowResolver;
+use AnzuSystems\Contracts\AnzuApp;
 use DateTimeImmutable;
 use PHPUnit\Framework\TestCase;
 
@@ -24,6 +25,17 @@ final class McpDateWindowResolverTest extends TestCase
 
         self::assertSame('2026-07-19T12:00:00+00:00', $window->from->format(DATE_ATOM));
         self::assertSame('2026-07-20T12:00:00+00:00', $window->until->format(DATE_ATOM));
+        self::assertFalse($window->truncated);
+    }
+
+    public function testLogWindowWithAFutureUntilDefaultsToOneDayBeforeNow(): void
+    {
+        $until = AnzuApp::date()->modify('+1 year');
+
+        $window = $this->resolver->resolveLogWindow(null, $until);
+
+        self::assertEquals(AnzuApp::date()->modify('-1 day'), $window->from);
+        self::assertEquals($until, $window->until);
         self::assertFalse($window->truncated);
     }
 

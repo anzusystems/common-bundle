@@ -12,6 +12,11 @@ use Mcp\Schema\Content\TextContent;
 use Mcp\Schema\Enum\Role;
 use ReflectionClass;
 
+/**
+ * Reads the #[AsMcpPrompt] of the prompt class when it renders instead of taking McpPromptDefinitions: a trait cannot
+ * add a constructor argument to the host prompt, and a #[Required] setter would leave the readonly property of a prompt
+ * built without the container uninitialized.
+ */
 trait McpPromptMessageTrait
 {
     /**

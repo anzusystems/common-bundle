@@ -73,7 +73,7 @@ final class McpToolDefinitionsCompilerPassTest extends TestCase
 
         self::assertSame(
             [SearchAppLogsTool::NAME, self::READ_TOOL_METHOD],
-            array_keys(array_filter($this->getDefinitionField($container, self::READ_ONLY_ARGUMENT))),
+            array_filter($this->getDefinitionField($container, self::READ_ONLY_ARGUMENT)) |> array_keys(...),
         );
     }
 
@@ -115,7 +115,7 @@ final class McpToolDefinitionsCompilerPassTest extends TestCase
         );
         self::assertSame(
             [SearchAppLogsTool::NAME, ExampleWritePreviewTool::NAME],
-            array_keys(array_filter($this->getDefinitionField($container, self::READ_ONLY_ARGUMENT))),
+            array_filter($this->getDefinitionField($container, self::READ_ONLY_ARGUMENT)) |> array_keys(...),
         );
     }
 
