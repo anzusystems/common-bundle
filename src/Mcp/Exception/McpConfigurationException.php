@@ -29,11 +29,10 @@ final class McpConfigurationException extends LogicException
         return new self(sprintf('The mcp server "%s" already has a reference handler, so %s cannot wrap the SDK one.', $serverName, McpToolReferenceHandler::class));
     }
 
-    public static function createAppTemplateOnAsMcpTool(string $class, string $toolKey): self
+    public static function createAppToolTemplate(string $toolKey): self
     {
         return new self(sprintf(
-            'The MCP tool "%s" declares #[AsMcpTool] and the MCP App template of "%s": %s returns a CallToolResult, but the template needs an array, so drop one of them.',
-            $class,
+            'The MCP tool "%s" declares an MCP App template, which %s does not support: the template needs an array, an #[AsMcpTool] returns a CallToolResult and a plain #[McpTool] has no permission, so every call would be denied. Drop the template.',
             $toolKey,
             McpToolReferenceHandler::class,
         ));

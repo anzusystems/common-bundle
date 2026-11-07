@@ -11,12 +11,13 @@ use Closure;
 #[AsMcpTool(
     name: InvalidCategoryExampleTool::NAME,
     description: 'Lists examples of a category that is not camelCase.',
-    category: 'example.tools',
+    category: InvalidCategoryExampleTool::CATEGORY,
     readOnly: true,
 )]
 final readonly class InvalidCategoryExampleTool
 {
     public const string NAME = 'invalid_category_example';
+    public const string CATEGORY = 'example.tools';
 
     /**
      * @param Closure(): McpLogsByContextResponse $handler

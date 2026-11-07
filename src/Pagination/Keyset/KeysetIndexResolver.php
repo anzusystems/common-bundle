@@ -33,22 +33,26 @@ final readonly class KeysetIndexResolver
     {
         $equalityColumns = array_map(static fn (string $field): string => IndexHintWalker::resolveIndexColumn($metadata, $field), $equalityFields);
         $orderColumns = array_map(static fn (string $field): string => IndexHintWalker::resolveIndexColumn($metadata, $field), $order->fields);
-        $fieldTable = $this->resolveFieldTable(entityManager: $entityManager, metadata: $metadata, fields: [...$equalityFields, ...$order->fields]);
+        $fieldMetadata = $this->resolveFieldMetadata(entityManager: $entityManager, metadata: $metadata, fields: [...$equalityFields, ...$order->fields]);
         $primaryKeyColumn = $this->resolvePrimaryKeyColumn($metadata);
 
-        foreach (IndexHintWalker::resolveMappedIndexes($entityManager, $metadata) as $indexName => $index) {
-            if ($index->tableMetadata->getTableName() === $fieldTable && $this->isKeysetIndex(
-                indexColumns: $index->columns,
-                equalityColumns: $equalityColumns,
-                orderColumns: $orderColumns,
-                primaryKeyColumn: $primaryKeyColumn,
-            )) {
-                return $indexName;
+        foreach (IndexHintWalker::resolveMappedIndexes($entityManager, $metadata) as $indexName => $mappedIndexes) {
+            foreach ($mappedIndexes as $index) {
+                if ($index->tableMetadata->getTableName() === $fieldMetadata->getTableName() && $this->isKeysetIndex(
+                    indexColumns: $index->columns,
+                    equalityColumns: $equalityColumns,
+                    orderColumns: $orderColumns,
+                    primaryKeyColumn: $primaryKeyColumn,
+                )) {
+                    IndexHintWalker::resolveUnambiguousIndex(metadata: $metadata, index: $indexName, mappedIndexes: $mappedIndexes);
+
+                    return $indexName;
+                }
             }
         }
 
         throw new LogicException($this->createMissingIndexMessage(
-            metadata: $metadata,
+            metadata: $fieldMetadata,
             equalityFields: $equalityFields,
             order: $order,
             primaryKeyColumn: $primaryKeyColumn,
@@ -85,25 +89,28 @@ final readonly class KeysetIndexResolver
      *
      * @param ClassMetadata<object> $metadata
      * @param non-empty-list<string> $fields
+     *
+     * @return ClassMetadata<object> the metadata of the class whose table holds every field
      */
-    private function resolveFieldTable(EntityManagerInterface $entityManager, ClassMetadata $metadata, array $fields): string
+    private function resolveFieldMetadata(EntityManagerInterface $entityManager, ClassMetadata $metadata, array $fields): ClassMetadata
     {
-        $fieldTables = array_map(
-            static fn (string $field): string => $entityManager->getClassMetadata(
+        $fieldMetadata = [];
+        foreach ($fields as $field) {
+            $declaringMetadata = $entityManager->getClassMetadata(
                 ($metadata->fieldMappings[$field] ?? $metadata->associationMappings[$field])->inherited ?? $metadata->getName(),
-            )->getTableName(),
-            $fields,
-        ) |> array_unique(...);
-        if (1 < count($fieldTables)) {
+            );
+            $fieldMetadata[$declaringMetadata->getTableName()] = $declaringMetadata;
+        }
+        if (1 < count($fieldMetadata)) {
             throw new LogicException(sprintf(
                 self::FIELDS_ON_SEVERAL_TABLES_MESSAGE,
                 implode(self::LIST_SEPARATOR, $fields),
                 $metadata->getName(),
-                implode(self::LIST_SEPARATOR, $fieldTables),
+                implode(self::LIST_SEPARATOR, array_keys($fieldMetadata)),
             ));
         }
 
-        return (string) array_first($fieldTables);
+        return array_first($fieldMetadata);
     }
 
     /**

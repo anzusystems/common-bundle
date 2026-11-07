@@ -6,7 +6,6 @@ namespace AnzuSystems\CommonBundle\Tests\Mcp;
 
 use AnzuSystems\CommonBundle\Mcp\Attribute\AsMcpTool;
 use AnzuSystems\CommonBundle\Mcp\Handler\McpToolReferenceHandler;
-use BackedEnum;
 use LogicException;
 use Mcp\Schema\Enum\ProtocolVersion;
 use Mcp\Schema\JsonRpc\MessageInterface;
@@ -72,10 +71,7 @@ final class McpTestClient
     {
         $message = $this->send(self::METHOD_TOOLS_CALL, [
             self::NAME_KEY => self::resolveToolName($toolClass),
-            'arguments' => (object) array_map(
-                static fn (mixed $argument): mixed => $argument instanceof BackedEnum ? $argument->value : $argument,
-                $arguments,
-            ),
+            'arguments' => (object) $arguments,
         ]);
         if (isset($message[self::ERROR_KEY])) {
             return new McpToolResult(isError: true, error: (string) $message[self::ERROR_KEY]['message'], data: []);

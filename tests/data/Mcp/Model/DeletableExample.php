@@ -11,7 +11,7 @@ use AnzuSystems\Contracts\Entity\Traits\IdentityIntTrait;
 use AnzuSystems\Contracts\Entity\Traits\TimeTrackingTrait;
 use AnzuSystems\Contracts\Entity\Traits\UserTrackingTrait;
 
-final class DeletableExample implements IdentifiableInterface, TimeTrackingInterface, UserTrackingInterface
+class DeletableExample implements IdentifiableInterface, TimeTrackingInterface, UserTrackingInterface
 {
     use IdentityIntTrait;
     use TimeTrackingTrait;

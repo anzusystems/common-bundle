@@ -10,6 +10,7 @@ use AnzuSystems\CommonBundle\Mcp\Exception\McpToolCallRejectedException;
 use AnzuSystems\CommonBundle\Mcp\Security\McpDeleteGuard;
 use AnzuSystems\CommonBundle\Tests\Data\Entity\User;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Model\DeletableExample;
+use AnzuSystems\CommonBundle\Tests\Data\Mcp\Model\DeletableExampleProxy;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Security\DeletableExampleDependencyProvider;
 use AnzuSystems\Contracts\AnzuApp;
 use DateTimeImmutable;
@@ -110,6 +111,21 @@ final class McpDeleteGuardTest extends TestCase
         $this->addToAssertionCount(1);
     }
 
+    public function testProxyOfTheEntityUsesTheDependencyProviderOfTheEntityClass(): void
+    {
+        $entity = $this->createEntity(
+            createdAt: AnzuApp::date()->modify(self::FRESH_OFFSET),
+            createdById: self::CURRENT_USER_ID,
+            entity: new DeletableExampleProxy(),
+        );
+
+        self::assertSame(
+            [sprintf(McpDeleteGuard::IN_USE_MESSAGE, self::FIRST_DEPENDENCY)],
+            $this->createGuard([self::FIRST_DEPENDENCY])
+                ->resolveRefusals($entity),
+        );
+    }
+
     public function testEntityWithoutDependencyProviderFails(): void
     {
         $entity = $this->createEntity(createdAt: AnzuApp::date()->modify(self::FRESH_OFFSET), createdById: self::CURRENT_USER_ID);
@@ -131,9 +147,12 @@ final class McpDeleteGuardTest extends TestCase
         );
     }
 
-    private function createEntity(DateTimeImmutable $createdAt, ?int $createdById): DeletableExample
-    {
-        $entity = new DeletableExample()
+    private function createEntity(
+        DateTimeImmutable $createdAt,
+        ?int $createdById,
+        DeletableExample $entity = new DeletableExample(),
+    ): DeletableExample {
+        $entity
             ->setId(self::ENTITY_ID)
             ->setCreatedAt($createdAt);
         if (is_int($createdById)) {

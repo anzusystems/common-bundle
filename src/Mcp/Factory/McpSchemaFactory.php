@@ -44,6 +44,7 @@ final class McpSchemaFactory
     public const string ADDITIONAL_PROPERTIES = 'additionalProperties';
     public const string UNTYPED_COLLECTION_MESSAGE = 'The MCP schema cannot describe %s::%s, a Collection without its key and item types: declare Collection<int, X> (Collection<string, X> for a keyed map) in its @var, or in its @return for a getter.';
     public const string UNTYPED_ARRAY_MESSAGE = 'The MCP schema cannot describe %s::%s, an array without its item type: declare list<X> (array<string, X> for a keyed map) in its @var, or in its @return for a getter.';
+    public const string SELF_CONTAINING_CLASS_MESSAGE = 'The MCP schema cannot describe the class %s, it contains itself through its #[Serialize] members, so its schema would never end: describe the nested level with another class.';
     public const string UNDESCRIBED_CLASS_MESSAGE = 'The MCP schema cannot describe the class %s, it has no #[Serialize] member: use a scalar, a Uuid, a backed enum, a DateTimeImmutable with #[Serialize(handler: McpDateTimeHandler::class)] or a class with #[Serialize] members.';
 
     private const string REQUIRED = 'required';
@@ -81,6 +82,11 @@ final class McpSchemaFactory
      */
     private array $describedClasses = [];
 
+    /**
+     * @var array<class-string, true>
+     */
+    private array $classesBeingDescribed = [];
+
     public function __construct()
     {
         $this->typeResolver = TypeResolver::create();
@@ -93,6 +99,10 @@ final class McpSchemaFactory
      */
     public function createForClass(string $class): array
     {
+        if (isset($this->classesBeingDescribed[$class])) {
+            throw new LogicException(sprintf(self::SELF_CONTAINING_CLASS_MESSAGE, $class));
+        }
+        $this->classesBeingDescribed[$class] = true;
         $this->describedClasses[$class] = true;
         $properties = [];
         $required = [];
@@ -131,6 +141,7 @@ final class McpSchemaFactory
             $schema[self::REQUIRED] = $required;
         }
         $schema[self::ADDITIONAL_PROPERTIES] = false;
+        unset($this->classesBeingDescribed[$class]);
 
         return $schema;
     }

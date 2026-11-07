@@ -45,8 +45,8 @@ final class McpToolReferenceHandlerErrorTest extends AbstractMcpToolReferenceHan
             McpToolErrorResolver::INVALID_ARGUMENTS_PREFIX . self::LIMIT_VIOLATION,
             $result->structuredContent[McpToolReferenceHandler::ERROR_KEY],
         );
-        self::assertSame(McpLogger::LEVEL_NAME_ERROR, $this->insertedDocuments[0][McpLogger::LEVEL_NAME_FIELD]);
-        self::assertSame($result->structuredContent[McpToolReferenceHandler::ERROR_KEY], $this->insertedDocuments[0][McpLogger::ERROR_FIELD]);
+        self::assertSame(McpLogger::LEVEL_NAME_ERROR, $this->insertedDocuments[0][McpLogger::FIELD_LEVEL_NAME]);
+        self::assertSame($result->structuredContent[McpToolReferenceHandler::ERROR_KEY], $this->insertedDocuments[0][McpLogger::FIELD_ERROR]);
     }
 
     /**
@@ -153,9 +153,9 @@ final class McpToolReferenceHandlerErrorTest extends AbstractMcpToolReferenceHan
 
         self::assertTrue($result->isError);
         self::assertSame(self::INPUT_ERROR_MESSAGE, $result->structuredContent[McpToolReferenceHandler::ERROR_KEY]);
-        self::assertSame(McpLogger::LEVEL_NAME_ERROR, $this->insertedDocuments[0][McpLogger::LEVEL_NAME_FIELD]);
-        self::assertSame(self::INPUT_ERROR_MESSAGE, $this->insertedDocuments[0][McpLogger::ERROR_FIELD]);
-        self::assertSame([], $this->insertedDocuments[0]['params']);
+        self::assertSame(McpLogger::LEVEL_NAME_ERROR, $this->insertedDocuments[0][McpLogger::FIELD_LEVEL_NAME]);
+        self::assertSame(self::INPUT_ERROR_MESSAGE, $this->insertedDocuments[0][McpLogger::FIELD_ERROR]);
+        self::assertSame([], $this->insertedDocuments[0][McpLogger::FIELD_PARAMS]);
     }
 
     /**
@@ -169,8 +169,8 @@ final class McpToolReferenceHandlerErrorTest extends AbstractMcpToolReferenceHan
 
         self::assertTrue($result->isError);
         self::assertSame($expectedError, $result->structuredContent[McpToolReferenceHandler::ERROR_KEY]);
-        self::assertSame(McpLogger::LEVEL_NAME_ERROR, $this->insertedDocuments[0][McpLogger::LEVEL_NAME_FIELD]);
-        self::assertSame($expectedError, $this->insertedDocuments[0][McpLogger::ERROR_FIELD]);
+        self::assertSame(McpLogger::LEVEL_NAME_ERROR, $this->insertedDocuments[0][McpLogger::FIELD_LEVEL_NAME]);
+        self::assertSame($expectedError, $this->insertedDocuments[0][McpLogger::FIELD_ERROR]);
     }
 
     /**
@@ -208,7 +208,7 @@ final class McpToolReferenceHandlerErrorTest extends AbstractMcpToolReferenceHan
 
         self::assertTrue($result->isError);
         self::assertSame(self::BACKEND_ERROR_MESSAGE, $result->structuredContent[McpToolReferenceHandler::ERROR_KEY]);
-        self::assertSame(self::BACKEND_ERROR_MESSAGE, $this->insertedDocuments[0][McpLogger::ERROR_FIELD]);
+        self::assertSame(self::BACKEND_ERROR_MESSAGE, $this->insertedDocuments[0][McpLogger::FIELD_ERROR]);
     }
 
     public function testValidationExceptionKeepsItsFieldErrorsOverAConfiguredMessage(): void
@@ -241,10 +241,10 @@ final class McpToolReferenceHandlerErrorTest extends AbstractMcpToolReferenceHan
         }
 
         self::assertCount(1, $this->insertedDocuments);
-        self::assertSame(McpLogger::LEVEL_NAME_ERROR, $this->insertedDocuments[0][McpLogger::LEVEL_NAME_FIELD]);
+        self::assertSame(McpLogger::LEVEL_NAME_ERROR, $this->insertedDocuments[0][McpLogger::FIELD_LEVEL_NAME]);
         self::assertSame(
             sprintf(McpToolReferenceHandler::UNHANDLED_ERROR_FORMAT, RuntimeException::class),
-            $this->insertedDocuments[0][McpLogger::ERROR_FIELD],
+            $this->insertedDocuments[0][McpLogger::FIELD_ERROR],
         );
     }
 

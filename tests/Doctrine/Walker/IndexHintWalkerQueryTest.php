@@ -8,6 +8,7 @@ use AnzuSystems\CommonBundle\Doctrine\Walker\IndexHintWalker;
 use AnzuSystems\CommonBundle\Tests\Data\Entity\Example;
 use AnzuSystems\CommonBundle\Tests\Data\Entity\ExampleAmbiguousIndexChild;
 use AnzuSystems\CommonBundle\Tests\Data\Entity\ExampleAmbiguousIndexParent;
+use AnzuSystems\CommonBundle\Tests\Data\Entity\ExampleAmbiguousIndexSecondChild;
 use AnzuSystems\CommonBundle\Tests\Data\Entity\ExampleInheritanceChild;
 use AnzuSystems\CommonBundle\Tests\Data\Entity\ExampleInheritanceParent;
 use AnzuSystems\CommonBundle\Tests\Data\Entity\ExampleJoinedEntity;
@@ -16,6 +17,8 @@ use LogicException;
 
 final class IndexHintWalkerQueryTest extends AbstractDoctrineQueryTestCase
 {
+    private const string UNKNOWN_INDEX = 'IDX_unknown';
+
     /**
      * @dataProvider dqlProvider
      *
@@ -123,13 +126,40 @@ final class IndexHintWalkerQueryTest extends AbstractDoctrineQueryTestCase
     }
 
     /**
+     * @dataProvider unambiguousIndexBesideAnAmbiguousOneProvider
+     *
+     * @param class-string $entityClass
+     */
+    public function testUnambiguousIndexIsForcedBesideAnIndexNameOnTwoTables(string $entityClass, string $expectedRootTable): void
+    {
+        $sql = $this->getSql(
+            dql: 'SELECT e.name FROM ' . $entityClass . ' e',
+            indexByAlias: ['e' => IndexHintWalker::PRIMARY_INDEX],
+        );
+
+        self::assertStringStartsWith('SELECT /*+ INDEX(e0_ ' . IndexHintWalker::PRIMARY_INDEX . ') */ ', $sql);
+        self::assertStringContainsString($expectedRootTable, $sql);
+    }
+
+    /**
+     * @return array<string, array{class-string, string}>
+     */
+    public static function unambiguousIndexBesideAnAmbiguousOneProvider(): array
+    {
+        return [
+            'root of children with the same index name' => [ExampleAmbiguousIndexParent::class, ' FROM example_ambiguous_index_parent e0_ '],
+            'child with the index name of its parent' => [ExampleAmbiguousIndexSecondChild::class, ' INNER JOIN example_ambiguous_index_parent e0_ '],
+        ];
+    }
+
+    /**
      * @dataProvider unmappedIndexProvider
      */
     public function testUnmappedIndexFails(string $dql, string $alias, string $entityClass): void
     {
-        $this->expectExceptionObject(new LogicException(sprintf(IndexHintWalker::UNKNOWN_INDEX_MESSAGE, 'IDX_unknown', $entityClass)));
+        $this->expectExceptionObject(new LogicException(sprintf(IndexHintWalker::UNKNOWN_INDEX_MESSAGE, self::UNKNOWN_INDEX, $entityClass)));
 
-        $this->getSql(dql: $dql, indexByAlias: [$alias => 'IDX_unknown']);
+        $this->getSql(dql: $dql, indexByAlias: [$alias => self::UNKNOWN_INDEX]);
     }
 
     /**

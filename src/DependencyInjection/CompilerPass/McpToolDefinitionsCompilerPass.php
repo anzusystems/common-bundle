@@ -117,9 +117,9 @@ final class McpToolDefinitionsCompilerPass implements CompilerPassInterface
         $signature = $this->resolveToolSignature($tools);
 
         return new Definition(McpToolSignature::class, [
-            $signature->inputParameterName,
-            $signature->inputClass,
-            $signature->outputClass,
+            '$inputParameterName' => $signature->inputParameterName,
+            '$inputClass' => $signature->inputClass,
+            '$outputClass' => $signature->outputClass,
         ]);
     }
 

@@ -49,16 +49,19 @@ final class IndexHintWalker extends SqlOutputWalker
     /**
      * @param ClassMetadata<object> $metadata
      *
-     * @return array<string, MappedIndex> every index the alias of the entity can force by its name; PRIMARY is on the
-     *         table of the root entity, which Doctrine reads the primary key from
+     * @return array<string, non-empty-list<MappedIndex>> every index the alias of the entity can force, by its name, with
+     *         one item per table that maps the name; PRIMARY is on the table of the root entity, which Doctrine reads the
+     *         primary key from
      */
     public static function resolveMappedIndexes(EntityManagerInterface $entityManager, ClassMetadata $metadata): array
     {
         $mappedIndexes = [
-            self::PRIMARY_INDEX => new MappedIndex(
-                tableMetadata: $entityManager->getClassMetadata($metadata->rootEntityName),
-                columns: $metadata->getIdentifierColumnNames(),
-            ),
+            self::PRIMARY_INDEX => [
+                new MappedIndex(
+                    tableMetadata: $entityManager->getClassMetadata($metadata->rootEntityName),
+                    columns: $metadata->getIdentifierColumnNames(),
+                ),
+            ],
         ];
         foreach (self::getTableMetadata($entityManager, $metadata) as $tableMetadata) {
             $indexes = [...$tableMetadata->table['indexes'] ?? [], ...$tableMetadata->table['uniqueConstraints'] ?? []];
@@ -66,10 +69,7 @@ final class IndexHintWalker extends SqlOutputWalker
                 if (false === is_string($name)) {
                     continue;
                 }
-                if (isset($mappedIndexes[$name])) {
-                    throw new LogicException(sprintf(self::AMBIGUOUS_INDEX_MESSAGE, $name, $metadata->getName()));
-                }
-                $mappedIndexes[$name] = new MappedIndex(
+                $mappedIndexes[$name][] = new MappedIndex(
                     tableMetadata: $tableMetadata,
                     columns: $index['columns'] ?? array_map(
                         static fn (string $field): string => self::resolveIndexColumn($tableMetadata, $field),
@@ -80,6 +80,19 @@ final class IndexHintWalker extends SqlOutputWalker
         }
 
         return $mappedIndexes;
+    }
+
+    /**
+     * @param ClassMetadata<object> $metadata
+     * @param non-empty-list<MappedIndex> $mappedIndexes the tables of the hierarchy that map the index name
+     */
+    public static function resolveUnambiguousIndex(ClassMetadata $metadata, string $index, array $mappedIndexes): MappedIndex
+    {
+        if (1 < count($mappedIndexes)) {
+            throw new LogicException(sprintf(self::AMBIGUOUS_INDEX_MESSAGE, $index, $metadata->getName()));
+        }
+
+        return array_first($mappedIndexes);
     }
 
     /**
@@ -125,8 +138,9 @@ final class IndexHintWalker extends SqlOutputWalker
         if (false === $metadata instanceof ClassMetadata) {
             throw new LogicException(sprintf(self::UNKNOWN_ALIAS_MESSAGE, $dqlAlias, $index));
         }
-        $mappedIndex = self::resolveMappedIndexes($this->getEntityManager(), $metadata)[$index]
+        $mappedIndexes = self::resolveMappedIndexes($this->getEntityManager(), $metadata)[$index]
             ?? throw new LogicException(sprintf(self::UNKNOWN_INDEX_MESSAGE, $index, $metadata->getName()));
+        $mappedIndex = self::resolveUnambiguousIndex(metadata: $metadata, index: $index, mappedIndexes: $mappedIndexes);
 
         return $this->getSQLTableAlias($mappedIndex->tableMetadata->getTableName(), $dqlAlias);
     }

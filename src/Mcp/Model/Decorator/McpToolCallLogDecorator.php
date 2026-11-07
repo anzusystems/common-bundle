@@ -13,12 +13,12 @@ final class McpToolCallLogDecorator extends AbstractMcpLogDecorator
 {
     #[Serialize]
     public ?string $levelName {
-        get => $this->readString($this->document, McpLogger::LEVEL_NAME_FIELD);
+        get => $this->readString($this->document, McpLogger::FIELD_LEVEL_NAME);
     }
 
     #[Serialize]
     public ?string $tool {
-        get => $this->readString($this->document, McpLogger::TOOL_FIELD);
+        get => $this->readString($this->document, McpLogger::FIELD_TOOL);
     }
 
     /**
@@ -26,33 +26,33 @@ final class McpToolCallLogDecorator extends AbstractMcpLogDecorator
      */
     #[Serialize(handler: RawArrayHandler::class)]
     public array $params {
-        get => $this->readArray($this->document, McpLogger::PARAMS_FIELD);
+        get => $this->readArray($this->document, McpLogger::FIELD_PARAMS);
     }
 
     #[Serialize]
     public ?int $userId {
-        get => $this->readInt($this->document, McpLogger::USER_ID_FIELD);
+        get => $this->readInt($this->document, McpLogger::FIELD_USER_ID);
     }
 
     #[McpField(description: 'The name of the MCP client, null when it sent none.')]
     #[Serialize]
     public ?string $client {
-        get => $this->readString($this->document, McpLogger::CLIENT_FIELD);
+        get => $this->readString($this->document, McpLogger::FIELD_CLIENT);
     }
 
     #[Serialize]
     public ?string $contextId {
-        get => $this->readString($this->document, McpLogger::CONTEXT_ID_FIELD);
+        get => $this->readString($this->document, McpLogger::FIELD_CONTEXT_ID);
     }
 
     #[Serialize]
     public ?int $durationMs {
-        get => $this->readInt($this->document, McpLogger::DURATION_MS_FIELD);
+        get => $this->readInt($this->document, McpLogger::FIELD_DURATION_MS);
     }
 
     #[McpField(description: self::TRUNCATED_DESCRIPTION)]
     #[Serialize]
     public ?string $error {
-        get => $this->readTruncated($this->document, McpLogger::ERROR_FIELD);
+        get => $this->readTruncated($this->document, McpLogger::FIELD_ERROR);
     }
 }

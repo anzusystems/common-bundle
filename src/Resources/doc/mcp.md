@@ -283,12 +283,12 @@ to the inner handler unchanged:
    `isError: true`, so the protocol client sees a failed call instead of a successful one with an `error` key;
 5. the call is logged with `params` = the serialized input (`[]` without one).
 
-`McpToolReferenceHandlerCompilerPass` puts the handler into the server after McpBundle's `McpPass`: around an SDK
-`ReferenceHandler` on the handler locator of the server, or, when MCP App tool templates registered
-`mcp.server.<server>.app.reference_handler`, between that handler and its SDK handler. `McpToolDefinitionsCompilerPass` reads the `__invoke()` signature of every `#[AsMcpTool]` tool once
+`McpToolReferenceHandlerCompilerPass` puts the handler into the server after McpBundle's `McpPass`, around an SDK
+`ReferenceHandler` on the handler locator of the server. `McpToolDefinitionsCompilerPass` reads the `__invoke()` signature of every `#[AsMcpTool]` tool once
 and stores it in `McpToolDefinition::$signature`, so a call needs no reflection. `McpToolReferenceHandlerCompilerPass` fails the container
-compilation when an `#[AsMcpTool]` tool also has an MCP App template (the template needs an array, the handler returns
-a `CallToolResult`) and when the server already has another reference handler.
+compilation when a tool has an MCP App template and when the server already has another reference handler. A template
+needs a tool that returns an array: an `#[AsMcpTool]` returns a `CallToolResult`, and a plain `#[McpTool]` has no
+permission, so its every call would be denied.
 
 The serializer builds an input object without a constructor: a DTO with optional fields has public properties with
 defaults (it treats every promoted constructor parameter as required).
@@ -555,8 +555,9 @@ final readonly class NoteDeleteDependencyProvider implements McpDeleteDependency
 }
 ```
 
-With the `mcp` section the bundle tags an autoconfigured implementation itself. `$entity::class` is the key of the
-provider, and an entity without a provider throws a `LogicException`, never "no dependencies".
+With the `mcp` section the bundle tags an autoconfigured implementation itself. The class of the entity is the key of
+the provider; for a Doctrine proxy (`getReference()` without native lazy objects) it is the entity class the proxy
+extends. An entity without a provider throws a `LogicException`, never "no dependencies".
 
 The guard does not check the delete permission: the host tool does, on the stored entity. The tool records the audit
 resource with `setAuditResource()` and the id from its response, because Doctrine clears the id after the flush.
@@ -846,8 +847,8 @@ and hosts:
 
 ```php
 'mcp' => [
-    'allowed_hosts' => env('APP_MCP_ALLOWED_HOSTS')->csv(),
-    'pod' => env('APP_MCP_POD')->bool(),
+    'allowed_hosts' => env('ANZU_MCP_ALLOWED_HOSTS')->csv(),
+    'pod' => env('ANZU_MCP_POD')->bool(),
 ],
 ```
 

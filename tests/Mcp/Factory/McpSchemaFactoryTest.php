@@ -25,6 +25,7 @@ use AnzuSystems\CommonBundle\Tests\Data\Mcp\Model\Request\NullableBareArrayExamp
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Model\Request\PageExampleRequest;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Model\Request\PreviewHashExampleRequest;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Model\Request\PromotedExampleRequest;
+use AnzuSystems\CommonBundle\Tests\Data\Mcp\Model\Request\TreeExampleRequest;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Model\Request\UntypedCollectionExampleRequest;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Model\Request\UuidExampleRequest;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Model\Response\BareArrayExampleResponse;
@@ -294,6 +295,14 @@ final class McpSchemaFactoryTest extends TestCase
 
         new McpSchemaFactory()
             ->createForClass(DateExampleRequest::class);
+    }
+
+    public function testClassContainingItselfFailsWithItsName(): void
+    {
+        $this->expectExceptionObject(new LogicException(sprintf(McpSchemaFactory::SELF_CONTAINING_CLASS_MESSAGE, TreeExampleRequest::class)));
+
+        new McpSchemaFactory()
+            ->createForClass(TreeExampleRequest::class);
     }
 
     public function testPrivatePropertiesOfAParentAreDescribedAndTheChildWins(): void

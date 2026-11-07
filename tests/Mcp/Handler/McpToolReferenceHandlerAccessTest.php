@@ -59,7 +59,7 @@ final class McpToolReferenceHandlerAccessTest extends AbstractMcpToolReferenceHa
 
         self::assertTrue($result->isError);
         self::assertSame($expectedError, $result->structuredContent[McpToolReferenceHandler::ERROR_KEY]);
-        self::assertSame(McpLogger::LEVEL_NAME_ERROR, $this->insertedDocuments[0][McpLogger::LEVEL_NAME_FIELD]);
+        self::assertSame(McpLogger::LEVEL_NAME_ERROR, $this->insertedDocuments[0][McpLogger::FIELD_LEVEL_NAME]);
     }
 
     /**

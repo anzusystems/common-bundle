@@ -58,9 +58,9 @@ final class StrictToolArgumentsRequestHandlerTest extends TestCase
             $result->structuredContent[McpToolReferenceHandler::ERROR_KEY],
         );
         self::assertCount(1, $this->insertedDocuments);
-        self::assertSame(self::TOOL_NAME, $this->insertedDocuments[0]['tool']);
-        self::assertSame([self::ALLOWED_ARGUMENT => self::ALLOWED_VALUE], $this->insertedDocuments[0]['params']);
-        self::assertSame($result->structuredContent[McpToolReferenceHandler::ERROR_KEY], $this->insertedDocuments[0][McpLogger::ERROR_FIELD]);
+        self::assertSame(self::TOOL_NAME, $this->insertedDocuments[0][McpLogger::FIELD_TOOL]);
+        self::assertSame([self::ALLOWED_ARGUMENT => self::ALLOWED_VALUE], $this->insertedDocuments[0][McpLogger::FIELD_PARAMS]);
+        self::assertSame($result->structuredContent[McpToolReferenceHandler::ERROR_KEY], $this->insertedDocuments[0][McpLogger::FIELD_ERROR]);
     }
 
     public function testToolThatIsNotGrantedIsLeftToTheSdk(): void

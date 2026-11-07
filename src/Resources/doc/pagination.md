@@ -105,12 +105,13 @@ that declares it, and the primary key from the table of the root entity, where `
 ordered by `name, id` of its parent therefore uses the index of the parent table, and the hint goes to the alias of
 that table. Fields on more than one table, such as a field of the child ordered by `id`, throw a `LogicException`
 before the query runs, because no index spans two tables and MySQL would sort the rows in a filesort. An index name
-mapped on two tables of the hierarchy throws a `LogicException` as well, because the hint could not tell which table
-it means. The list of mapped indexes and their tables is `IndexHintWalker::resolveMappedIndexes()` (a `MappedIndex`
-per name), which the walker checks the hint against too.
+mapped on two tables of the hierarchy throws a `LogicException` as well when the resolver or a hint picks it, because
+the hint could not tell which table it means; the other indexes of the hierarchy stay usable. The list of mapped
+indexes and their tables is `IndexHintWalker::resolveMappedIndexes()` (a `MappedIndex` per table that maps the name),
+which the walker checks the hint against too.
 
-Without such an index `paginate()` throws a `LogicException` before the query runs. It names the entity, the
-equality and order fields and the index to add:
+Without such an index `paginate()` throws a `LogicException` before the query runs. It names the entity whose table
+holds the fields (the parent entity for fields of the parent table), the equality and order fields and the index to add:
 
 ```
 No named index of App\Entity\Note starts with the equality fields [label, author] in any order followed by the order fields [createdAt, id], so the keyset query would sort its rows in a filesort. Add #[ORM\Index(name: 'IDX_label_author_createdAt', fields: ['label', 'author', 'createdAt'])].

@@ -33,8 +33,8 @@ final readonly class McpLogRepository
     public function findLatestByContextId(string $contextId, DateTimeImmutable $from, int $limit): array
     {
         $documents = $this->mcpLogCollection->find([
-            McpLogger::CONTEXT_ID_FIELD => $contextId,
-            McpLogger::DATETIME_FIELD => [
+            McpLogger::FIELD_CONTEXT_ID => $contextId,
+            McpLogger::FIELD_DATETIME => [
                 self::MONGO_GTE => new UTCDateTime($from),
             ],
             MongoHelper::FIELD_ID => [
@@ -49,6 +49,6 @@ final readonly class McpLogRepository
             'typeMap' => self::RAW_ARRAY_TYPE_MAP,
         ]);
 
-        return MongoHelper::sortNewestFirst(array_values($documents->toArray()), McpLogger::DATETIME_FIELD);
+        return MongoHelper::sortNewestFirst(array_values($documents->toArray()), McpLogger::FIELD_DATETIME);
     }
 }

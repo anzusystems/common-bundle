@@ -11,7 +11,10 @@ use Doctrine\ORM\Mapping as ORM;
 #[ORM\Table('example_ambiguous_index_parent')]
 #[ORM\InheritanceType('JOINED')]
 #[ORM\DiscriminatorColumn(name: 'discriminator', type: Types::STRING)]
-#[ORM\DiscriminatorMap(['child' => ExampleAmbiguousIndexChild::class])]
+#[ORM\DiscriminatorMap([
+    'child' => ExampleAmbiguousIndexChild::class,
+    'secondChild' => ExampleAmbiguousIndexSecondChild::class,
+])]
 #[ORM\Index(name: self::IDX_NAME, fields: ['name'])]
 abstract class ExampleAmbiguousIndexParent
 {

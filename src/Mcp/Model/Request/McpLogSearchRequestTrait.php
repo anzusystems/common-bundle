@@ -27,7 +27,7 @@ trait McpLogSearchRequestTrait
     #[McpField(
         description: <<<'TXT'
             Only records at or before this date-time.
-            Defaults to now; the from..until window is capped at {{ logWindowMaxDays }} days.
+            Defaults to now; the window is capped at {{ logWindowMaxDays }} days before until, or before now when until is later.
             TXT
         ,
         descriptionValues: ['logWindowMaxDays' => McpDateWindowResolver::LOG_WINDOW_MAX_DAYS],
