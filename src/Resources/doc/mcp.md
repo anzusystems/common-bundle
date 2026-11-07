@@ -719,6 +719,74 @@ and the `warnings` for a shortened window or for results that were actually cut 
 partial result for a complete one. `McpLogFinder` fetches one row beyond the effective limit to tell the two apart, so
 the warning reports real truncation.
 
+## Pagination
+
+A list tool pages in one of two ways:
+
+* **Pages** (`page` and `limit`) for a bounded set: a small table, or an Elasticsearch search, which returns at most
+  10 000 hits (the default `index.max_result_window`), as many as `McpPageWindow::PAGE_MAX` (200) pages of 50. The request uses
+  `McpPageRequestTrait`, the response `McpPageResponseTrait` and `hasNextPage`, and the repository gets the
+  `offset` from `McpPageWindow`.
+* **A cursor** for a database table that keeps growing, such as a history or a log. An offset makes the database
+  read and throw away every row of the earlier pages, so a deep page of a long history gets slower with each page.
+  A cursor continues after the last row of the previous page through an index instead.
+
+A cursor tool uses `McpCursorRequestTrait` (`cursor`) in the request and `McpCursorResponseTrait` (`nextCursor`) in
+the response, and its repository pages the query with `KeysetPaginator` (see [Keyset pagination](pagination.md) for
+the query, the index rule and the cursor format):
+
+```php
+final class ListNotesRequest
+{
+    use McpCursorRequestTrait;
+
+    private const int LIMIT_DEFAULT = 20;
+    private const int LIMIT_MAX = 50;
+
+    #[McpExistingId(entity: Label::class, resolverTool: ListLabelsTool::NAME)]
+    #[McpField(description: 'Id of the label, as returned by {{ list_labels }}.', descriptionValues: ['list_labels' => ListLabelsTool::NAME])]
+    #[Serialize]
+    public int $labelId;
+
+    #[Assert\Range(min: McpPageWindow::LIMIT_MIN, max: self::LIMIT_MAX)]
+    #[McpField(description: 'Number of notes per page.')]
+    #[Serialize]
+    public int $limit = self::LIMIT_DEFAULT;
+}
+
+final class McpNoteListResponse
+{
+    use McpCursorResponseTrait;
+
+    /**
+     * @var Collection<int, McpNoteDecorator>
+     */
+    #[McpField(description: 'Newest first by createdAt.')]
+    #[Serialize(type: McpNoteDecorator::class)]
+    public Collection $notes {
+        get => $this->cursorPage->items;
+    }
+
+    /**
+     * @param KeysetPage<McpNoteDecorator> $cursorPage
+     */
+    public function __construct(
+        private readonly KeysetPage $cursorPage,
+    ) {
+    }
+}
+
+// in the decorator of the tool, with NoteRepository::findAllByLabel() of pagination.md
+return new McpNoteListResponse(
+    $this->noteRepository->findAllByLabel(label: $label, pinned: null, cursor: $request->cursor, limit: $request->limit)
+        ->map(static fn (Note $note): McpNoteDecorator => new McpNoteDecorator($note)),
+);
+```
+
+A cursor the tool did not return throws `InvalidCursorException`, and `McpToolErrorResolver` answers it as an invalid
+`cursor` argument: `Invalid arguments: cursor: This value is not a nextCursor of this tool: …`
+(`McpToolErrorResolver::CURSOR_ARGUMENT`, `McpToolErrorResolver::INVALID_CURSOR_MESSAGE`).
+
 ## Log query bounds
 
 The log repositories behind the diagnostic tools (`JournalLogRepository::findLatest()`, `AuditLogRepository::findLatest()`,

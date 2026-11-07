@@ -15,6 +15,7 @@ use AnzuSystems\CommonBundle\Tests\Data\Mcp\Model\Request\ChildExampleRequest;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Model\Request\CollectionExampleRequest;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Model\Request\CompoundExampleRequest;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Model\Request\ConstraintExampleRequest;
+use AnzuSystems\CommonBundle\Tests\Data\Mcp\Model\Request\CursorExampleRequest;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Model\Request\DateExampleRequest;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Model\Request\DescribedEnumExampleRequest;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Model\Request\EnumExampleRequest;
@@ -27,6 +28,7 @@ use AnzuSystems\CommonBundle\Tests\Data\Mcp\Model\Request\PromotedExampleRequest
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Model\Request\UntypedCollectionExampleRequest;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Model\Request\UuidExampleRequest;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Model\Response\BareArrayExampleResponse;
+use AnzuSystems\CommonBundle\Tests\Data\Mcp\Model\Response\CursorExampleResponse;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Model\Response\UntypedCollectionExampleResponse;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Validator\Constraints\ExampleIdFilter;
 use AnzuSystems\CommonBundle\Tests\Data\Model\Enum\DummyEnum;
@@ -431,6 +433,37 @@ final class McpSchemaFactoryTest extends TestCase
             $schema[McpSchemaFactory::PROPERTIES]['page'],
         );
         self::assertArrayNotHasKey(self::REQUIRED, $schema);
+    }
+
+    public function testCursorOfACursorRequestIsAnOptionalString(): void
+    {
+        $schema = new McpSchemaFactory()
+            ->createForClass(CursorExampleRequest::class);
+
+        self::assertSame(
+            [
+                'type' => ['null', 'string'],
+                'description' => 'Pass the nextCursor of the previous response to get the next page; omit it for the first page.',
+                'default' => null,
+            ],
+            $schema[McpSchemaFactory::PROPERTIES]['cursor'],
+        );
+        self::assertArrayNotHasKey(self::REQUIRED, $schema);
+    }
+
+    public function testNextCursorOfACursorResponseIsARequiredNullableString(): void
+    {
+        $schema = new McpSchemaFactory()
+            ->createForClass(CursorExampleResponse::class);
+
+        self::assertSame(
+            [
+                'type' => ['null', 'string'],
+                'description' => 'Pass it as cursor to get the next page; null on the last page.',
+            ],
+            $schema[McpSchemaFactory::PROPERTIES]['nextCursor'],
+        );
+        self::assertSame(['items', 'nextCursor'], $schema[self::REQUIRED]);
     }
 
     public function testPromotedPropertyTakesTheDefaultOfItsConstructorParameter(): void

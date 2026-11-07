@@ -233,6 +233,7 @@ common-bundle provides many functionalities, you can read about them in followin
 * [Locks](src/Resources/doc/locks.md)
 * [Logs](src/Resources/doc/logs.md)
 * [MCP Server](src/Resources/doc/mcp.md)
+* [Pagination](src/Resources/doc/pagination.md)
 * [Proxy Cache](src/Resources/doc/proxy_cache.md)
 * [Tests](src/Resources/doc/tests.md)
 * [Traits](src/Resources/doc/traits.md)

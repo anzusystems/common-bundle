@@ -18,6 +18,9 @@ use AnzuSystems\CommonBundle\Event\Listener\ConsoleExceptionListener;
 use AnzuSystems\CommonBundle\Event\Listener\ExceptionListener;
 use AnzuSystems\CommonBundle\Event\Listener\LockReleaseListener;
 use AnzuSystems\CommonBundle\Event\Subscriber\CommandLockSubscriber;
+use AnzuSystems\CommonBundle\Pagination\Keyset\KeysetCursorCodec;
+use AnzuSystems\CommonBundle\Pagination\Keyset\KeysetIndexResolver;
+use AnzuSystems\CommonBundle\Pagination\Keyset\KeysetPaginator;
 use AnzuSystems\CommonBundle\Repository\JobRepository;
 use AnzuSystems\CommonBundle\Repository\JobUserDataDeleteRepository;
 use AnzuSystems\CommonBundle\Router\AnzuDomainRouteLoader;
@@ -177,5 +180,14 @@ return static function (ContainerConfigurator $configurator): void {
 
     $services->set(NotEmptyIdValidator::class)
         ->tag('validator.constraint_validator')
+    ;
+
+    $services->set(KeysetCursorCodec::class);
+
+    $services->set(KeysetIndexResolver::class);
+
+    $services->set(KeysetPaginator::class)
+        ->arg('$cursorCodec', service(KeysetCursorCodec::class))
+        ->arg('$indexResolver', service(KeysetIndexResolver::class))
     ;
 };

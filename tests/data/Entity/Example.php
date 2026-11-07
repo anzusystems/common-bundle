@@ -13,9 +13,13 @@ use Doctrine\ORM\Mapping as ORM;
 
 #[ORM\Entity(repositoryClass: ExampleRepository::class)]
 #[ORM\Table('example')]
+#[ORM\Index(name: self::IDX_NAME_CREATED_AT, fields: ['name', 'createdAt'])]
+#[ORM\Index(name: self::IDX_NAME_DUMMY_ENUM_CREATED_AT, fields: ['name', 'dummyEnum', 'createdAt'])]
 class Example
 {
     public const EXAMPLE_INSTANCE_ID = 1;
+    public const string IDX_NAME_CREATED_AT = 'IDX_name_createdAt';
+    public const string IDX_NAME_DUMMY_ENUM_CREATED_AT = 'IDX_name_dummyEnum_createdAt';
 
     #[ORM\Column(type: Types::INTEGER)]
     #[ORM\Id]
