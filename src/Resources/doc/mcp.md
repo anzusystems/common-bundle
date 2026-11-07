@@ -192,9 +192,15 @@ final readonly class ListLabelsTool
   with `#[Serialize(handler: McpDateTimeHandler::class)]` (also nullable) is a string, and the schema appends
   `McpDateTimeHandler::FORMAT_DESCRIPTION` to its description: the handler reads a calendar date `YYYY-MM-DD` with
   an optional time (`THH:MM`, seconds and a fraction optional) and an optional offset (`Z`, `+HH`, `+HHMM` or `+HH:MM`),
-  reads a value without an offset as UTC and returns it in UTC. The schema has no `format: date-time`, which requires
-  an offset. An unreadable value is answered with `Invalid arguments: <field>: "<value>" is not an ISO 8601 date-time,
-  …` before the validator runs.
+  reads a value without an offset as UTC and returns it in UTC. The description asks the agent for the UTC offset of
+  the user's time zone, because the server cannot know it, and says that a date alone is the start of that day. The
+  schema has no `format: date-time`, which requires an offset. An unreadable value is answered with
+  `Invalid arguments: <field>: "<value>" is not an ISO 8601 date-time, …` before the validator runs.
+* A field that ends a period and is compared inclusively, such as `until`, declares
+  `#[Serialize(handler: McpDateTimeHandler::class, type: McpDateTimeHandler::END_OF_DAY)]`. There a date alone is the
+  end of that day (`23:59:59.999999` UTC), so `"until": "2026-10-31"` keeps the records of 31 October; a value with a
+  time is read as it is. The schema appends `McpDateTimeHandler::END_OF_DAY_DESCRIPTION` to the description of such a
+  field. `McpLogSearchRequestTrait::$until` declares it.
 * The return class is the response: the pass appends a `Returns:` list of its `#[Serialize]` properties to the
   description, because clients hand the model the description and the input schema, not necessarily an output schema.
 * `#[McpField(description: …, descriptionValues: […])]` describes a DTO property, a response property, a prompt argument (see
@@ -612,7 +618,7 @@ final readonly class LabelDigestPrompt
   `tools/call`. Otherwise `prompts/get`, and `completion/complete` of an argument of that prompt, answer the JSON-RPC
   error `-32602` with `Access denied — the current MCP user is
   not allowed to use every tool of the prompt "<prompt>".` A prompt has no permission of its own. A prompt without
-  tools, or one declared by the plain `#[McpPrompt]`, is seen by everyone.
+  tools (`#[AsMcpPrompt(tools: [])]`) is seen by everyone.
 - **Tools in the text.** The text names a tool only as `{{ <tool name> }}`, e.g. `{{ list_labels }}`.
   `createUserMessage()` replaces every placeholder of a tool in `tools` by its name and every `{{ <argument> }}` by the
   value of that argument, in one pass, so an argument value is never read as a placeholder. A placeholder that is
@@ -627,7 +633,11 @@ final readonly class LabelDigestPrompt
   renamed, so `McpPromptLoaderCompilerPass` replaces the `addPrompt` call of every `#[AsMcpPrompt]` with
   `McpPromptLoader`, which registers the prompt with these arguments and keeps its title, description, icons, meta and
   completion providers. A parameter without `#[McpField]` fails the container compilation with
-  `McpConfigurationException`. A prompt declared by the plain `#[McpPrompt]` keeps the SDK registration.
+  `McpConfigurationException`.
+- **No plain `#[McpPrompt]`.** A prompt of the server declared by the plain SDK `#[McpPrompt]` names no tools, so the
+  filter above would show it to every token. `McpPromptLoaderCompilerPass` fails the container compilation with
+  `McpConfigurationException` for it; declare it with `#[AsMcpPrompt(tools: […])]`, or `tools: []` for a prompt that
+  calls no tool.
 - **Compile-time check.** `McpPromptDefinitionsCompilerPass` collects the tools of every `#[AsMcpPrompt]` into
   `McpPromptDefinitions`; a tool that is not an MCP tool of the server and a prompt name that two prompts use fail the
   container compilation with `McpConfigurationException`.

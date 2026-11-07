@@ -32,7 +32,7 @@ trait McpLogSearchRequestTrait
         ,
         descriptionValues: ['logWindowMaxDays' => McpDateWindowResolver::LOG_WINDOW_MAX_DAYS],
     )]
-    #[Serialize(handler: McpDateTimeHandler::class)]
+    #[Serialize(handler: McpDateTimeHandler::class, type: McpDateTimeHandler::END_OF_DAY)]
     public ?DateTimeImmutable $until = null;
 
     #[Assert\Range(min: McpLogFinder::LIMIT_MIN, max: McpLogFinder::LIMIT_MAX)]

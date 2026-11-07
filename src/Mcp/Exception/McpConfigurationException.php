@@ -175,6 +175,15 @@ final class McpConfigurationException extends LogicException
         ));
     }
 
+    public static function createPlainPrompt(string $promptName, string $class): self
+    {
+        return new self(sprintf(
+            'The MCP prompt "%s" of %s is declared by the plain #[McpPrompt], which every token would see: declare it with #[AsMcpPrompt(tools: […])] and list the tools it leads the agent to call, or tools: [] for none.',
+            $promptName,
+            $class,
+        ));
+    }
+
     public static function createPromptOfUnknownTool(string $promptName, string $toolName): self
     {
         return new self(sprintf('The MCP prompt "%s" names the tool "%s", which is not an MCP tool of the server.', $promptName, $toolName));

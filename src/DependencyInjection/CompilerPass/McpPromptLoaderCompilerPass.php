@@ -21,7 +21,8 @@ use Symfony\Component\DependencyInjection\Definition;
 /**
  * Runs after the mcp-bundle McpPass, whose addPrompt calls let the SDK take the description of a prompt argument only
  * from the docblock of the handler. An #[AsMcpPrompt] goes to McpPromptLoader instead, with arguments from the
- * #[McpField] of each handler parameter.
+ * #[McpField] of each handler parameter. A prompt of the plain #[McpPrompt] names no tools, so the prompt filter would
+ * show it to every token; it fails the compilation instead.
  */
 final class McpPromptLoaderCompilerPass implements CompilerPassInterface
 {
@@ -59,7 +60,7 @@ final class McpPromptLoaderCompilerPass implements CompilerPassInterface
             [$class, $handlerMethod] = $arguments[self::HANDLER_ARGUMENT];
             $reflection = new ReflectionMethod($class, $handlerMethod);
             if (false === $this->resolveElementAttribute($reflection, McpPrompt::class) instanceof AsMcpPrompt) {
-                continue;
+                throw McpConfigurationException::createPlainPrompt($arguments[self::NAME_ARGUMENT], $class);
             }
             $prompts[] = [
                 'prompt' => new Definition(Prompt::class, [

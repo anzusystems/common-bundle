@@ -60,13 +60,36 @@ final class McpDateTimeHandlerTest extends TestCase
         ];
     }
 
+    /**
+     * @dataProvider endOfDayProvider
+     */
+    public function testDateAloneEndsTheDayOnlyInAnEndOfDayField(string $field, string $value, string $expectedDate): void
+    {
+        $request = $this->deserialize([$field => $value, 'at' => self::AT]);
+
+        self::assertSame($expectedDate, McpSerializerFactory::create()->toArray($request)[$field]);
+    }
+
+    /**
+     * @return array<string, array{string, string, string}>
+     */
+    public static function endOfDayProvider(): array
+    {
+        return [
+            'a date alone ending a period' => ['until', '2026-10-31', '2026-10-31T23:59:59.999999Z'],
+            'a date-time ending a period' => ['until', '2026-10-31T10:00:00+02:00', '2026-10-31T08:00:00.000000Z'],
+            'midnight written out ending a period' => ['until', '2026-10-31T00:00:00', '2026-10-31T00:00:00.000000Z'],
+            'a date alone in a plain field' => ['from', '2026-10-31', '2026-10-31T00:00:00.000000Z'],
+        ];
+    }
+
     public function testNullStaysNullAndTheDateIsSerializedInTheDefaultFormat(): void
     {
         $serializer = McpSerializerFactory::create();
         $request = $this->deserialize(['from' => null, 'at' => self::AT]);
 
         self::assertNull($request->from);
-        self::assertSame(['from' => null, 'at' => '2026-10-07T00:00:00.000000Z'], $serializer->toArray($request));
+        self::assertSame(['from' => null, 'until' => null, 'at' => '2026-10-07T00:00:00.000000Z'], $serializer->toArray($request));
     }
 
     /**

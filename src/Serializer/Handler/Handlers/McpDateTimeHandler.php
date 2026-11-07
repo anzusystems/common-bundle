@@ -22,11 +22,19 @@ use DateTimeZone;
  */
 final class McpDateTimeHandler extends AbstractHandler
 {
-    public const string FORMAT_DESCRIPTION = 'ISO 8601 date-time, e.g. "2026-07-09T06:00:00+02:00"; any UTC offset is honoured and a value without an offset is read as UTC.';
+    public const string FORMAT_DESCRIPTION = 'ISO 8601 date-time with the UTC offset of the user\'s time zone, e.g. "2026-07-09T06:00:00+02:00"; a value without an offset is read as UTC and a date alone as the start of that day.';
+    public const string END_OF_DAY_DESCRIPTION = 'Here a date alone means the end of that day.';
+
+    /**
+     * Marks the end of a period (#[Serialize(handler: McpDateTimeHandler::class, type: McpDateTimeHandler::END_OF_DAY)]):
+     * an inclusive "until" read as midnight would leave out the whole last day the user asked for.
+     */
+    public const string END_OF_DAY = 'endOfDay';
     public const string INVALID_VALUE_MESSAGE = '"%s" is not an ISO 8601 date-time, e.g. "2026-07-09T06:00:00+02:00".';
 
     private const string UTC_TIMEZONE = 'UTC';
     private const string ISO_8601_PATTERN = '/^\d{4}-\d{2}-\d{2}(T\d{2}:\d{2}(:\d{2}(\.\d{1,6})?)?(Z|[+-]\d{2}(:?\d{2})?)?)?$/';
+    private const int TIME_GROUP = 1;
 
     public function __construct(
         private readonly DateTimeHandler $dateTimeHandler,
@@ -39,7 +47,8 @@ final class McpDateTimeHandler extends AbstractHandler
             return null;
         }
 
-        return $this->dateTimeHandler->serialize(value: $value, metadata: $metadata, context: $context);
+        // DateTimeHandler takes the custom type as its date format, which END_OF_DAY is not.
+        return $this->dateTimeHandler->serialize(value: $value, metadata: clone ($metadata, ['customType' => null]), context: $context);
     }
 
     public function deserialize(mixed $value, Metadata $metadata): ?DateTimeImmutable
@@ -51,7 +60,7 @@ final class McpDateTimeHandler extends AbstractHandler
             throw $this->invalidValue($value, $metadata);
         }
 
-        $date = $this->parse($value);
+        $date = $this->parse(value: $value, isEndOfDay: self::END_OF_DAY === $metadata->customType);
         if (null === $date) {
             throw McpToolArgumentsInputException::createInvalidArgument(
                 propertyPath: (string) $metadata->property,
@@ -65,9 +74,9 @@ final class McpDateTimeHandler extends AbstractHandler
     /**
      * The constructor rolls an impossible date over ("2026-02-31" becomes 3 March) and only warns, so a warning refuses it.
      */
-    private function parse(string $value): ?DateTimeImmutable
+    private function parse(string $value, bool $isEndOfDay): ?DateTimeImmutable
     {
-        if (1 !== preg_match(pattern: self::ISO_8601_PATTERN, subject: $value)) {
+        if (1 !== preg_match(pattern: self::ISO_8601_PATTERN, subject: $value, matches: $matches)) {
             return null;
         }
         $utc = new DateTimeZone(self::UTC_TIMEZONE);
@@ -81,6 +90,11 @@ final class McpDateTimeHandler extends AbstractHandler
             return null;
         }
 
-        return $date->setTimezone($utc);
+        $date = $date->setTimezone($utc);
+        if ($isEndOfDay && false === isset($matches[self::TIME_GROUP])) {
+            return $date->setTime(hour: 23, minute: 59, second: 59, microsecond: 999_999);
+        }
+
+        return $date;
     }
 }

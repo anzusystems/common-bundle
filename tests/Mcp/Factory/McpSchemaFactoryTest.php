@@ -273,6 +273,11 @@ final class McpSchemaFactoryTest extends TestCase
                 'description' => McpDateExampleRequest::FROM_DESCRIPTION . ' ' . McpDateTimeHandler::FORMAT_DESCRIPTION,
                 'default' => null,
             ]],
+            'end of a period' => ['until', [
+                'type' => ['null', 'string'],
+                'description' => McpDateExampleRequest::UNTIL_DESCRIPTION . ' ' . McpDateTimeHandler::FORMAT_DESCRIPTION . ' ' . McpDateTimeHandler::END_OF_DAY_DESCRIPTION,
+                'default' => null,
+            ]],
             'DateTimeImmutable' => ['at', [
                 'type' => 'string',
                 'description' => McpDateTimeHandler::FORMAT_DESCRIPTION,

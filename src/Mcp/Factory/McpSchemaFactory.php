@@ -165,8 +165,8 @@ final class McpSchemaFactory
     }
 
     /**
-     * The field's own description, the format of an McpDateTimeHandler date and the described values of its backed
-     * enum, the default one marked.
+     * The field's own description, the format of an McpDateTimeHandler date, read as the end of the day when the field
+     * ends a period, and the described values of its backed enum, the default one marked.
      */
     private function createDescription(ReflectionProperty|ReflectionMethod $member, mixed $default): ?string
     {
@@ -177,6 +177,9 @@ final class McpSchemaFactory
         }
         if ($this->isMcpDateTime($member)) {
             $parts[] = McpDateTimeHandler::FORMAT_DESCRIPTION;
+        }
+        if ($this->isMcpEndOfDay($member)) {
+            $parts[] = McpDateTimeHandler::END_OF_DAY_DESCRIPTION;
         }
         $enumClass = $this->resolveEnumClass($this->typeResolver->resolve($member));
         $values = [];
@@ -260,6 +263,12 @@ final class McpSchemaFactory
     private function isMcpDateTime(ReflectionProperty|ReflectionMethod $member): bool
     {
         return McpDateTimeHandler::class === $this->resolveAttribute($member, Serialize::class)?->handler;
+    }
+
+    private function isMcpEndOfDay(ReflectionProperty|ReflectionMethod $member): bool
+    {
+        return $this->isMcpDateTime($member)
+            && McpDateTimeHandler::END_OF_DAY === $this->resolveAttribute($member, Serialize::class)?->type;
     }
 
     private function isUntypedCollection(Type $type): bool

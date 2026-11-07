@@ -31,18 +31,25 @@ final class McpPromptLoaderCompilerPassTest extends TestCase
 
     public function testAsMcpPromptMovesFromAddPromptToTheLoader(): void
     {
-        $container = $this->createContainer([ArgumentsExamplePrompt::class, PlainExamplePrompt::class]);
+        $container = $this->createContainer([ArgumentsExamplePrompt::class]);
 
         new McpPromptLoaderCompilerPass()
             ->process($container);
 
-        $methodCalls = $this->getBuilder($container)
-            ->getMethodCalls();
         self::assertSame(
-            [McpPromptLoaderCompilerPass::ADD_PROMPT_METHOD, McpPromptLoaderCompilerPass::ADD_LOADER_METHOD],
-            array_column($methodCalls, 0),
+            [McpPromptLoaderCompilerPass::ADD_LOADER_METHOD],
+            array_column($this->getBuilder($container)->getMethodCalls(), 0),
         );
-        self::assertSame([PlainExamplePrompt::class, McpToolSignatureResolver::INVOKE_METHOD], $methodCalls[0][1][0]);
+    }
+
+    public function testPlainMcpPromptFailsAtCompileTime(): void
+    {
+        $container = $this->createContainer([ArgumentsExamplePrompt::class, PlainExamplePrompt::class]);
+
+        $this->expectExceptionObject(McpConfigurationException::createPlainPrompt(PlainExamplePrompt::NAME, PlainExamplePrompt::class));
+
+        new McpPromptLoaderCompilerPass()
+            ->process($container);
     }
 
     public function testLoaderRegistersArgumentsFromMcpFields(): void
