@@ -430,6 +430,9 @@ A preview is a read tool that shows what a write tool would save and changes not
 )]
 ```
 
+A preview with `$writable` false has no hash, and the guard then lets the write tool run without the hash check, the
+confirmation and the write limit. So a write tool has to check again the rule that made its preview not writable.
+
 `McpToolReferenceHandler` signs every preview: when `McpWritePreviewInterface::$writable` is true, it sets `previewHash`
 from the write tool name, the arguments and `$currentState`, the decorator of what the write would change (`null` when
 the write creates something new). `McpPreviewHashFactory` serializes the decorator and leaves out
