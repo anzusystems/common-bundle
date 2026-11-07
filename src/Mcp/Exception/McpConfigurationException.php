@@ -10,11 +10,13 @@ use AnzuSystems\CommonBundle\Mcp\Model\McpWritePreviewInterface;
 use LogicException;
 
 /**
- * An MCP server or tool that a compiler pass refuses, so the mistake fails the container compilation.
+ * An MCP server, tool or prompt that a compiler pass refuses, so the mistake fails the container compilation; a prompt
+ * text is checked when the prompt renders it.
  */
 final class McpConfigurationException extends LogicException
 {
     private const string TOOL_NAME_SEPARATOR = ', ';
+    private const string PLACEHOLDER_NAME_SEPARATOR = '", "';
 
     public static function createInvalidServerName(string $parameter): self
     {
@@ -149,5 +151,36 @@ final class McpConfigurationException extends LogicException
     public static function createNotAsMcpTool(string $toolMethod): self
     {
         return new self(sprintf('The MCP tool "%s" is not declared by #[AsMcpTool].', $toolMethod));
+    }
+
+    public static function createPromptWithoutAttribute(string $class): self
+    {
+        return new self(sprintf('The MCP prompt "%s" renders its text with McpPromptMessageTrait, so it declares #[AsMcpPrompt].', $class));
+    }
+
+    /**
+     * @param list<string> $placeholderNames
+     */
+    public static function createPromptPlaceholderOutsideTools(string $promptName, array $placeholderNames): self
+    {
+        return new self(sprintf(
+            'The text of the MCP prompt "%s" has the placeholders "%s", which are neither its arguments nor its tools: add the tool to #[AsMcpPrompt(tools: …)].',
+            $promptName,
+            implode(self::PLACEHOLDER_NAME_SEPARATOR, $placeholderNames),
+        ));
+    }
+
+    public static function createPromptOfUnknownTool(string $promptName, string $toolName): self
+    {
+        return new self(sprintf('The MCP prompt "%s" names the tool "%s", which is not an MCP tool of the server.', $promptName, $toolName));
+    }
+
+    public static function createPromptArgumentWithoutField(string $promptName, string $argumentName): self
+    {
+        return new self(sprintf(
+            'The argument "%s" of the MCP prompt "%s" has no #[McpField], which gives the client its description.',
+            $argumentName,
+            $promptName,
+        ));
     }
 }

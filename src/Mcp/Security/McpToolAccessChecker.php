@@ -72,7 +72,7 @@ final readonly class McpToolAccessChecker
         $readToolNames = $this->resolveToolScope()
             ->readToolNames;
         if (null === $readToolNames) {
-            return true;
+            return false === $this->toolDefinitions->find($toolName)?->explicitGrant;
         }
 
         return in_array(needle: $toolName, haystack: $readToolNames, strict: true);

@@ -15,8 +15,8 @@ final readonly class McpToolErrorResolver
 {
     public const string ACCESS_DENIED_MESSAGE = 'Access denied — the current MCP user is not allowed to access the requested resource.';
     public const string INVALID_ARGUMENTS_PREFIX = 'Invalid arguments: ';
+    public const string VIOLATION_FORMAT = '%s: %s';
 
-    private const string VIOLATION_FORMAT = '%s: %s';
     private const string VIOLATION_SEPARATOR = ' ';
 
     /**

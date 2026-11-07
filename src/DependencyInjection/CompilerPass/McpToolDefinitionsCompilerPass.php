@@ -18,8 +18,6 @@ use AnzuSystems\CommonBundle\Mcp\Resolver\McpToolSignatureResolver;
 use Mcp\Capability\Attribute\McpTool;
 use Mcp\Capability\Discovery\ElementMetadataResolver;
 use Mcp\Capability\Tool\NameValidator;
-use ReflectionAttribute;
-use ReflectionMethod;
 use Symfony\Component\DependencyInjection\Compiler\CompilerPassInterface;
 use Symfony\Component\DependencyInjection\Compiler\ServiceLocatorTagPass;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
@@ -31,13 +29,13 @@ use Symfony\Component\DependencyInjection\Reference;
  */
 final class McpToolDefinitionsCompilerPass implements CompilerPassInterface
 {
+    use McpTaggedElementTrait;
+
     public const string TOOL_TAG = 'mcp.tool';
     public const string CATEGORY_PATTERN = '/^[a-z][a-zA-Z0-9]*$/';
+    public const string DEFINITIONS_ARGUMENT = '$definitions';
 
-    private const string TOOL_TAG_METHOD = 'method';
-    private const string TOOL_METHOD_FORMAT = '%s::%s';
     private const string TOOL_METHOD_SEPARATOR = '::';
-    private const string DEFINITIONS_ARGUMENT = '$definitions';
     private const string RATE_LIMITER_ID_FORMAT = 'limiter.%s';
 
     public function process(ContainerBuilder $container): void
@@ -107,6 +105,7 @@ final class McpToolDefinitionsCompilerPass implements CompilerPassInterface
                 '$previewTool' => $previewToolNames[$toolName] ?? null,
                 '$rateLimiter' => $toolRateLimiters[$toolName] ?? null,
                 '$signature' => $tool instanceof AsMcpTool ? $this->createSignatureDefinition($tools) : null,
+                '$explicitGrant' => $tool instanceof AsMcpTool && $tool->explicitGrant,
             ]);
         }
 
@@ -133,8 +132,8 @@ final class McpToolDefinitionsCompilerPass implements CompilerPassInterface
     private function resolveToolsByName(ContainerBuilder $container): array
     {
         $toolsByName = [];
-        foreach ($this->resolveToolMethods($container) as $toolMethod => $reflection) {
-            $tool = $this->resolveToolAttribute($reflection);
+        foreach ($this->resolveTaggedMethods($container, self::TOOL_TAG) as $toolMethod => $reflection) {
+            $tool = $this->resolveElementAttribute($reflection, McpTool::class);
             if (null === $tool) {
                 continue;
             }
@@ -142,57 +141,6 @@ final class McpToolDefinitionsCompilerPass implements CompilerPassInterface
         }
 
         return $toolsByName;
-    }
-
-    /**
-     * @return array<string, ReflectionMethod>
-     */
-    private function resolveToolMethods(ContainerBuilder $container): array
-    {
-        $toolMethods = [];
-        foreach ($container->findTaggedServiceIds(self::TOOL_TAG) as $serviceId => $tags) {
-            $class = $this->resolveToolClass($container, $serviceId);
-            if (null === $class) {
-                continue;
-            }
-            foreach ($tags as $tagAttributes) {
-                $method = $tagAttributes[self::TOOL_TAG_METHOD] ?? McpToolSignatureResolver::INVOKE_METHOD;
-                if (method_exists($class, $method)) {
-                    $toolMethods[sprintf(self::TOOL_METHOD_FORMAT, $class, $method)] = new ReflectionMethod($class, $method);
-                }
-            }
-        }
-
-        return $toolMethods;
-    }
-
-    /**
-     * @return class-string|null
-     */
-    private function resolveToolClass(ContainerBuilder $container, string $serviceId): ?string
-    {
-        $definition = $container->getDefinition($serviceId);
-        if ($definition->isAbstract()) {
-            return null;
-        }
-        $class = $container->getParameterBag()
-            ->resolveValue($definition->getClass() ?? $serviceId);
-        if (is_string($class) && class_exists($class)) {
-            return $class;
-        }
-
-        return null;
-    }
-
-    private function resolveToolAttribute(ReflectionMethod $reflection): ?McpTool
-    {
-        $attributes = $reflection->getAttributes(McpTool::class, ReflectionAttribute::IS_INSTANCEOF);
-        if (empty($attributes) && StringHelper::isSame(McpToolSignatureResolver::INVOKE_METHOD, $reflection->getName())) {
-            $attributes = $reflection->getDeclaringClass()
-                ->getAttributes(McpTool::class, ReflectionAttribute::IS_INSTANCEOF);
-        }
-
-        return array_first($attributes)?->newInstance();
     }
 
     /**

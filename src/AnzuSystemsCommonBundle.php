@@ -8,6 +8,8 @@ use AnzuSystems\CommonBundle\DependencyInjection\AnzuSystemsCommonExtension;
 use AnzuSystems\CommonBundle\DependencyInjection\CompilerPass\ExceptionHandlerCompilerPass;
 use AnzuSystems\CommonBundle\DependencyInjection\CompilerPass\HealthCheckModuleCompilerPass;
 use AnzuSystems\CommonBundle\DependencyInjection\CompilerPass\McpCompilerPass;
+use AnzuSystems\CommonBundle\DependencyInjection\CompilerPass\McpPromptDefinitionsCompilerPass;
+use AnzuSystems\CommonBundle\DependencyInjection\CompilerPass\McpPromptLoaderCompilerPass;
 use AnzuSystems\CommonBundle\DependencyInjection\CompilerPass\McpToolDefinitionsCompilerPass;
 use AnzuSystems\CommonBundle\DependencyInjection\CompilerPass\McpToolReferenceHandlerCompilerPass;
 use AnzuSystems\CommonBundle\DependencyInjection\CompilerPass\McpToolSchemaCompilerPass;
@@ -31,7 +33,9 @@ final class AnzuSystemsCommonBundle extends Bundle
         $container->addCompilerPass(new HealthCheckModuleCompilerPass());
         $container->addCompilerPass(new McpCompilerPass());
         $container->addCompilerPass(new McpToolDefinitionsCompilerPass());
+        $container->addCompilerPass(new McpPromptDefinitionsCompilerPass());
         $container->addCompilerPass(new McpToolSchemaCompilerPass(), priority: McpToolSchemaCompilerPass::PRIORITY);
+        $container->addCompilerPass(new McpPromptLoaderCompilerPass(), priority: McpPromptLoaderCompilerPass::PRIORITY);
         $container->addCompilerPass(new McpToolReferenceHandlerCompilerPass(), priority: McpToolReferenceHandlerCompilerPass::PRIORITY);
     }
 }

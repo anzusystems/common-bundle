@@ -156,6 +156,41 @@ final class McpToolAccessCheckerTest extends TestCase
         ];
     }
 
+    /**
+     * @dataProvider explicitGrantProvider
+     */
+    public function testExplicitGrantToolNeedsTheScopeToNameIt(?McpToolScopeProviderInterface $toolScopeProvider, bool $expectedGranted): void
+    {
+        $security = $this->createStub(Security::class);
+        $security->method('isGranted')
+            ->willReturn(true);
+        $checker = new McpToolAccessChecker(
+            toolDefinitions: McpToolDefinitionsFactory::create(
+                toolPermissions: [self::GRANTED_TOOL => self::GRANTED_PERMISSION, self::SECOND_GRANTED_TOOL => self::GRANTED_PERMISSION],
+                readOnlyToolNames: [self::GRANTED_TOOL, self::SECOND_GRANTED_TOOL],
+                explicitGrantToolNames: [self::GRANTED_TOOL],
+            ),
+            security: $security,
+            toolScopeProvider: $toolScopeProvider,
+        );
+
+        self::assertSame($expectedGranted, $checker->isToolGranted(self::GRANTED_TOOL));
+        self::assertContains(self::GRANTED_TOOL, $checker->getPermittedToolNames());
+    }
+
+    /**
+     * @return array<string, array{McpToolScopeProviderInterface|null, bool}>
+     */
+    public static function explicitGrantProvider(): array
+    {
+        return [
+            'no scope provider denies it' => [null, false],
+            'null scope denies it' => [self::createToolScopeProvider(null), false],
+            'scope naming it grants it' => [self::createToolScopeProvider([self::GRANTED_TOOL]), true],
+            'scope naming another tool denies it' => [self::createToolScopeProvider([self::SECOND_GRANTED_TOOL]), false],
+        ];
+    }
+
     public function testPermittedToolNamesIgnoreToolScope(): void
     {
         $checker = $this->createChecker(

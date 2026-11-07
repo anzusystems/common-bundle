@@ -4,15 +4,13 @@ declare(strict_types=1);
 
 namespace AnzuSystems\CommonBundle\Tests\Mcp\Resolver;
 
-use AnzuSystems\CommonBundle\Mcp\Exception\McpToolInputException;
 use AnzuSystems\CommonBundle\Mcp\Model\McpDateWindow;
 use AnzuSystems\CommonBundle\Mcp\Resolver\McpDateWindowResolver;
+use DateTimeImmutable;
 use PHPUnit\Framework\TestCase;
 
 final class McpDateWindowResolverTest extends TestCase
 {
-    private const string NON_UTC_TIMEZONE = 'Europe/Bratislava';
-
     private McpDateWindowResolver $resolver;
 
     protected function setUp(): void
@@ -22,7 +20,7 @@ final class McpDateWindowResolverTest extends TestCase
 
     public function testLogWindowDefaultsToOneDayBeforeUntil(): void
     {
-        $window = $this->resolver->resolveLogWindow(null, '2026-07-20T12:00:00+00:00');
+        $window = $this->resolver->resolveLogWindow(null, new DateTimeImmutable('2026-07-20T12:00:00+00:00'));
 
         self::assertSame('2026-07-19T12:00:00+00:00', $window->from->format(DATE_ATOM));
         self::assertSame('2026-07-20T12:00:00+00:00', $window->until->format(DATE_ATOM));
@@ -31,24 +29,10 @@ final class McpDateWindowResolverTest extends TestCase
 
     public function testLogWindowFromIsClampedToMaxDays(): void
     {
-        $window = $this->resolver->resolveLogWindow('2026-01-01T00:00:00+00:00', '2026-07-20T00:00:00+00:00');
+        $window = $this->resolver->resolveLogWindow(new DateTimeImmutable('2026-01-01T00:00:00+00:00'), new DateTimeImmutable('2026-07-20T00:00:00+00:00'));
 
         self::assertSame('2026-06-19T00:00:00+00:00', $window->from->format(DATE_ATOM));
         self::assertTrue($window->truncated);
-    }
-
-    public function testLogWindowInvertedThrows(): void
-    {
-        $this->expectException(McpToolInputException::class);
-
-        $this->resolver->resolveLogWindow('2026-07-20T00:00:00+00:00', '2026-07-19T00:00:00+00:00');
-    }
-
-    public function testLogWindowInvalidDateThrows(): void
-    {
-        $this->expectException(McpToolInputException::class);
-
-        $this->resolver->resolveLogWindow('not-a-date', null);
     }
 
     public function testArticleWindowKeepsExplicitRangeWithinCap(): void
@@ -85,49 +69,11 @@ final class McpDateWindowResolverTest extends TestCase
         self::assertTrue($window->truncated);
     }
 
-    public function testArticleWindowNormalizesOffsetToUtc(): void
-    {
-        $window = $this->resolveDateRange('2026-10-07T00:00:00+02:00', '2026-10-07T23:59:59+02:00');
-
-        self::assertSame('2026-10-06T22:00:00+00:00', $window->from->format(DATE_ATOM));
-        self::assertSame('2026-10-07T21:59:59+00:00', $window->until->format(DATE_ATOM));
-        self::assertFalse($window->truncated);
-    }
-
-    public function testDateWithoutOffsetIsReadAsUtcWhateverTheDefaultTimezone(): void
-    {
-        $defaultTimezone = date_default_timezone_get();
-        date_default_timezone_set(self::NON_UTC_TIMEZONE);
-        try {
-            $date = $this->resolver->parseDateTime('publishedFrom', '2026-10-07T00:00:00');
-        } finally {
-            date_default_timezone_set($defaultTimezone);
-        }
-
-        self::assertSame('2026-10-07T00:00:00+00:00', $date?->format(DATE_ATOM));
-    }
-
-    public function testArticleWindowInvertedThrows(): void
-    {
-        $this->expectException(McpToolInputException::class);
-
-        $this->resolveDateRange('2026-07-10T00:00:00+00:00', '2026-07-01T00:00:00+00:00');
-    }
-
-    public function testEnsureNotInvertedThrows(): void
-    {
-        $this->expectException(McpToolInputException::class);
-
-        $this->resolver->ensureNotInverted(
-            fromName: 'from',
-            from: $this->resolver->parseDateTime('from', '2026-07-10T00:00:00+00:00'),
-            untilName: 'until',
-            until: $this->resolver->parseDateTime('until', '2026-07-01T00:00:00+00:00'),
-        );
-    }
-
     private function resolveDateRange(?string $from, ?string $until): McpDateWindow
     {
-        return $this->resolver->resolveDateRange(fromName: 'publishedFrom', from: $from, untilName: 'publishedUntil', until: $until);
+        return $this->resolver->resolveDateRange(
+            is_string($from) ? new DateTimeImmutable($from) : null,
+            is_string($until) ? new DateTimeImmutable($until) : null,
+        );
     }
 }

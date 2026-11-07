@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace AnzuSystems\CommonBundle\Mcp\Exception;
 
+use AnzuSystems\CommonBundle\Mcp\Resolver\McpToolErrorResolver;
+
 final class McpToolArgumentsInputException extends McpToolInputException
 {
     /**
@@ -23,5 +25,10 @@ final class McpToolArgumentsInputException extends McpToolInputException
     public static function createInvalidArguments(string $violationsMessage): self
     {
         return new self($violationsMessage);
+    }
+
+    public static function createInvalidArgument(string $propertyPath, string $message): self
+    {
+        return new self(McpToolErrorResolver::INVALID_ARGUMENTS_PREFIX . sprintf(McpToolErrorResolver::VIOLATION_FORMAT, $propertyPath, $message));
     }
 }

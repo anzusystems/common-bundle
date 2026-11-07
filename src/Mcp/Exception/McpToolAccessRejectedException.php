@@ -10,4 +10,9 @@ final class McpToolAccessRejectedException extends McpToolCallRejectedException
     {
         return new self(sprintf('Access denied — the current MCP user is not allowed to use the tool "%s".', $toolName));
     }
+
+    public static function createPromptNotGranted(string $promptName): self
+    {
+        return new self(sprintf('Access denied — the current MCP user is not allowed to use every tool of the prompt "%s".', $promptName));
+    }
 }

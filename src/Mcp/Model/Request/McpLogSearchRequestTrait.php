@@ -7,7 +7,9 @@ namespace AnzuSystems\CommonBundle\Mcp\Model\Request;
 use AnzuSystems\CommonBundle\Mcp\Attribute\McpField;
 use AnzuSystems\CommonBundle\Mcp\Log\McpLogFinder;
 use AnzuSystems\CommonBundle\Mcp\Resolver\McpDateWindowResolver;
+use AnzuSystems\CommonBundle\Serializer\Handler\Handlers\McpDateTimeHandler;
 use AnzuSystems\SerializerBundle\Attributes\Serialize;
+use DateTimeImmutable;
 use Symfony\Component\Validator\Constraints as Assert;
 
 trait McpLogSearchRequestTrait
@@ -16,24 +18,21 @@ trait McpLogSearchRequestTrait
     #[Serialize]
     public ?string $contextId = null;
 
-    #[McpField(description: 'Only records at or after this ISO 8601 date-time, e.g. "2026-07-20T06:00:00+02:00". Defaults to 1 day before until. ' . McpDateWindowResolver::DATE_TIME_OFFSET_DESCRIPTION)]
-    #[Serialize]
-    public ?string $from = null;
+    #[McpField(description: 'Only records at or after this date-time. Defaults to 1 day before until.')]
+    #[Serialize(handler: McpDateTimeHandler::class)]
+    public ?DateTimeImmutable $from = null;
 
+    #[Assert\GreaterThanOrEqual(propertyPath: 'from', message: McpDateWindowResolver::NOT_BEFORE_FROM_MESSAGE)]
     #[McpField(
         description: <<<'TXT'
-            Only records at or before this ISO 8601 date-time.
+            Only records at or before this date-time.
             Defaults to now; the from..until window is capped at {{ logWindowMaxDays }} days.
-            {{ dateTimeOffset }}
             TXT
         ,
-        descriptionValues: [
-            'dateTimeOffset' => McpDateWindowResolver::DATE_TIME_OFFSET_DESCRIPTION,
-            'logWindowMaxDays' => McpDateWindowResolver::LOG_WINDOW_MAX_DAYS,
-        ],
+        descriptionValues: ['logWindowMaxDays' => McpDateWindowResolver::LOG_WINDOW_MAX_DAYS],
     )]
-    #[Serialize]
-    public ?string $until = null;
+    #[Serialize(handler: McpDateTimeHandler::class)]
+    public ?DateTimeImmutable $until = null;
 
     #[Assert\Range(min: McpLogFinder::LIMIT_MIN, max: McpLogFinder::LIMIT_MAX)]
     #[McpField(description: 'Maximum number of records.')]

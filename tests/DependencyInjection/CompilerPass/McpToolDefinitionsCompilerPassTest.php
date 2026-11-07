@@ -22,6 +22,7 @@ use AnzuSystems\CommonBundle\Tests\Data\Mcp\Tool\ExampleToolCategory;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Tool\ExampleWithoutInputTool;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Tool\ExampleWritePreviewTool;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Tool\ExampleWriteTool;
+use AnzuSystems\CommonBundle\Tests\Data\Mcp\Tool\ExplicitGrantExampleTool;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Tool\InvalidCategoryExampleTool;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Tool\InvalidNameExampleTool;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Tool\NoHashInputExamplePreviewTool;
@@ -51,6 +52,7 @@ final class McpToolDefinitionsCompilerPassTest extends TestCase
     private const string PREVIEW_TOOL_ARGUMENT = '$previewTool';
     private const string RATE_LIMITER_ARGUMENT = '$rateLimiter';
     private const string SIGNATURE_ARGUMENT = '$signature';
+    private const string EXPLICIT_GRANT_ARGUMENT = '$explicitGrant';
     private const string TOOL_PERMISSION = 'cms_example_read';
     private const string RATE_LIMITER_ID = 'limiter.example_write';
     private const string TOOL_TAG_METHOD = 'method';
@@ -132,6 +134,20 @@ final class McpToolDefinitionsCompilerPassTest extends TestCase
                 ExamplePermissionTool::NAME => ExamplePermissionTool::PERMISSION,
             ],
             $this->getDefinitionField($container, self::PERMISSION_ARGUMENT),
+        );
+    }
+
+    public function testExplicitGrantReachesItsDefinition(): void
+    {
+        $container = $this->createMcpContainer();
+        $this->registerTools($container, [ExamplePermissionTool::class, ExplicitGrantExampleTool::class]);
+
+        new McpToolDefinitionsCompilerPass()
+            ->process($container);
+
+        self::assertSame(
+            [ExamplePermissionTool::NAME => false, ExplicitGrantExampleTool::NAME => true],
+            $this->getDefinitionField($container, self::EXPLICIT_GRANT_ARGUMENT),
         );
     }
 

@@ -12,13 +12,16 @@ use AnzuSystems\CommonBundle\Log\Repository\JournalLogRepository;
 use AnzuSystems\CommonBundle\Mcp\Controller\McpController;
 use AnzuSystems\CommonBundle\Mcp\Event\Listener\McpHostRouteListener;
 use AnzuSystems\CommonBundle\Mcp\Factory\McpPreviewHashFactory;
+use AnzuSystems\CommonBundle\Mcp\Handler\FilterPromptsListRequestHandler;
 use AnzuSystems\CommonBundle\Mcp\Handler\FilterToolsListRequestHandler;
 use AnzuSystems\CommonBundle\Mcp\Handler\McpToolReferenceHandler;
+use AnzuSystems\CommonBundle\Mcp\Handler\RejectUngrantedPromptRequestHandler;
 use AnzuSystems\CommonBundle\Mcp\Handler\StrictToolArgumentsRequestHandler;
 use AnzuSystems\CommonBundle\Mcp\Log\McpLogFinder;
 use AnzuSystems\CommonBundle\Mcp\Log\McpLogger;
 use AnzuSystems\CommonBundle\Mcp\Log\McpLogRepository;
 use AnzuSystems\CommonBundle\Mcp\Log\McpToolCallLogger;
+use AnzuSystems\CommonBundle\Mcp\McpPromptDefinitions;
 use AnzuSystems\CommonBundle\Mcp\McpRateLimiter;
 use AnzuSystems\CommonBundle\Mcp\McpToolDefinitions;
 use AnzuSystems\CommonBundle\Mcp\McpWriteRateLimiter;
@@ -29,6 +32,7 @@ use AnzuSystems\CommonBundle\Mcp\Resolver\McpToolErrorResolver;
 use AnzuSystems\CommonBundle\Mcp\Security\McpDeleteGuard;
 use AnzuSystems\CommonBundle\Mcp\Security\McpInputEnricherInterface;
 use AnzuSystems\CommonBundle\Mcp\Security\McpPreviewHashReservation;
+use AnzuSystems\CommonBundle\Mcp\Security\McpPromptAccessChecker;
 use AnzuSystems\CommonBundle\Mcp\Security\McpToolAccessChecker;
 use AnzuSystems\CommonBundle\Mcp\Security\McpToolScopeProviderInterface;
 use AnzuSystems\CommonBundle\Mcp\Security\McpWriteConfirmation;
@@ -75,6 +79,27 @@ return static function (ContainerConfigurator $configurator): void {
         ->arg('$registry', null)
         ->arg('$toolAccessChecker', service(McpToolAccessChecker::class))
         ->arg('$pageSize', null)
+        ->tag('mcp.request_handler')
+    ;
+
+    $services->set(McpPromptDefinitions::class)
+        ->arg('$toolNamesByPrompt', [])
+    ;
+
+    $services->set(McpPromptAccessChecker::class)
+        ->arg('$promptDefinitions', service(McpPromptDefinitions::class))
+        ->arg('$toolAccessChecker', service(McpToolAccessChecker::class))
+    ;
+
+    $services->set(FilterPromptsListRequestHandler::class)
+        ->arg('$registry', null)
+        ->arg('$promptAccessChecker', service(McpPromptAccessChecker::class))
+        ->arg('$pageSize', null)
+        ->tag('mcp.request_handler')
+    ;
+
+    $services->set(RejectUngrantedPromptRequestHandler::class)
+        ->arg('$promptAccessChecker', service(McpPromptAccessChecker::class))
         ->tag('mcp.request_handler')
     ;
 

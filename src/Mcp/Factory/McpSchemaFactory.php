@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace AnzuSystems\CommonBundle\Mcp\Factory;
 
 use AnzuSystems\CommonBundle\Mcp\Attribute\McpField;
+use AnzuSystems\CommonBundle\Serializer\Handler\Handlers\McpDateTimeHandler;
 use AnzuSystems\CommonBundle\Serializer\Handler\Handlers\RawArrayHandler;
 use AnzuSystems\SerializerBundle\Attributes\Serialize;
 use BackedEnum;
@@ -45,7 +46,7 @@ final class McpSchemaFactory
     public const string ADDITIONAL_PROPERTIES = 'additionalProperties';
     public const string UNTYPED_COLLECTION_MESSAGE = 'The MCP schema cannot describe %s::%s, a Collection without its key and item types: declare Collection<int, X> (Collection<string, X> for a keyed map) in its @var, or in its @return for a getter.';
     public const string UNTYPED_ARRAY_MESSAGE = 'The MCP schema cannot describe %s::%s, an array without its item type: declare list<X> (array<string, X> for a keyed map) in its @var, or in its @return for a getter.';
-    public const string UNDESCRIBED_CLASS_MESSAGE = 'The MCP schema cannot describe the class %s, it has no #[Serialize] member: use a scalar, a Uuid, a backed enum or a class with #[Serialize] members.';
+    public const string UNDESCRIBED_CLASS_MESSAGE = 'The MCP schema cannot describe the class %s, it has no #[Serialize] member: use a scalar, a Uuid, a backed enum, a DateTimeImmutable with #[Serialize(handler: McpDateTimeHandler::class)] or a class with #[Serialize] members.';
 
     private const string REQUIRED = 'required';
     private const string ENUM = 'enum';
@@ -172,6 +173,9 @@ final class McpSchemaFactory
         if ($field instanceof McpField) {
             $parts[] = $field->description;
         }
+        if ($this->isMcpDateTime($member)) {
+            $parts[] = McpDateTimeHandler::FORMAT_DESCRIPTION;
+        }
         $enumClass = $this->resolveEnumClass($this->typeResolver->resolve($member));
         $values = [];
         foreach (is_string($enumClass) ? $enumClass::cases() : [] as $case) {
@@ -214,6 +218,12 @@ final class McpSchemaFactory
         if ($this->isUntypedArray($type)) {
             throw new LogicException(sprintf(self::UNTYPED_ARRAY_MESSAGE, $member->class, $member->getName()));
         }
+        if ($this->isMcpDateTime($member)) {
+            $this->describedClasses[McpDateTimeHandler::class] = true;
+            $schema = [self::TYPE => self::TYPE_STRING];
+
+            return $type instanceof NullableType ? $this->allowNull($schema) : $schema;
+        }
         $intKeyedRawArrayType = $this->findIntKeyedRawArrayType($member, $type);
         if ($intKeyedRawArrayType instanceof CollectionType) {
             $schema = $this->createForMap($intKeyedRawArrayType);
@@ -240,6 +250,14 @@ final class McpSchemaFactory
         }
 
         return null;
+    }
+
+    /**
+     * Only McpDateTimeHandler reads a date the way FORMAT_DESCRIPTION says; DateTimeHandler takes one fixed format.
+     */
+    private function isMcpDateTime(ReflectionProperty|ReflectionMethod $member): bool
+    {
+        return McpDateTimeHandler::class === $this->resolveAttribute($member, Serialize::class)?->handler;
     }
 
     private function isUntypedCollection(Type $type): bool

@@ -100,6 +100,8 @@ infrastructure after a bundle upgrade.
   call is left to that validation, whose error does not list them.
 * `McpToolAccessChecker` + `FilterToolsListRequestHandler` — the permission of each tool (see below); the call-side
   check lives in `McpToolReferenceHandler`.
+* `McpPromptAccessChecker`, `FilterPromptsListRequestHandler` and `RejectUngrantedPromptRequestHandler` — a prompt follows the
+  tools it names, see "Prompts" below.
 * `SearchAppLogsTool`, `SearchAuditLogsTool`, `GetLogsByContextTool` — diagnostic tools over the shared log
   collections, correlated by `contextId`.
 
@@ -186,11 +188,16 @@ final readonly class ListKeywordsTool
   only with `strategy: Serialize::KEYS_VALUES`. A `Collection` without its key and item types fails the container
   compilation with a `LogicException` naming the member. An array follows the same rule: only `array<string, X>` is an
   object, `array<X>` is a list, and a bare `array` fails the compilation the same way. A class without a `#[Serialize]`
-  member, e.g. `DateTimeImmutable`, fails it too, because its schema would refuse every value.
+  member, e.g. `DateTimeImmutable`, fails it too, because its schema would refuse every value. A `DateTimeImmutable`
+  with `#[Serialize(handler: McpDateTimeHandler::class)]` (also nullable) is a string, and the schema appends
+  `McpDateTimeHandler::FORMAT_DESCRIPTION` to its description: the handler reads any ISO 8601 value the
+  `DateTimeImmutable` constructor accepts, a date alone included, reads a value without an offset as UTC and returns
+  it in UTC. The schema has no `format: date-time`, which requires an offset. An unreadable value is answered with
+  `Invalid arguments: <field>: "<value>" is not an ISO 8601 date-time, …` before the validator runs.
 * The return class is the response: the pass appends a `Returns:` list of its `#[Serialize]` properties to the
   description, because clients hand the model the description and the input schema, not necessarily an output schema.
-* `#[McpField(description: …, descriptionValues: […])]` describes a DTO property, a response property or a case of a backed
-  enum; the described cases of an enum field are listed after the field's own description, the default one marked.
+* `#[McpField(description: …, descriptionValues: […])]` describes a DTO property, a response property, a prompt argument (see
+  "Prompts") or a case of a backed enum; the described cases of an enum field are listed after the field's own description, the default one marked.
   A description longer than 120 characters or with a `{{ placeholder }}` is a nowdoc `<<<'TXT'` with one sentence per
   line. The `Returns:` list joins the lines of a field description with spaces; the description of a tool keeps them.
   Keep validation messages generic: the schema rejects most invalid calls before the validator runs, and the
@@ -554,11 +561,75 @@ A host says what a request may use by registering a service under the id `McpToo
 - `readToolNames`: the read tools the request may use, `null` keeps every read tool.
 - `writeToolNames`: the write tools the request may use.
 
-Without such a service, or when it returns an empty `new McpToolScope()`, read tools are not narrowed and write tools are denied. The scope only
+Without such a service, or when it returns an empty `new McpToolScope()`, read tools are not narrowed and write tools are denied.
+
+A read tool declared with `#[AsMcpTool(explicitGrant: true)]` is not in "every read tool": `readToolNames: null` and a
+request without a scope leave it out, so it is granted only when `readToolNames` names it. Use it for a tool whose data
+someone should decide to send to the model provider when they create the token, e.g. the drafts of articles.
+`McpToolDefinitions::find($toolName)->explicitGrant` tells a host which tools to leave out of its "every read tool"
+choice. A write tool is granted only by name anyway, so the flag changes nothing there. The scope only
 narrows: a tool in the scope still needs its permission. A tool outside the scope is hidden from `tools/list` and
 denied on `tools/call`. `McpToolAccessChecker::getPermittedToolNames()` lists every tool whose
 permission the current user holds, in the order of the tools, without the scope, so a host can offer them for a new token. A preview
 follows the scope of its write tool, so a token never names it.
+
+## Prompts
+
+A prompt is a template the user starts as a command in the MCP client. Declare it with `#[AsMcpPrompt]`, which extends
+the SDK `#[McpPrompt]` with the tools the prompt leads the agent to call, and render its text with
+`McpPromptMessageTrait`:
+
+```php
+#[AsMcpPrompt(
+    name: HomepageSnapshotPrompt::NAME,
+    description: 'Shows the boxes of the homepage of a site with their articles and reads.',
+    tools: [ListSitesTool::NAME, ListBoxesTool::NAME, GetBoxCurrentItemsTool::NAME, GetArticlesTool::NAME],
+)]
+final readonly class HomepageSnapshotPrompt
+{
+    use McpPromptMessageTrait;
+
+    public const string NAME = 'homepage_snapshot';
+
+    private const string TEXT = <<<'TXT'
+        Show the homepage of the site "{{ site }}".
+        1. Resolve the site with {{ list_sites }}.
+        …
+        TXT;
+
+    public function __invoke(
+        #[McpField(description: 'Name, domain or id of the site.')]
+        string $site,
+    ): PromptMessage {
+        return $this->createUserMessage(self::TEXT, ['site' => $site]);
+    }
+}
+```
+
+- **Who sees a prompt.** `prompts/list` shows a prompt and `prompts/get` returns it only when
+  `McpToolAccessChecker::isToolGranted()` holds for every tool in its `tools`, the same check as `tools/list` and
+  `tools/call`. Otherwise `prompts/get`, and `completion/complete` of an argument of that prompt, answer the JSON-RPC
+  error `-32602` with `Access denied — the current MCP user is
+  not allowed to use every tool of the prompt "<prompt>".` A prompt has no permission of its own. A prompt without
+  tools, or one declared by the plain `#[McpPrompt]`, is seen by everyone.
+- **Tools in the text.** The text names a tool only as `{{ <tool name> }}`, e.g. `{{ list_sites }}`.
+  `createUserMessage()` replaces every placeholder of a tool in `tools` by its name and every `{{ <argument> }}` by the
+  value of that argument, in one pass, so an argument value is never read as a placeholder. A placeholder that is
+  neither in `tools` nor an argument throws `McpConfigurationException` naming the prompt, so a tool the text names
+  cannot be missing from the tools that decide who sees the prompt. A tool in `tools` or an argument that the text does
+  not use throws a `LogicException` (`McpField::fillPlaceholders()`). The check runs when the prompt renders, so a test
+  that renders every prompt keeps the texts right.
+- **Arguments.** Each parameter of `__invoke()` is an argument of the prompt, described by its `#[McpField]`
+  (`descriptionValues` fill the description as for a tool field). It is `required` unless it is optional or has a
+  default. A parameter of a class type (`RequestContext`) is injected by the SDK and is no argument. The SDK reads an
+  argument description only from the `@param` tag of the handler, which drops it silently when the parameter is
+  renamed, so `McpPromptLoaderCompilerPass` replaces the `addPrompt` call of every `#[AsMcpPrompt]` with
+  `McpPromptLoader`, which registers the prompt with these arguments and keeps its title, description, icons, meta and
+  completion providers. A parameter without `#[McpField]` fails the container compilation with
+  `McpConfigurationException`. A prompt declared by the plain `#[McpPrompt]` keeps the SDK registration.
+- **Compile-time check.** `McpPromptDefinitionsCompilerPass` collects the tools of every `#[AsMcpPrompt]` into
+  `McpPromptDefinitions`; a tool that is not an MCP tool of the server fails the container compilation with
+  `McpConfigurationException`.
 
 ## Tool errors
 
@@ -581,13 +652,17 @@ A message tells the model what to do next, so it is prose, not an error code.
 
 ## Date windows
 
-`McpDateWindowResolver` caps both a date range (`resolveDateRange()`, which takes the names of its two arguments for its
-errors) and the log window (`resolveLogWindow()`) at `DATE_RANGE_MAX_DAYS` (31). The cap is applied silently to the effective window, so
+`McpDateWindowResolver` takes the dates the request read with `McpDateTimeHandler` and caps both a date range
+(`resolveDateRange()`) and the log window (`resolveLogWindow()`) at `DATE_RANGE_MAX_DAYS` (31). The cap is applied silently to the effective window, so
 `McpDateWindow::$truncated` reports whether the caller asked for more than it got:
 
 * `resolveDateRange()` — `true` when the resolved `until` is earlier than the requested one, or (when it was omitted)
   earlier than now, i.e. whenever the range was cut short at `from + 31 days`.
 * `resolveLogWindow()` — `true` when `from` was moved forward to `until - 31 days`.
+
+The resolver does not check the order of the two dates. The request refuses an `until` before `from` itself with
+`#[Assert\GreaterThanOrEqual(propertyPath: 'from', message: McpDateWindowResolver::NOT_BEFORE_FROM_MESSAGE)]`, so the
+agent gets `Invalid arguments: until: This value must not be before from.` like any other invalid argument.
 
 Pagination is checked by the input schema instead: a request declares
 `#[Assert\Range(min: McpPageWindow::PAGE_MIN, max: McpPageWindow::PAGE_MAX)]` on `page` and

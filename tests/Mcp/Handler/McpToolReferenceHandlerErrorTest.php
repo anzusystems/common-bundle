@@ -5,12 +5,18 @@ declare(strict_types=1);
 namespace AnzuSystems\CommonBundle\Tests\Mcp\Handler;
 
 use AnzuSystems\CommonBundle\Exception\ValidationException;
+use AnzuSystems\CommonBundle\Mcp\Exception\McpToolArgumentsInputException;
 use AnzuSystems\CommonBundle\Mcp\Handler\McpToolReferenceHandler;
 use AnzuSystems\CommonBundle\Mcp\Log\McpLogger;
+use AnzuSystems\CommonBundle\Mcp\Model\Request\SearchAppLogsRequest;
 use AnzuSystems\CommonBundle\Mcp\Model\Response\McpLogsByContextResponse;
+use AnzuSystems\CommonBundle\Mcp\Resolver\McpDateWindowResolver;
 use AnzuSystems\CommonBundle\Mcp\Resolver\McpToolErrorResolver;
+use AnzuSystems\CommonBundle\Serializer\Handler\Handlers\McpDateTimeHandler;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Exception\ExampleToolInputException;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Tool\ExampleSearchTool;
+use Mcp\Capability\Registry\ToolReference;
+use Mcp\Schema\Result\CallToolResult;
 use RuntimeException;
 use Symfony\Component\Security\Core\Exception\AccessDeniedException;
 use Throwable;
@@ -18,6 +24,11 @@ use Throwable;
 final class McpToolReferenceHandlerErrorTest extends AbstractMcpToolReferenceHandlerTestCase
 {
     private const string QUESTIONS_FIELD = 'questions';
+    private const string FROM = 'from';
+    private const string UNTIL = 'until';
+    private const string INVALID_DATE = 'not-a-date';
+    private const string JULY_FIRST = '2026-07-01';
+    private const string JULY_TENTH = '2026-07-10T00:00:00+02:00';
 
     public function testInvalidRequestIsReturnedAsToolErrorWithoutRunningTheTool(): void
     {
@@ -34,6 +45,92 @@ final class McpToolReferenceHandlerErrorTest extends AbstractMcpToolReferenceHan
         );
         self::assertSame(McpLogger::LEVEL_NAME_ERROR, $this->insertedDocuments[0]['levelName']);
         self::assertSame($result->structuredContent[McpToolReferenceHandler::ERROR_KEY], $this->insertedDocuments[0]['error']);
+    }
+
+    /**
+     * @dataProvider invalidDateWindowProvider
+     *
+     * @param array<string, string> $window
+     */
+    public function testInvalidDateWindowIsAnInvalidArgumentWithoutRunningTheTool(array $window, string $expectedError): void
+    {
+        $handler = $this->createHandler(
+            tool: new ExampleSearchTool(static fn (): McpLogsByContextResponse => throw new RuntimeException(self::MUST_NOT_RUN_MESSAGE)),
+        );
+
+        $result = $this->callSearchTool($handler, $window);
+
+        self::assertTrue($result->isError);
+        self::assertSame($expectedError, $result->structuredContent[McpToolReferenceHandler::ERROR_KEY]);
+    }
+
+    /**
+     * @return array<string, array{array<string, string>, string}>
+     */
+    public static function invalidDateWindowProvider(): array
+    {
+        return [
+            'unreadable date' => [
+                [self::FROM => self::INVALID_DATE],
+                McpToolArgumentsInputException::createInvalidArgument(
+                    propertyPath: self::FROM,
+                    message: sprintf(McpDateTimeHandler::INVALID_VALUE_MESSAGE, self::INVALID_DATE),
+                )->getMessage(),
+            ],
+            'until before from' => [
+                [self::FROM => self::JULY_TENTH, self::UNTIL => self::JULY_FIRST],
+                McpToolErrorResolver::INVALID_ARGUMENTS_PREFIX . sprintf(
+                    McpToolErrorResolver::VIOLATION_FORMAT,
+                    self::UNTIL,
+                    strtr(McpDateWindowResolver::NOT_BEFORE_FROM_MESSAGE, ['{{ compared_value_path }}' => self::FROM]),
+                ),
+            ],
+        ];
+    }
+
+    /**
+     * @dataProvider validDateWindowProvider
+     *
+     * @param array<string, string> $window
+     */
+    public function testValidDateWindowReachesTheToolInUtc(array $window, ?string $expectedFrom, ?string $expectedUntil): void
+    {
+        $request = null;
+        $handler = $this->createHandler(
+            tool: new ExampleSearchTool(static function (SearchAppLogsRequest $input) use (&$request): McpLogsByContextResponse {
+                $request = $input;
+
+                return self::createResponse();
+            }),
+        );
+
+        $result = $this->callSearchTool($handler, $window);
+
+        self::assertFalse($result->isError);
+        self::assertInstanceOf(SearchAppLogsRequest::class, $request);
+        self::assertSame($expectedFrom, $request->from?->format(DATE_ATOM));
+        self::assertSame($expectedUntil, $request->until?->format(DATE_ATOM));
+    }
+
+    /**
+     * @return array<string, array{array<string, string>, ?string, ?string}>
+     */
+    public static function validDateWindowProvider(): array
+    {
+        return [
+            'no dates' => [[], null, null],
+            'date only and offset' => [
+                [self::FROM => self::JULY_FIRST, self::UNTIL => self::JULY_TENTH],
+                '2026-07-01T00:00:00+00:00',
+                '2026-07-09T22:00:00+00:00',
+            ],
+            'equal dates' => [
+                [self::FROM => self::JULY_TENTH, self::UNTIL => self::JULY_TENTH],
+                '2026-07-09T22:00:00+00:00',
+                '2026-07-09T22:00:00+00:00',
+            ],
+            'from only' => [[self::FROM => self::JULY_TENTH], '2026-07-09T22:00:00+00:00', null],
+        ];
     }
 
     public function testInputExceptionIsReturnedAsToolErrorAndToolWithoutInputLogsEmptyParams(): void
@@ -135,5 +232,19 @@ final class McpToolReferenceHandlerErrorTest extends AbstractMcpToolReferenceHan
             sprintf(McpToolReferenceHandler::UNHANDLED_ERROR_FORMAT, RuntimeException::class),
             $this->insertedDocuments[0]['error'],
         );
+    }
+
+    /**
+     * @param array<string, string> $arguments
+     */
+    private function callSearchTool(McpToolReferenceHandler $handler, array $arguments): CallToolResult
+    {
+        $result = $handler->handle(
+            new ToolReference($this->createSdkTool(ExampleSearchTool::NAME), [ExampleSearchTool::class, self::INVOKE_METHOD]),
+            $this->createArguments(ExampleSearchTool::NAME, $arguments),
+        );
+        self::assertInstanceOf(CallToolResult::class, $result);
+
+        return $result;
     }
 }

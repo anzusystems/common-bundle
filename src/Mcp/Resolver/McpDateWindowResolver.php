@@ -4,46 +4,35 @@ declare(strict_types=1);
 
 namespace AnzuSystems\CommonBundle\Mcp\Resolver;
 
-use AnzuSystems\CommonBundle\Mcp\Exception\McpDateWindowInputException;
 use AnzuSystems\CommonBundle\Mcp\Model\McpDateWindow;
 use AnzuSystems\Contracts\AnzuApp;
 use DateTimeImmutable;
-use DateTimeZone;
-use Exception;
 
 final readonly class McpDateWindowResolver
 {
     public const int DATE_RANGE_MAX_DAYS = 31;
     public const int LOG_WINDOW_MAX_DAYS = self::DATE_RANGE_MAX_DAYS;
-    public const string DATE_TIME_OFFSET_DESCRIPTION = 'Any UTC offset is honoured; a value without an offset is read as UTC.';
+    public const string NOT_BEFORE_FROM_MESSAGE = 'This value must not be before {{ compared_value_path }}.';
 
     private const int LOG_WINDOW_DEFAULT_DAYS = 1;
-    private const string LOG_FROM_NAME = 'from';
-    private const string LOG_UNTIL_NAME = 'until';
-    private const string UTC_TIMEZONE = 'UTC';
 
-    public function resolveDateRange(string $fromName, ?string $from, string $untilName, ?string $until): McpDateWindow
+    public function resolveDateRange(?DateTimeImmutable $from, ?DateTimeImmutable $until): McpDateWindow
     {
-        $parsedFrom = $this->parseDateTime($fromName, $from);
-        $parsedUntil = $this->parseDateTime($untilName, $until);
-        $this->ensureNotInverted(fromName: $fromName, from: $parsedFrom, untilName: $untilName, until: $parsedUntil);
         $now = AnzuApp::date();
-        $clampedFrom = $this->clampFrom(from: $parsedFrom, until: $parsedUntil, now: $now);
-        $clampedUntil = $this->clampUntil($clampedFrom, $parsedUntil);
+        $clampedFrom = $this->clampFrom(from: $from, until: $until, now: $now);
+        $clampedUntil = $this->clampUntil($clampedFrom, $until);
 
         return new McpDateWindow(
             from: $clampedFrom,
             until: $clampedUntil,
-            truncated: $this->isUntilTruncated(from: $parsedFrom, until: $parsedUntil, clampedUntil: $clampedUntil, now: $now),
+            truncated: $this->isUntilTruncated(from: $from, until: $until, clampedUntil: $clampedUntil, now: $now),
         );
     }
 
-    public function resolveLogWindow(?string $from, ?string $until): McpDateWindow
+    public function resolveLogWindow(?DateTimeImmutable $from, ?DateTimeImmutable $until): McpDateWindow
     {
-        $parsedFrom = $this->parseDateTime(self::LOG_FROM_NAME, $from);
-        $resolvedUntil = $this->parseDateTime(self::LOG_UNTIL_NAME, $until) ?? AnzuApp::date();
-        $resolvedFrom = $parsedFrom ?? $resolvedUntil->modify(sprintf('-%d day', self::LOG_WINDOW_DEFAULT_DAYS));
-        $this->ensureNotInverted(fromName: self::LOG_FROM_NAME, from: $resolvedFrom, untilName: self::LOG_UNTIL_NAME, until: $resolvedUntil);
+        $resolvedUntil = $until ?? AnzuApp::date();
+        $resolvedFrom = $from ?? $resolvedUntil->modify(sprintf('-%d day', self::LOG_WINDOW_DEFAULT_DAYS));
         $clampedFrom = $this->clampLogFrom($resolvedFrom, $resolvedUntil);
 
         return new McpDateWindow(
@@ -51,29 +40,6 @@ final readonly class McpDateWindowResolver
             until: $resolvedUntil,
             truncated: $this->isFromTruncated($resolvedFrom, $clampedFrom),
         );
-    }
-
-    public function parseDateTime(string $paramName, ?string $value): ?DateTimeImmutable
-    {
-        if (null === $value) {
-            return null;
-        }
-
-        try {
-            $utc = new DateTimeZone(self::UTC_TIMEZONE);
-
-            return new DateTimeImmutable($value, $utc)
-                ->setTimezone($utc);
-        } catch (Exception) {
-            throw McpDateWindowInputException::createInvalidDate($paramName, $value);
-        }
-    }
-
-    public function ensureNotInverted(string $fromName, ?DateTimeImmutable $from, string $untilName, ?DateTimeImmutable $until): void
-    {
-        if ($from instanceof DateTimeImmutable && $until instanceof DateTimeImmutable && $until < $from) {
-            throw McpDateWindowInputException::createInverted($fromName, $untilName);
-        }
     }
 
     private function isFromTruncated(DateTimeImmutable $from, DateTimeImmutable $clampedFrom): bool

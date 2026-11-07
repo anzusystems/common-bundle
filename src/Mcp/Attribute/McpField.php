@@ -8,14 +8,16 @@ use Attribute;
 use LogicException;
 
 /**
- * Describes a field of an MCP tool input or output, or a value of a backed enum such a field takes. The description values replace
- * the {{ name }} placeholders of the description, like the parameters of a validation message.
+ * Describes a field of an MCP tool input or output, an argument of an MCP prompt, or a value of a backed enum such a field
+ * takes. The description values replace the {{ name }} placeholders of the description, like the parameters of a validation
+ * message.
  */
-#[Attribute(Attribute::TARGET_PROPERTY | Attribute::TARGET_METHOD | Attribute::TARGET_CLASS_CONSTANT)]
+#[Attribute(Attribute::TARGET_PROPERTY | Attribute::TARGET_METHOD | Attribute::TARGET_PARAMETER | Attribute::TARGET_CLASS_CONSTANT)]
 final readonly class McpField
 {
+    public const string PLACEHOLDER_PATTERN = '/{{ (\w+) }}/';
+
     private const string PLACEHOLDER_FORMAT = '{{ %s }}';
-    private const string PLACEHOLDER_PATTERN = '/{{ (\w+) }}/';
     private const string NAME_SEPARATOR = '", "';
 
     public string $description;

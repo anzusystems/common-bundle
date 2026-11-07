@@ -7,6 +7,7 @@ namespace AnzuSystems\CommonBundle\Tests\Mcp\Factory;
 use AnzuSystems\CommonBundle\Mcp\Factory\McpSchemaFactory;
 use AnzuSystems\CommonBundle\Mcp\Model\Decorator\McpToolCallLogDecorator;
 use AnzuSystems\CommonBundle\Mcp\Model\Response\McpLogsByContextResponse;
+use AnzuSystems\CommonBundle\Serializer\Handler\Handlers\McpDateTimeHandler;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Model\Request\ArrayExampleRequest;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Model\Request\BareArrayExampleRequest;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Model\Request\ChildExampleRequest;
@@ -17,6 +18,7 @@ use AnzuSystems\CommonBundle\Tests\Data\Mcp\Model\Request\DateExampleRequest;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Model\Request\DescribedEnumExampleRequest;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Model\Request\EnumExampleRequest;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Model\Request\HookedExampleRequest;
+use AnzuSystems\CommonBundle\Tests\Data\Mcp\Model\Request\McpDateExampleRequest;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Model\Request\NullableBareArrayExampleRequest;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Model\Request\PreviewHashExampleRequest;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Model\Request\UntypedCollectionExampleRequest;
@@ -239,6 +241,39 @@ final class McpSchemaFactoryTest extends TestCase
             'property' => [BareArrayExampleRequest::class, 'items'],
             'nullable property' => [NullableBareArrayExampleRequest::class, 'items'],
             'getter' => [BareArrayExampleResponse::class, 'getItems'],
+        ];
+    }
+
+    /**
+     * @dataProvider mcpDatePropertyProvider
+     *
+     * @param array<string, mixed> $expectedSchema
+     */
+    public function testMcpDatePropertyIsAStringDescribingItsFormat(string $property, array $expectedSchema): void
+    {
+        $factory = new McpSchemaFactory();
+        $schema = $factory->createForClass(McpDateExampleRequest::class);
+
+        self::assertSame($expectedSchema, $schema[McpSchemaFactory::PROPERTIES][$property]);
+        self::assertSame(['at'], $schema['required']);
+        self::assertContains(McpDateTimeHandler::class, $factory->getDescribedClasses());
+    }
+
+    /**
+     * @return array<string, array{string, array<string, mixed>}>
+     */
+    public static function mcpDatePropertyProvider(): array
+    {
+        return [
+            '?DateTimeImmutable' => ['from', [
+                'type' => ['null', 'string'],
+                'description' => McpDateExampleRequest::FROM_DESCRIPTION . ' ' . McpDateTimeHandler::FORMAT_DESCRIPTION,
+                'default' => null,
+            ]],
+            'DateTimeImmutable' => ['at', [
+                'type' => 'string',
+                'description' => McpDateTimeHandler::FORMAT_DESCRIPTION,
+            ]],
         ];
     }
 

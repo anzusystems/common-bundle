@@ -73,6 +73,7 @@ use AnzuSystems\CommonBundle\Log\Repository\JournalLogRepository;
 use AnzuSystems\CommonBundle\Mcp\Attribute\AsMcpTool;
 use AnzuSystems\CommonBundle\Mcp\Controller\McpController;
 use AnzuSystems\CommonBundle\Mcp\Event\Listener\McpHostRouteListener;
+use AnzuSystems\CommonBundle\Mcp\Handler\FilterPromptsListRequestHandler;
 use AnzuSystems\CommonBundle\Mcp\Handler\FilterToolsListRequestHandler;
 use AnzuSystems\CommonBundle\Mcp\Handler\McpToolReferenceHandler;
 use AnzuSystems\CommonBundle\Mcp\Handler\StrictToolArgumentsRequestHandler;
@@ -90,6 +91,7 @@ use AnzuSystems\CommonBundle\Request\ValueResolver\ValueObjectValueResolver;
 use AnzuSystems\CommonBundle\Security\PermissionConfig;
 use AnzuSystems\CommonBundle\Serializer\Exception\SerializerExceptionHandler;
 use AnzuSystems\CommonBundle\Serializer\Handler\Handlers\GeolocationHandler;
+use AnzuSystems\CommonBundle\Serializer\Handler\Handlers\McpDateTimeHandler;
 use AnzuSystems\CommonBundle\Serializer\Handler\Handlers\RawArrayHandler;
 use AnzuSystems\CommonBundle\Serializer\Handler\Handlers\UuidArrayHandler;
 use AnzuSystems\CommonBundle\Serializer\Handler\Handlers\ValueObjectHandler;
@@ -99,6 +101,7 @@ use AnzuSystems\CommonBundle\Validator\Constraints\EntityExistsValidator;
 use AnzuSystems\CommonBundle\Validator\Constraints\UniqueEntityDtoValidator;
 use AnzuSystems\CommonBundle\Validator\Constraints\UniqueEntityValidator;
 use AnzuSystems\CommonBundle\Validator\Validator;
+use AnzuSystems\SerializerBundle\Handler\Handlers\DateTimeHandler;
 use AnzuSystems\SerializerBundle\Handler\Handlers\UuidHandler;
 use AnzuSystems\SerializerBundle\Metadata\MetadataRegistry;
 use AnzuSystems\SerializerBundle\Serializer;
@@ -704,10 +707,16 @@ final class AnzuSystemsCommonExtension extends Extension implements PrependExten
             ->getDefinition(StrictToolArgumentsRequestHandler::class)
             ->replaceArgument('$registry', $registryReference);
 
+        $paginationLimit = $this->resolveMcpPaginationLimit($container, $serverName);
         $container
             ->getDefinition(FilterToolsListRequestHandler::class)
             ->replaceArgument('$registry', $registryReference)
-            ->replaceArgument('$pageSize', $this->resolveMcpPaginationLimit($container, $serverName));
+            ->replaceArgument('$pageSize', $paginationLimit);
+
+        $container
+            ->getDefinition(FilterPromptsListRequestHandler::class)
+            ->replaceArgument('$registry', $registryReference)
+            ->replaceArgument('$pageSize', $paginationLimit);
 
         $container
             ->getDefinition(McpToolReferenceHandler::class)
@@ -801,6 +810,12 @@ final class AnzuSystemsCommonExtension extends Extension implements PrependExten
             UuidArrayHandler::class,
             new Definition(UuidArrayHandler::class)
                 ->setArgument('$uuidHandler', new Reference(UuidHandler::class))
+                ->addTag(AnzuSystemsCommonBundle::TAG_SERIALIZER_HANDLER)
+        );
+        $container->setDefinition(
+            McpDateTimeHandler::class,
+            new Definition(McpDateTimeHandler::class)
+                ->setArgument('$dateTimeHandler', new Reference(DateTimeHandler::class))
                 ->addTag(AnzuSystemsCommonBundle::TAG_SERIALIZER_HANDLER)
         );
 

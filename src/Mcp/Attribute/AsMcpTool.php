@@ -33,6 +33,7 @@ final class AsMcpTool extends McpTool
         public readonly ?string $previewOf = null,
         public readonly ?string $permission = null,
         public readonly ?string $rateLimiter = null,
+        public readonly bool $explicitGrant = false,
     ) {
         parent::__construct(
             name: $name,

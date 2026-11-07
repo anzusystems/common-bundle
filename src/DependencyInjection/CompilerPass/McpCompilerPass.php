@@ -29,7 +29,6 @@ final class McpCompilerPass implements CompilerPassInterface
     private const string SET_CAPABILITIES_METHOD = 'setCapabilities';
     private const string SET_SUBSCRIPTION_LIFETIME_METHOD = 'setSubscriptionLifetime';
     private const string WITHOUT_INPUT_REQUIRED_SHIM_METHOD = 'withoutInputRequiredShim';
-    private const string PROMPT_TAG = 'mcp.prompt';
     private const string RESOURCE_TAG = 'mcp.resource';
     private const string RESOURCE_TEMPLATE_TAG = 'mcp.resource_template';
 
@@ -84,7 +83,7 @@ final class McpCompilerPass implements CompilerPassInterface
                 '$resources' => $this->hasTaggedService($container, self::RESOURCE_TAG, self::RESOURCE_TEMPLATE_TAG),
                 '$resourcesSubscribe' => false,
                 '$resourcesListChanged' => false,
-                '$prompts' => $this->hasTaggedService($container, self::PROMPT_TAG),
+                '$prompts' => $this->hasTaggedService($container, McpPromptDefinitionsCompilerPass::PROMPT_TAG),
                 '$promptsListChanged' => false,
                 '$logging' => true,
                 '$completions' => true,
