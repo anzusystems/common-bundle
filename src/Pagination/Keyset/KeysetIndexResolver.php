@@ -8,9 +8,8 @@ use Doctrine\ORM\Mapping\ClassMetadata;
 use LogicException;
 
 /**
- * Finds the index that serves a keyset query: its first columns are the columns of the equalities in any order, and the
- * columns of the keyset follow in its order. The last field may be missing from the index when it is the single-column
- * primary key, because InnoDB appends the primary key to every secondary index.
+ * The last keyset field may be missing from the index when it is the single-column primary key: InnoDB appends the
+ * primary key to every secondary index.
  */
 final readonly class KeysetIndexResolver
 {
@@ -73,14 +72,11 @@ final readonly class KeysetIndexResolver
             return true;
         }
 
-        // The appended primary key follows the last column, so the index must end where the keyset leaves it out.
         return array_last($orderColumns) === $primaryKeyColumn
             && $trailingColumns === array_slice(array: $orderColumns, offset: 0, length: -1);
     }
 
     /**
-     * Forcing an index needs its name, so an index without one in the mapping does not count.
-     *
      * @param ClassMetadata<object> $metadata
      *
      * @return array<string, list<string>>

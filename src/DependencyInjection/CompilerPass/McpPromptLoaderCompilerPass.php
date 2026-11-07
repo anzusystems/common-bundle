@@ -19,10 +19,8 @@ use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\DependencyInjection\Definition;
 
 /**
- * Runs after the mcp-bundle McpPass, whose addPrompt calls let the SDK take the description of a prompt argument only
- * from the docblock of the handler. An #[AsMcpPrompt] goes to McpPromptLoader instead, with arguments from the
- * #[McpField] of each handler parameter. A prompt of the plain #[McpPrompt] names no tools, so the prompt filter would
- * show it to every token; it fails the compilation instead.
+ * Runs after the mcp-bundle McpPass, whose addPrompt calls take an argument description only from the handler docblock.
+ * A plain #[McpPrompt] names no tools, so the prompt filter would show it to every token.
  */
 final class McpPromptLoaderCompilerPass implements CompilerPassInterface
 {

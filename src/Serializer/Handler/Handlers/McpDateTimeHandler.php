@@ -14,11 +14,9 @@ use DateTimeImmutable;
 use DateTimeZone;
 
 /**
- * Reads an ISO 8601 date, optionally with a time and an offset, where DateTimeHandler requires one fixed format and
- * would refuse a date without a time or a value without an offset. The pattern keeps out what the DateTimeImmutable
- * constructor also takes: relative words ("yesterday", "+3 days") and an empty text, which would silently mean now.
- * The SDK checks the arguments against the schema only, so an unreadable value is answered as an invalid argument; a
- * DeserializationException would end the call with an internal error.
+ * The pattern keeps out what the DateTimeImmutable constructor also takes: relative words ("yesterday") and an empty
+ * text, which would silently mean now. A DeserializationException would end the call with an internal error, so an
+ * unreadable value is an invalid argument.
  */
 final class McpDateTimeHandler extends AbstractHandler
 {

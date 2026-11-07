@@ -18,10 +18,6 @@ use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use UnexpectedValueException;
 
-/**
- * Talks to the MCP endpoint over HTTP like a client does, so a call passes the token, the input schema of the SDK and the
- * tools/list filter that a call of the handler alone skips.
- */
 final class McpTestClient
 {
     private const string METHOD_INITIALIZE = 'initialize';
@@ -69,8 +65,6 @@ final class McpTestClient
     }
 
     /**
-     * Enum arguments go in as their values, the way a client sends them.
-     *
      * @param class-string $toolClass
      * @param array<string, mixed> $arguments
      */

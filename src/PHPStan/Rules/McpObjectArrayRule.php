@@ -22,9 +22,6 @@ use PHPStan\Type\TypeCombinator;
 use PHPStan\Type\VerbosityLevel;
 
 /**
- * #[Serialize] properties are checked too: McpSchemaFactory describes Collection<int, X> exactly like list<X>, so the
- * tool schema stays the same.
- *
  * @implements Rule<InClassNode>
  */
 final readonly class McpObjectArrayRule implements Rule

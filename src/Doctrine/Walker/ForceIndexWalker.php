@@ -61,9 +61,6 @@ final class ForceIndexWalker extends SqlOutputWalker
     }
 
     /**
-     * A join table is the table of a joined alias or a table that class table inheritance joins to an alias; the own
-     * table of the root alias is the FROM table, which HINT_FORCE_INDEX_FOR_FROM covers.
-     *
      * @return list<string>
      */
     private function createJoinIndexHints(string $sql, SelectStatement $selectStatement): array

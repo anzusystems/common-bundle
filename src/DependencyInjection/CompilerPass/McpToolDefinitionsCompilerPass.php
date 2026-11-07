@@ -24,9 +24,6 @@ use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\DependencyInjection\Definition;
 use Symfony\Component\DependencyInjection\Reference;
 
-/**
- * Reads the attribute of every mcp.tool service, refuses what cannot work and builds McpToolDefinitions from the rest.
- */
 final class McpToolDefinitionsCompilerPass implements CompilerPassInterface
 {
     use McpTaggedElementTrait;

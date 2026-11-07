@@ -8,10 +8,6 @@ use Attribute;
 use Mcp\Capability\Attribute\McpTool;
 use Mcp\Schema\ToolAnnotations;
 
-/**
- * An MCP tool whose input schema comes from the input class of its __invoke() and whose description lists the fields of
- * the class it returns.
- */
 #[Attribute(Attribute::TARGET_CLASS)]
 final class AsMcpTool extends McpTool
 {

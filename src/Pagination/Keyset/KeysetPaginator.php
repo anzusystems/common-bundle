@@ -15,9 +15,6 @@ use Doctrine\ORM\QueryBuilder;
 use JsonException;
 use LogicException;
 
-/**
- * Pages a query by a keyset instead of an offset, so a later page does not read and skip the rows of the earlier ones.
- */
 final readonly class KeysetPaginator
 {
     private const string COLUMN_FORMAT = '%s.%s';
@@ -32,10 +29,7 @@ final readonly class KeysetPaginator
     }
 
     /**
-     * Filters the query by the equalities, orders it by the keyset, continues after the row the cursor points to and
-     * forces the index that KeysetIndexResolver finds for the equalities and the order, or throws a LogicException
-     * without one. A condition the caller adds to the query builder itself is not covered by that index check: check
-     * such a query with EXPLAIN.
+     * A condition the caller adds to the query builder itself is not covered by the index check: check it with EXPLAIN.
      *
      * @template T of object
      *

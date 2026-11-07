@@ -13,9 +13,6 @@ use Doctrine\DBAL\Types\Types;
 use JsonException;
 use LogicException;
 
-/**
- * Turns the keyset values of the last row of a page into an opaque cursor (base64url JSON) and back.
- */
 final readonly class KeysetCursorCodec
 {
     public const string DATE_FORMAT = 'Y-m-d\TH:i:s.up';

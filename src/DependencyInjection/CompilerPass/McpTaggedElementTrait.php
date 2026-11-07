@@ -10,9 +10,6 @@ use ReflectionAttribute;
 use ReflectionMethod;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 
-/**
- * Reads the MCP elements of tagged services the way the McpBundle McpPass registers them with the server.
- */
 trait McpTaggedElementTrait
 {
     private const string ELEMENT_TAG_METHOD = 'method';

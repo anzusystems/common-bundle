@@ -23,7 +23,6 @@ final readonly class McpToolAccessChecker
 
     public function isToolPermissionGranted(string $toolName): bool
     {
-        // A preview is granted exactly with its write tool, so a token never sees it alone.
         $writeToolName = $this->toolDefinitions->find($toolName)?->previewOf;
         if (is_string($writeToolName)) {
             return $this->isToolGranted($writeToolName);

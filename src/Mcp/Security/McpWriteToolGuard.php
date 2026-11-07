@@ -16,10 +16,6 @@ use Mcp\Server\RequestContext;
 use Symfony\Component\HttpFoundation\RequestStack;
 use Throwable;
 
-/**
- * Keeps one HTTP request (one JSON-RPC batch) to at most one successful write: the main request is marked after a
- * write tool returned, so the guard does not depend on audit resources. Without a main request there is no guard.
- */
 final readonly class McpWriteToolGuard
 {
     private const string WRITE_TOOL_DONE_ATTR = '_mcp_write_tool_done';
@@ -53,9 +49,6 @@ final readonly class McpWriteToolGuard
     }
 
     /**
-     * A write runs only with the previewHash its preview returns right now. A preview without a hash has nothing to write
-     * (no change, or a reason the tool itself reports), so the tool runs and takes no token.
-     *
      * @param Closure(): McpWritePreviewInterface $runPreview
      */
     public function guardPreview(
@@ -101,9 +94,6 @@ final readonly class McpWriteToolGuard
             ->set(self::WRITE_TOOL_DONE_ATTR, true);
     }
 
-    /**
-     * A retry with a used hash is refused before it takes a token, and a hash refused by the limit stays usable.
-     */
     private function consumeReserved(string $toolName, McpPreviewHashAwareInterface $input): void
     {
         $this->previewHashReservation->reserve($toolName, $input);

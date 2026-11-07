@@ -10,9 +10,6 @@ use AnzuSystems\CommonBundle\Mcp\Model\McpToolDefinition;
 use Psr\Container\ContainerInterface;
 use Symfony\Component\RateLimiter\RateLimiterFactory;
 
-/**
- * The budget of writes per user, on top of the request limit of McpRateLimiter. Tools naming one limiter share it.
- */
 final readonly class McpWriteRateLimiter
 {
     public function __construct(

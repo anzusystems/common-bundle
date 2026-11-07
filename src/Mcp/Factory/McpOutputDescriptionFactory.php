@@ -33,9 +33,6 @@ final readonly class McpOutputDescriptionFactory
     }
 
     /**
-     * Fields without a description and without fields of their own share the first line, and so do the fields of an
-     * object that has only such fields: a line per field costs the model tokens without telling it anything.
-     *
      * @param array<array-key, mixed> $schema
      *
      * @return list<string>

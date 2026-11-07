@@ -6,9 +6,6 @@ namespace AnzuSystems\CommonBundle\Mcp\Model\Response;
 
 use AnzuSystems\SerializerBundle\Attributes\Serialize;
 
-/**
- * The using class holds its page as the promoted McpPageWindow $pageWindow.
- */
 trait McpPageResponseTrait
 {
     #[Serialize]

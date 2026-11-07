@@ -21,8 +21,6 @@ use PHPStan\Rules\RuleErrorBuilder;
 use PHPStan\Type\Constant\ConstantStringType;
 
 /**
- * A forgotten check is no failure a caller would see: the tool just reads what the user may not.
- *
  * @implements Rule<InClassNode>
  */
 final readonly class McpToolInputPermissionRule implements Rule

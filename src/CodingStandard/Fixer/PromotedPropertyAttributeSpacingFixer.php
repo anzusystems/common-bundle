@@ -176,9 +176,6 @@ final class PromotedPropertyAttributeSpacingFixer extends AbstractFixer implemen
         );
     }
 
-    /**
-     * The first line break after the comma; a comment on the line of the comma stays with the previous parameter.
-     */
     private function findSeparatorIndex(Tokens $tokens, int $startIndex): ?int
     {
         for ($index = $startIndex; $tokens[$index]->isWhitespace() || $tokens[$index]->isComment(); ++$index) {

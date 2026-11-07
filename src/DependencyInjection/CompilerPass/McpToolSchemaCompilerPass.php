@@ -13,9 +13,7 @@ use Symfony\Component\DependencyInjection\Compiler\CompilerPassInterface;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 
 /**
- * Runs after the mcp-bundle McpPass, which puts the input schema made from the handler parameters into each addTool
- * call of the server builder; a tool with #[AsMcpTool] gets the schema of the input class of its __invoke() instead and
- * the fields of its return class and its write limit appended to its description.
+ * Runs after the mcp-bundle McpPass, which puts the schema of the handler parameters into each addTool call.
  */
 final class McpToolSchemaCompilerPass implements CompilerPassInterface
 {

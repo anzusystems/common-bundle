@@ -12,10 +12,6 @@ use Mcp\Schema\Content\TextContent;
 use Mcp\Schema\Enum\Role;
 use ReflectionClass;
 
-/**
- * Renders the text of an #[AsMcpPrompt]: {{ <tool> }} becomes the name of a tool from its tools, {{ <argument> }} the
- * value of an argument, so a tool the text names cannot be missing from the tools that decide who sees the prompt.
- */
 trait McpPromptMessageTrait
 {
     /**

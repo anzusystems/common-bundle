@@ -7,9 +7,6 @@ namespace AnzuSystems\CommonBundle\Mcp\Attribute;
 use Attribute;
 use Mcp\Capability\Attribute\McpPrompt;
 
-/**
- * An MCP prompt that a request sees only when it may use every tool the prompt names.
- */
 #[Attribute(Attribute::TARGET_CLASS)]
 final class AsMcpPrompt extends McpPrompt
 {

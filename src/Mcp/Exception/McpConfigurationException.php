@@ -9,10 +9,6 @@ use AnzuSystems\CommonBundle\Mcp\Model\McpPreviewHashAwareInterface;
 use AnzuSystems\CommonBundle\Mcp\Model\McpWritePreviewInterface;
 use LogicException;
 
-/**
- * An MCP server, tool or prompt that a compiler pass refuses, so the mistake fails the container compilation; a prompt
- * text is checked when the prompt renders it.
- */
 final class McpConfigurationException extends LogicException
 {
     private const string TOOL_NAME_SEPARATOR = ', ';

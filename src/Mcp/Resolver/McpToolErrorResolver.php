@@ -30,9 +30,6 @@ final readonly class McpToolErrorResolver
     ) {
     }
 
-    /**
-     * What the agent can fix or has to accept; the message is safe to show as it is.
-     */
     public function resolveRejectionMessage(Throwable $exception): ?string
     {
         return match (true) {

@@ -30,11 +30,8 @@ use Symfony\Component\Validator\Constraint;
 use Symfony\Component\Validator\Constraints as Assert;
 
 /**
- * The JSON Schema of an MCP tool input or output, made from the DTO the serializer reads: its #[Serialize] properties
- * and getters with their types, defaults and validation constraints. Assert\Regex is left out on purpose: PCRE is not
- * the ECMA-262 dialect of "pattern", and the validator answers the agent with a better message than a schema rejection.
- * A Collection<string, X> is an object here; the serializer writes it as one only with strategy: Serialize::KEYS_VALUES,
- * otherwise as a list.
+ * Assert\Regex is left out on purpose: PCRE is not the ECMA-262 dialect of "pattern", and the validator words it better.
+ * A Collection<string, X> is an object here; the serializer writes it as one only with strategy: Serialize::KEYS_VALUES.
  */
 final class McpSchemaFactory
 {
@@ -164,10 +161,6 @@ final class McpSchemaFactory
         return $properties;
     }
 
-    /**
-     * The field's own description, the format of an McpDateTimeHandler date, read as the end of the day when the field
-     * ends a period, and the described values of its backed enum, the default one marked.
-     */
     private function createDescription(ReflectionProperty|ReflectionMethod $member, mixed $default): ?string
     {
         $parts = [];
@@ -257,9 +250,6 @@ final class McpSchemaFactory
         return null;
     }
 
-    /**
-     * Only McpDateTimeHandler reads a date the way FORMAT_DESCRIPTION says; DateTimeHandler takes one fixed format.
-     */
     private function isMcpDateTime(ReflectionProperty|ReflectionMethod $member): bool
     {
         return McpDateTimeHandler::class === $this->resolveAttribute($member, Serialize::class)?->handler;
@@ -488,9 +478,6 @@ final class McpSchemaFactory
     }
 
     /**
-     * An integer bound becomes the next inclusive one ("minimum": 1 for Positive), which reads more naturally to an
-     * agent than an exclusive bound.
-     *
      * @param array<string, mixed> $schema
      *
      * @return array<string, mixed>
@@ -508,8 +495,6 @@ final class McpSchemaFactory
     }
 
     /**
-     * A property without a default value or with a constraint that rejects an absent value must be sent.
-     *
      * @param array<array-key, Constraint> $constraints
      */
     private function isRequired(ReflectionProperty $property, array $constraints): bool

@@ -17,9 +17,6 @@ use Mcp\Server\Handler\Request\RequestHandlerInterface;
 use Mcp\Server\Session\SessionInterface;
 
 /**
- * Answers prompts/get and the completion of an argument of a prompt whose tools the request may not use all; the SDK
- * handlers serve the granted ones.
- *
  * @implements RequestHandlerInterface<GetPromptResult|CompletionCompleteResult>
  */
 final readonly class RejectUngrantedPromptRequestHandler implements RequestHandlerInterface

@@ -14,8 +14,7 @@ use Symfony\Component\DependencyInjection\Compiler\CompilerPassInterface;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 
 /**
- * Collects the tools of every #[AsMcpPrompt] into McpPromptDefinitions. It runs after McpToolDefinitionsCompilerPass,
- * whose tool definitions are the tools a prompt may name.
+ * Runs after McpToolDefinitionsCompilerPass, whose tools are the only ones a prompt may name.
  */
 final class McpPromptDefinitionsCompilerPass implements CompilerPassInterface
 {

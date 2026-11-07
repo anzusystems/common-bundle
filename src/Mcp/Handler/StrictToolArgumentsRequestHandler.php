@@ -65,8 +65,6 @@ final readonly class StrictToolArgumentsRequestHandler implements RequestHandler
     }
 
     /**
-     * A tool the user may not call is left to the schema check of the SDK, whose error does not list the arguments.
-     *
      * @return list<string>
      */
     private function findUnknownArguments(CallToolRequest $request): array
