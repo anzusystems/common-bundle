@@ -4,7 +4,8 @@ declare(strict_types=1);
 
 namespace AnzuSystems\CommonBundle\Tests\Pagination\Keyset;
 
-use AnzuSystems\CommonBundle\Doctrine\Walker\ForceIndexWalker;
+use AnzuSystems\CommonBundle\Doctrine\Walker\IndexHintWalker;
+use AnzuSystems\CommonBundle\Pagination\Keyset\Exception\InvalidCursorException;
 use AnzuSystems\CommonBundle\Pagination\Keyset\KeysetCursorCodec;
 use AnzuSystems\CommonBundle\Pagination\Keyset\KeysetIndexResolver;
 use AnzuSystems\CommonBundle\Pagination\Keyset\KeysetOrder;
@@ -12,6 +13,9 @@ use AnzuSystems\CommonBundle\Pagination\Keyset\KeysetPage;
 use AnzuSystems\CommonBundle\Pagination\Keyset\KeysetPaginator;
 use AnzuSystems\CommonBundle\Tests\AnzuKernelTestCase;
 use AnzuSystems\CommonBundle\Tests\Data\Entity\Example;
+use AnzuSystems\CommonBundle\Tests\Data\Entity\ExampleInheritanceChild;
+use AnzuSystems\CommonBundle\Tests\Data\Entity\ExampleInheritanceParent;
+use AnzuSystems\CommonBundle\Tests\Data\Entity\ExampleJoinedEntity;
 use AnzuSystems\CommonBundle\Tests\Data\Model\Enum\DummyEnum;
 use DateTimeImmutable;
 use Doctrine\Common\Collections\Order;
@@ -32,7 +36,7 @@ final class KeysetPaginatorTest extends AnzuKernelTestCase
         900_005 => ['2026-01-02 10:00:00', DummyEnum::StateTwo],
     ];
     private const array FIELDS = ['createdAt', 'id'];
-    private const int CURSOR_ID = 900_003;
+    private const int CURSOR_ID = 900_005;
     private const string CURSOR_CREATED_AT = '2026-01-02 10:00:00';
 
     private EntityManagerInterface $entityManager;
@@ -106,26 +110,26 @@ final class KeysetPaginatorTest extends AnzuKernelTestCase
             queryBuilder: $queryBuilder,
             entityClass: Example::class,
             order: new KeysetOrder(fields: self::FIELDS, direction: $direction),
-            equalities: ['dummyEnum' => DummyEnum::StateTwo, 'name' => self::NAME],
-            cursor: $this->createCursor(),
+            equalities: ['name' => self::NAME, 'dummyEnum' => DummyEnum::StateTwo],
+            cursor: $this->createCursor(direction: $direction, dummyEnum: DummyEnum::StateTwo),
             limit: 1,
         );
 
         self::assertSame(
             sprintf(
-                'SELECT example FROM %s example WHERE example.dummyEnum = :keysetDummyEnum AND example.name = :keysetName AND (example.createdAt %2$s :cursorCreatedAt OR (example.createdAt = :cursorCreatedAt AND example.id %2$s :cursorId)) ORDER BY example.createdAt %3$s, example.id %3$s',
+                'SELECT example FROM %s example WHERE example.name = :keyset0 AND example.dummyEnum = :keyset1 AND (example.createdAt %2$s :cursor0 OR (example.createdAt = :cursor0 AND example.id %2$s :cursor1)) ORDER BY example.createdAt %3$s, example.id %3$s',
                 Example::class,
                 $operator,
                 $direction->value,
             ),
             $queryBuilder->getDQL(),
         );
-        self::assertSame(DummyEnum::StateTwo, $queryBuilder->getParameter('keysetDummyEnum')?->getValue());
-        self::assertSame(self::NAME, $queryBuilder->getParameter('keysetName')?->getValue());
-        $createdAt = $queryBuilder->getParameter('cursorCreatedAt');
+        self::assertSame(self::NAME, $queryBuilder->getParameter('keyset0')?->getValue());
+        self::assertSame(DummyEnum::StateTwo, $queryBuilder->getParameter('keyset1')?->getValue());
+        $createdAt = $queryBuilder->getParameter('cursor0');
         self::assertSame(Types::DATETIME_IMMUTABLE, $createdAt?->getType());
         self::assertEquals(new DateTimeImmutable(self::CURSOR_CREATED_AT), $createdAt->getValue());
-        $id = $queryBuilder->getParameter('cursorId');
+        $id = $queryBuilder->getParameter('cursor1');
         self::assertSame(Types::INTEGER, $id?->getType());
         self::assertSame(self::CURSOR_ID, $id->getValue());
         self::assertSame(2, $queryBuilder->getMaxResults());
@@ -154,7 +158,7 @@ final class KeysetPaginatorTest extends AnzuKernelTestCase
             entityClass: Example::class,
             order: new KeysetOrder(fields: self::FIELDS, direction: Order::Descending),
             equalities: ['name' => self::NAME, 'dummyEnum' => $dummyEnum],
-            cursor: $this->createCursor(),
+            cursor: $this->createCursor(direction: Order::Descending, dummyEnum: $dummyEnum),
             limit: 1,
         );
 
@@ -176,6 +180,90 @@ final class KeysetPaginatorTest extends AnzuKernelTestCase
         ];
     }
 
+    /**
+     * @dataProvider anotherQueryProvider
+     */
+    public function testCursorOfAnotherQueryIsAnInvalidCursorException(Order $direction, ?DummyEnum $dummyEnum): void
+    {
+        $cursor = $this->createCursor(direction: Order::Descending, dummyEnum: DummyEnum::StateTwo);
+
+        $this->expectExceptionObject(new InvalidCursorException());
+
+        $this->paginate(direction: $direction, dummyEnum: $dummyEnum, cursor: $cursor, limit: 2);
+    }
+
+    /**
+     * @return array<string, array{Order, ?DummyEnum}>
+     */
+    public static function anotherQueryProvider(): array
+    {
+        return [
+            'another equality value' => [Order::Descending, DummyEnum::StateOne],
+            'equality left out' => [Order::Descending, null],
+            'another direction' => [Order::Ascending, DummyEnum::StateTwo],
+        ];
+    }
+
+    /**
+     * @dataProvider unsupportedOrderFieldProvider
+     *
+     * @param class-string $entityClass
+     * @param non-empty-list<string> $orderFields
+     */
+    public function testOrderFieldACursorCannotHoldIsALogicException(string $entityClass, array $orderFields, string $expectedField): void
+    {
+        $this->expectExceptionObject(new LogicException(sprintf(
+            KeysetPaginator::UNSUPPORTED_ORDER_FIELD_MESSAGE,
+            $entityClass,
+            $expectedField,
+            implode(', ', array_keys(KeysetCursorCodec::FIELD_TYPES)),
+        )));
+
+        $this->paginator->paginate(
+            queryBuilder: $this->entityManager->createQueryBuilder()
+                ->select('entity')
+                ->from($entityClass, 'entity'),
+            entityClass: $entityClass,
+            order: new KeysetOrder(fields: $orderFields, direction: Order::Descending),
+            equalities: [],
+            cursor: null,
+            limit: 1,
+        );
+    }
+
+    /**
+     * @return array<string, array{class-string, non-empty-list<string>, string}>
+     */
+    public static function unsupportedOrderFieldProvider(): array
+    {
+        return [
+            'type the cursor cannot hold' => [Example::class, ['dummyEnum', 'id'], 'dummyEnum'],
+            'nullable field' => [ExampleJoinedEntity::class, ['archivedAt', 'id'], 'archivedAt'],
+            'association' => [ExampleJoinedEntity::class, ['joinedEntity', 'id'], 'joinedEntity'],
+        ];
+    }
+
+    public function testKeysetOfAClassTableInheritanceChildForcesTheIndexOfTheParentTable(): void
+    {
+        $queryBuilder = $this->entityManager->createQueryBuilder()
+            ->select('child')
+            ->from(ExampleInheritanceChild::class, 'child');
+
+        $this->paginator->paginate(
+            queryBuilder: $queryBuilder,
+            entityClass: ExampleInheritanceChild::class,
+            order: new KeysetOrder(fields: ['name', 'id'], direction: Order::Descending),
+            equalities: [],
+            cursor: null,
+            limit: 1,
+        );
+
+        $sql = $queryBuilder->getQuery()
+            ->getSQL();
+        self::assertStringStartsWith(sprintf('SELECT /*+ INDEX(e0_ %s) */ ', ExampleInheritanceParent::IDX_PARENT_NAME), $sql);
+        self::assertStringContainsString(' INNER JOIN example_inheritance_parent e0_ ', $sql);
+    }
+
     public function testPageWithEveryRemainingRowHasNoNextCursor(): void
     {
         $page = $this->paginate(direction: Order::Descending, dummyEnum: null, cursor: null, limit: count(self::ROWS));
@@ -190,7 +278,7 @@ final class KeysetPaginatorTest extends AnzuKernelTestCase
 
         $this->paginator->paginate(
             queryBuilder: $this->createQueryBuilder()
-                ->setHint(Query::HINT_CUSTOM_OUTPUT_WALKER, ForceIndexWalker::class),
+                ->setHint(Query::HINT_CUSTOM_OUTPUT_WALKER, IndexHintWalker::class),
             entityClass: Example::class,
             order: new KeysetOrder(fields: self::FIELDS, direction: Order::Descending),
             equalities: ['name' => self::NAME],
@@ -225,13 +313,13 @@ final class KeysetPaginatorTest extends AnzuKernelTestCase
             ->getValues();
     }
 
-    private function createCursor(): string
+    private function createCursor(Order $direction, ?DummyEnum $dummyEnum): string
     {
-        return new KeysetCursorCodec()
-            ->encode([
-                'createdAt' => new DateTimeImmutable(self::CURSOR_CREATED_AT),
-                'id' => self::CURSOR_ID,
-            ]);
+        $cursor = $this->paginate(direction: $direction, dummyEnum: $dummyEnum, cursor: null, limit: 2)
+            ->nextCursor;
+        self::assertIsString($cursor);
+
+        return $cursor;
     }
 
     private function createQueryBuilder(): QueryBuilder

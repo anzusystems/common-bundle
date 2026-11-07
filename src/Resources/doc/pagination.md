@@ -65,18 +65,23 @@ The caller passes `nextCursor` of the response back as `cursor` for the next pag
 
 ## What `paginate()` adds to the query
 
-* `equalities`: `note.label = :keysetLabel` for every field with a value; `null` adds no condition, so `pinned: null`
+* `equalities`: `note.label = :keyset0` for every field with a value (the parameters are numbered, so a field of an
+  embeddable such as `dates.publishedAt` works too); `null` adds no condition, so `pinned: null`
   lists pinned and other notes. A key is a field or a to-one association of the root entity. The value is bound
   without a type, so Doctrine infers it (an entity by its id, an enum by its value).
 * `ORDER BY note.createdAt DESC, note.id DESC`. The order of the query builder is replaced. All fields go in one
   direction, and the last one is unique (usually `id`), so rows with the same `createdAt` are neither repeated nor
   skipped.
-* With a cursor: `(note.createdAt < :cursorCreatedAt OR (note.createdAt = :cursorCreatedAt AND note.id < :cursorId))`,
+* With a cursor: `(note.createdAt < :cursor0 OR (note.createdAt = :cursor0 AND note.id < :cursor1))`,
   `>` for `Order::Ascending`. The parameters get the Doctrine type of the field mapping.
 * `LIMIT limit + 1`. The extra row only tells whether there is a next page; `nextCursor` holds the fields of the last
   row of the page.
-* The optimizer hint `/*+ INDEX(<table alias> <index>) */` right after `SELECT`, through `ForceIndexWalker` (the query
+* The optimizer hint `/*+ INDEX(<table alias> <index>) */` right after `SELECT`, through `IndexHintWalker` (the query
   builder must not set another output walker).
+
+Every order field must be a mapped field, not nullable, of a type the cursor can hold (`datetime_immutable`, `integer`,
+`smallint`, `string`; `KeysetCursorCodec::FIELD_TYPES`). Otherwise `paginate()` throws a `LogicException` before the
+query runs: a descending order puts the rows with `null` last, where `x < :cursor0` never reaches them.
 
 ## The index rule
 
@@ -94,6 +99,11 @@ does not, because `title` comes before the appended `id`.
 In the example, `pinned: null` uses `IDX_label_createdAt` and `pinned: true` uses `IDX_label_pinned_createdAt`.
 Only indexes with a name in the mapping count, because the optimizer hint needs the name.
 
+With class table inheritance (`InheritanceType('JOINED')`) the resolver reads the indexes of every table of the
+hierarchy, and takes one only when every field except the primary key is a column of its table. A child entity ordered by a field of its
+parent therefore uses the index of the parent table, and the hint goes to the alias of that table. The list of mapped
+indexes and their tables is `IndexHintWalker::resolveMappedIndexes()`, which the walker checks the hint against too.
+
 Without such an index `paginate()` throws a `LogicException` before the query runs. It names the entity, the
 equality and order fields and the index to add:
 
@@ -109,19 +119,22 @@ A new combination of equalities therefore fails in the first test that runs it, 
   but the index check knows nothing about them. The forced index stays the one for the equalities and the order, so
   such a condition filters the rows the index reads. When it removes most of them, a page can read many rows. Check
   such a query with `EXPLAIN` on production-sized data, for the first page and for a later one.
-* That the index exists in the database. The resolver reads the mapping; a migration must create the index. A
-  missing one fails the query with `Key '…' doesn't exist`.
+* That the index exists in the database. The resolver reads the mapping; a migration must create the index. MySQL
+  only warns about a hint naming a missing index and runs the query without it, with a filesort.
 
 ## Cursor format
 
-`KeysetCursorCodec` writes the order field values of the last row as base64url JSON without padding:
+`KeysetCursorCodec` writes base64url JSON without padding: `{"query": "<fingerprint>", "values": {…}}`. The
+`query` is a hash of the DQL and the parameters of the query before the cursor condition, so a cursor only continues
+the list it came from: a cursor of another filter, another order or another direction throws `InvalidCursorException`
+instead of skipping rows. The limit is not part of it and may change between pages. The `values` are the order field
+values of the last row:
 
 * a date as ISO 8601 in UTC with microseconds (`KeysetCursorCodec::DATE_FORMAT`, e.g. `2026-08-21T08:00:00.123456Z`);
   it is read back into the default time zone, because DBAL writes a date parameter without converting it;
 * an integer or a string as it is.
 
-Reading it back checks base64, the JSON object, exactly the keys of the order fields and the type each field has in the
-Doctrine mapping (`datetime_immutable`, `integer`, `smallint`, `string`). Anything else throws
-`InvalidCursorException`. A field of another type throws a `LogicException` when the cursor is read.
+Reading it back checks base64, the JSON object, the fingerprint of the query, exactly the keys of the order fields and
+the type each field has in the Doctrine mapping. Anything else throws `InvalidCursorException`.
 
 The cursor is not signed. It only says where to continue; the query keeps every filter and access check of the call.

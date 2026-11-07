@@ -9,7 +9,9 @@ use AnzuSystems\SerializerBundle\Attributes\Serialize;
 
 trait McpCursorResponseTrait
 {
-    #[McpField(description: 'Pass it as cursor to get the next page; null on the last page.')]
+    public const string NEXT_CURSOR_DESCRIPTION = 'Pass it as cursor to get the next page; null on the last page.';
+
+    #[McpField(description: self::NEXT_CURSOR_DESCRIPTION)]
     #[Serialize]
     public ?string $nextCursor {
         get => $this->cursorPage->nextCursor;

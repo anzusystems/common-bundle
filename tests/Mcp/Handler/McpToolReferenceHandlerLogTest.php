@@ -45,7 +45,7 @@ final class McpToolReferenceHandlerLogTest extends AbstractMcpToolReferenceHandl
             [McpToolReferenceHandler::ERROR_KEY => ExampleErrorResultTool::ERROR],
             $secondResult->structuredContent,
         );
-        self::assertSame(ExampleErrorResultTool::ERROR, $this->insertedDocuments[0]['error']);
+        self::assertSame(ExampleErrorResultTool::ERROR, $this->insertedDocuments[0][McpLogger::ERROR_FIELD]);
         self::assertTrue($request->attributes->has(AuditLogResourceHelper::RESOURCE_EXCLUDE_ATTR_NAME));
     }
 
@@ -56,8 +56,8 @@ final class McpToolReferenceHandlerLogTest extends AbstractMcpToolReferenceHandl
         $result = $this->callTool(handler: $handler, toolClass: ExampleErrorResultWithoutKeyTool::class, toolName: ExampleErrorResultWithoutKeyTool::NAME);
 
         self::assertTrue($result->isError);
-        self::assertSame(McpLogger::LEVEL_NAME_ERROR, $this->insertedDocuments[0]['levelName']);
-        self::assertSame(McpToolReferenceHandler::ERROR_RESULT_MESSAGE, $this->insertedDocuments[0]['error']);
+        self::assertSame(McpLogger::LEVEL_NAME_ERROR, $this->insertedDocuments[0][McpLogger::LEVEL_NAME_FIELD]);
+        self::assertSame(McpToolReferenceHandler::ERROR_RESULT_MESSAGE, $this->insertedDocuments[0][McpLogger::ERROR_FIELD]);
     }
 
     /**

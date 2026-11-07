@@ -12,11 +12,15 @@ use AnzuSystems\CommonBundle\Mcp\Resolver\McpToolSignatureResolver;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Prompt\ArgumentsExamplePrompt;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Prompt\FieldlessArgumentExamplePrompt;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Prompt\PlainExamplePrompt;
+use AnzuSystems\CommonBundle\Tests\Data\Mcp\Prompt\UnnamedPlainExamplePrompt;
+use Mcp\Capability\Attribute\McpPrompt;
 use Mcp\Capability\Completion\ListCompletionProvider;
 use Mcp\Capability\Registry;
 use Mcp\Schema\Icon;
 use Mcp\Schema\PromptArgument;
 use PHPUnit\Framework\TestCase;
+use ReflectionAttribute;
+use ReflectionClass;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\DependencyInjection\Definition;
 
@@ -42,14 +46,30 @@ final class McpPromptLoaderCompilerPassTest extends TestCase
         );
     }
 
-    public function testPlainMcpPromptFailsAtCompileTime(): void
+    /**
+     * @dataProvider plainPromptProvider
+     *
+     * @param class-string $promptClass
+     */
+    public function testPlainMcpPromptFailsAtCompileTime(string $promptClass, string $expectedPromptName): void
     {
-        $container = $this->createContainer([ArgumentsExamplePrompt::class, PlainExamplePrompt::class]);
+        $container = $this->createContainer([ArgumentsExamplePrompt::class, $promptClass]);
 
-        $this->expectExceptionObject(McpConfigurationException::createPlainPrompt(PlainExamplePrompt::NAME, PlainExamplePrompt::class));
+        $this->expectExceptionObject(McpConfigurationException::createPlainPrompt($expectedPromptName, $promptClass));
 
         new McpPromptLoaderCompilerPass()
             ->process($container);
+    }
+
+    /**
+     * @return array<string, array{class-string, string}>
+     */
+    public static function plainPromptProvider(): array
+    {
+        return [
+            'named' => [PlainExamplePrompt::class, PlainExamplePrompt::NAME],
+            'without a name, named after the class' => [UnnamedPlainExamplePrompt::class, 'UnnamedPlainExamplePrompt'],
+        ];
     }
 
     public function testLoaderRegistersArgumentsFromMcpFields(): void
@@ -109,7 +129,10 @@ final class McpPromptLoaderCompilerPassTest extends TestCase
         foreach ($promptClasses as $promptClass) {
             $builder->addMethodCall(McpPromptLoaderCompilerPass::ADD_PROMPT_METHOD, [
                 [$promptClass, McpToolSignatureResolver::INVOKE_METHOD],
-                constant($promptClass . '::NAME'),
+                new ReflectionClass($promptClass)
+                    ->getAttributes(McpPrompt::class, ReflectionAttribute::IS_INSTANCEOF)
+                    |> array_first(...)
+                    |> (static fn (ReflectionAttribute $attribute): ?string => $attribute->newInstance()->name),
                 self::TITLE,
                 self::DESCRIPTION,
                 [new Definition(Icon::class, [self::ICON_SRC, null, null])],

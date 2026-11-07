@@ -182,10 +182,10 @@ final class McpToolReferenceHandlerWritePreviewTest extends AbstractMcpToolRefer
         }
 
         self::assertSame(0, $this->writeRuns);
-        self::assertSame(McpLogger::LEVEL_NAME_ERROR, $this->insertedDocuments[0]['levelName']);
+        self::assertSame(McpLogger::LEVEL_NAME_ERROR, $this->insertedDocuments[0][McpLogger::LEVEL_NAME_FIELD]);
         self::assertSame(
             sprintf(McpToolReferenceHandler::UNHANDLED_ERROR_FORMAT, RuntimeException::class),
-            $this->insertedDocuments[0]['error'],
+            $this->insertedDocuments[0][McpLogger::ERROR_FIELD],
         );
     }
 

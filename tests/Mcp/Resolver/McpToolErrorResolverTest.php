@@ -16,7 +16,7 @@ final class McpToolErrorResolverTest extends TestCase
         self::assertSame(
             McpToolArgumentsInputException::createInvalidArgument(
                 propertyPath: McpToolErrorResolver::CURSOR_ARGUMENT,
-                message: McpToolErrorResolver::INVALID_CURSOR_MESSAGE,
+                message: InvalidCursorException::MESSAGE,
             )->getMessage(),
             new McpToolErrorResolver()
                 ->resolveRejectionMessage(new InvalidCursorException()),

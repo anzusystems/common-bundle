@@ -144,8 +144,8 @@ abstract class AbstractMcpToolReferenceHandlerTestCase extends TestCase
         self::assertInstanceOf(CallToolResult::class, $result);
         self::assertTrue($result->isError);
         self::assertSame($expectedError, $result->structuredContent[McpToolReferenceHandler::ERROR_KEY]);
-        self::assertSame(McpLogger::LEVEL_NAME_ERROR, $this->insertedDocuments[0]['levelName']);
-        self::assertSame($expectedError, $this->insertedDocuments[0]['error']);
+        self::assertSame(McpLogger::LEVEL_NAME_ERROR, $this->insertedDocuments[0][McpLogger::LEVEL_NAME_FIELD]);
+        self::assertSame($expectedError, $this->insertedDocuments[0][McpLogger::ERROR_FIELD]);
     }
 
     /**

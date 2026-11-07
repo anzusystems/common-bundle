@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace AnzuSystems\CommonBundle\Pagination\Keyset;
 
+use AnzuSystems\CommonBundle\Doctrine\Walker\IndexHintWalker;
+use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\Mapping\ClassMetadata;
 use LogicException;
 
@@ -13,7 +15,6 @@ use LogicException;
  */
 final readonly class KeysetIndexResolver
 {
-    public const string PRIMARY_INDEX = 'PRIMARY';
     public const string MISSING_INDEX_MESSAGE = 'No named index of %s starts with the equality fields [%s] in any order followed by the order fields [%s], so the keyset query would sort its rows in a filesort. Add #[ORM\\Index(name: \'%s\', fields: [\'%s\'])].';
 
     private const string INDEX_NAME_PREFIX = 'IDX_';
@@ -27,15 +28,19 @@ final readonly class KeysetIndexResolver
      *
      * @return string the name of the index to force
      */
-    public function resolve(ClassMetadata $metadata, array $equalityFields, KeysetOrder $order): string
+    public function resolve(EntityManagerInterface $entityManager, ClassMetadata $metadata, array $equalityFields, KeysetOrder $order): string
     {
         $equalityColumns = array_map(fn (string $field): string => $this->resolveColumn($metadata, $field), $equalityFields);
         $orderColumns = array_map(fn (string $field): string => $this->resolveColumn($metadata, $field), $order->fields);
+        $fieldTables = array_map(
+            fn (string $field): ?string => $this->resolveFieldTable(entityManager: $entityManager, metadata: $metadata, field: $field),
+            [...$equalityFields, ...$order->fields],
+        );
         $primaryKeyColumn = $this->resolvePrimaryKeyColumn($metadata);
 
-        foreach ($this->resolveNamedIndexColumns($metadata) as $indexName => $indexColumns) {
-            if ($this->isKeysetIndex(
-                indexColumns: $indexColumns,
+        foreach (IndexHintWalker::resolveMappedIndexes($entityManager, $metadata) as $indexName => $index) {
+            if ($this->isTableOfEveryField($index['table'], $fieldTables) && $this->isKeysetIndex(
+                indexColumns: $index['columns'],
                 equalityColumns: $equalityColumns,
                 orderColumns: $orderColumns,
                 primaryKeyColumn: $primaryKeyColumn,
@@ -50,6 +55,17 @@ final readonly class KeysetIndexResolver
             order: $order,
             primaryKeyColumn: $primaryKeyColumn,
         ));
+    }
+
+    /**
+     * @param ClassMetadata<object> $tableMetadata
+     * @param list<?string> $fieldTables
+     */
+    private function isTableOfEveryField(ClassMetadata $tableMetadata, array $fieldTables): bool
+    {
+        $tableName = $tableMetadata->getTableName();
+
+        return array_all($fieldTables, static fn (?string $fieldTable): bool => null === $fieldTable || $fieldTable === $tableName);
     }
 
     /**
@@ -78,27 +94,6 @@ final readonly class KeysetIndexResolver
 
     /**
      * @param ClassMetadata<object> $metadata
-     *
-     * @return array<string, list<string>>
-     */
-    private function resolveNamedIndexColumns(ClassMetadata $metadata): array
-    {
-        $indexColumns = [self::PRIMARY_INDEX => $metadata->getIdentifierColumnNames()];
-        $indexes = [...$metadata->table['indexes'] ?? [], ...$metadata->table['uniqueConstraints'] ?? []];
-        foreach ($indexes as $name => $index) {
-            if (is_string($name)) {
-                $indexColumns[$name] = $index['columns'] ?? array_map(
-                    fn (string $field): string => $this->resolveColumn($metadata, $field),
-                    $index['fields'] ?? [],
-                );
-            }
-        }
-
-        return $indexColumns;
-    }
-
-    /**
-     * @param ClassMetadata<object> $metadata
      */
     private function resolveColumn(ClassMetadata $metadata, string $field): string
     {
@@ -110,6 +105,22 @@ final readonly class KeysetIndexResolver
         }
 
         throw new LogicException(sprintf('"%s" is neither a field nor a to-one association of %s.', $field, $metadata->getName()));
+    }
+
+    /**
+     * @param ClassMetadata<object> $metadata
+     *
+     * @return string|null null for the primary key, which every table of class table inheritance holds
+     */
+    private function resolveFieldTable(EntityManagerInterface $entityManager, ClassMetadata $metadata, string $field): ?string
+    {
+        if ($metadata->isIdentifier($field)) {
+            return null;
+        }
+        $owningClass = ($metadata->fieldMappings[$field] ?? $metadata->associationMappings[$field])->inherited ?? $metadata->getName();
+
+        return $entityManager->getClassMetadata($owningClass)
+            ->getTableName();
     }
 
     /**

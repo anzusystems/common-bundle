@@ -427,7 +427,7 @@ final class McpSchemaFactoryTest extends TestCase
                 'type' => 'integer',
                 'minimum' => McpPageWindow::PAGE_MIN,
                 'maximum' => McpPageWindow::PAGE_MAX,
-                'description' => 'Page number, starting at 1.',
+                'description' => PageExampleRequest::PAGE_DESCRIPTION,
                 'default' => McpPageWindow::PAGE_MIN,
             ],
             $schema[McpSchemaFactory::PROPERTIES]['page'],
@@ -443,7 +443,7 @@ final class McpSchemaFactoryTest extends TestCase
         self::assertSame(
             [
                 'type' => ['null', 'string'],
-                'description' => 'Pass the nextCursor of the previous response to get the next page; omit it for the first page.',
+                'description' => CursorExampleRequest::CURSOR_DESCRIPTION,
                 'default' => null,
             ],
             $schema[McpSchemaFactory::PROPERTIES]['cursor'],
@@ -459,7 +459,7 @@ final class McpSchemaFactoryTest extends TestCase
         self::assertSame(
             [
                 'type' => ['null', 'string'],
-                'description' => 'Pass it as cursor to get the next page; null on the last page.',
+                'description' => CursorExampleResponse::NEXT_CURSOR_DESCRIPTION,
             ],
             $schema[McpSchemaFactory::PROPERTIES]['nextCursor'],
         );
@@ -473,6 +473,14 @@ final class McpSchemaFactoryTest extends TestCase
 
         self::assertSame(['type' => 'integer', 'default' => PromotedExampleRequest::LIMIT_DEFAULT], $schema[McpSchemaFactory::PROPERTIES]['limit']);
         self::assertSame(['query'], $schema[self::REQUIRED]);
+    }
+
+    public function testPromotedPropertyWithAnObjectDefaultHasNoDefaultInTheSchema(): void
+    {
+        $schema = new McpSchemaFactory()
+            ->createForClass(PromotedExampleRequest::class);
+
+        self::assertSame(['type' => 'array', 'items' => ['type' => 'integer']], $schema[McpSchemaFactory::PROPERTIES]['ids']);
     }
 
     public function testHookedRequestPropertyKeepsItsDefaultAndConstraints(): void

@@ -119,7 +119,11 @@ final class McpSchemaFactory
 
                 continue;
             }
-            $properties[$name][self::DEFAULT] = $this->normalizeDefault($this->getDefaultValue($member));
+            $default = $this->normalizeDefault($this->getDefaultValue($member));
+            // The schema becomes a service argument, and the container cannot dump an object such as new ArrayCollection().
+            if (false === is_object($default)) {
+                $properties[$name][self::DEFAULT] = $default;
+            }
         }
 
         $schema = [self::TYPE => self::TYPE_OBJECT, self::PROPERTIES => $properties];

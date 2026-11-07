@@ -34,7 +34,7 @@ final class McpToolReferenceHandlerCallTest extends AbstractMcpToolReferenceHand
         self::assertSame('{"auditLogs":[],"appLogs":[],"mcpToolCalls":[]}', $content->text);
         self::assertCount(1, $this->insertedDocuments);
         $document = $this->insertedDocuments[0];
-        self::assertSame(McpLogger::LEVEL_NAME_INFO, $document['levelName']);
+        self::assertSame(McpLogger::LEVEL_NAME_INFO, $document[McpLogger::LEVEL_NAME_FIELD]);
         self::assertSame(ExampleSearchTool::NAME, $document['tool']);
         self::assertSame(
             [
@@ -48,7 +48,7 @@ final class McpToolReferenceHandlerCallTest extends AbstractMcpToolReferenceHand
             $document['params'],
         );
         self::assertSame(self::USER_ID, $document['userId']);
-        self::assertNull($document['error']);
+        self::assertNull($document[McpLogger::ERROR_FIELD]);
     }
 
     public function testRequestContextIsInjectedAndCallToolResultIsPassedThroughAndLogged(): void
@@ -62,7 +62,7 @@ final class McpToolReferenceHandlerCallTest extends AbstractMcpToolReferenceHand
         self::assertCount(1, $this->insertedDocuments);
         self::assertSame(ExampleContextTool::NAME, $this->insertedDocuments[0]['tool']);
         self::assertSame(self::LIMIT, $this->insertedDocuments[0]['params']['limit']);
-        self::assertNull($this->insertedDocuments[0]['error']);
+        self::assertNull($this->insertedDocuments[0][McpLogger::ERROR_FIELD]);
     }
 
     public function testRefusedEnrichmentStopsTheCallBeforeTheToolRuns(): void

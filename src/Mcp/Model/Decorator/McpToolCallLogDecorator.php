@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace AnzuSystems\CommonBundle\Mcp\Model\Decorator;
 
 use AnzuSystems\CommonBundle\Mcp\Attribute\McpField;
+use AnzuSystems\CommonBundle\Mcp\Log\McpLogger;
 use AnzuSystems\CommonBundle\Serializer\Handler\Handlers\RawArrayHandler;
 use AnzuSystems\SerializerBundle\Attributes\Serialize;
 
@@ -12,7 +13,7 @@ final class McpToolCallLogDecorator extends AbstractMcpLogDecorator
 {
     #[Serialize]
     public ?string $levelName {
-        get => $this->readString($this->document, 'levelName');
+        get => $this->readString($this->document, McpLogger::LEVEL_NAME_FIELD);
     }
 
     #[Serialize]
@@ -52,6 +53,6 @@ final class McpToolCallLogDecorator extends AbstractMcpLogDecorator
     #[McpField(description: self::TRUNCATED_DESCRIPTION)]
     #[Serialize]
     public ?string $error {
-        get => $this->readTruncated($this->document, 'error');
+        get => $this->readTruncated($this->document, McpLogger::ERROR_FIELD);
     }
 }

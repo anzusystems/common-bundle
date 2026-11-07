@@ -11,8 +11,10 @@ use Symfony\Component\Validator\Constraints as Assert;
 
 trait McpPageRequestTrait
 {
+    public const string PAGE_DESCRIPTION = 'Page number, starting at ' . McpPageWindow::PAGE_MIN . '.';
+
     #[Assert\Range(min: McpPageWindow::PAGE_MIN, max: McpPageWindow::PAGE_MAX)]
-    #[McpField(description: 'Page number, starting at ' . McpPageWindow::PAGE_MIN . '.')]
+    #[McpField(description: self::PAGE_DESCRIPTION)]
     #[Serialize]
     public int $page = McpPageWindow::PAGE_MIN;
 }

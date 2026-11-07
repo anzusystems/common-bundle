@@ -9,6 +9,7 @@ use AnzuSystems\CommonBundle\Mcp\Attribute\McpField;
 use AnzuSystems\CommonBundle\Mcp\Exception\McpConfigurationException;
 use AnzuSystems\CommonBundle\Mcp\Loader\McpPromptLoader;
 use Mcp\Capability\Attribute\McpPrompt;
+use Mcp\Capability\Discovery\ElementMetadataResolver;
 use Mcp\Schema\Prompt;
 use Mcp\Schema\PromptArgument;
 use ReflectionAttribute;
@@ -58,7 +59,10 @@ final class McpPromptLoaderCompilerPass implements CompilerPassInterface
             [$class, $handlerMethod] = $arguments[self::HANDLER_ARGUMENT];
             $reflection = new ReflectionMethod($class, $handlerMethod);
             if (false === $this->resolveElementAttribute($reflection, McpPrompt::class) instanceof AsMcpPrompt) {
-                throw McpConfigurationException::createPlainPrompt($arguments[self::NAME_ARGUMENT], $class);
+                throw McpConfigurationException::createPlainPrompt(
+                    ElementMetadataResolver::resolveName($reflection, $arguments[self::NAME_ARGUMENT]),
+                    $class,
+                );
             }
             $prompts[] = [
                 'prompt' => new Definition(Prompt::class, [

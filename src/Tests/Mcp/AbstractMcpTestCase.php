@@ -12,9 +12,10 @@ use AnzuSystems\CommonBundle\Validator\Constraints\McpExistingId;
 abstract class AbstractMcpTestCase extends AnzuWebTestCase
 {
     /**
-     * The mcp/sdk schema validator words this error and has no constant for it.
+     * The mcp/sdk schema validator words these errors and has no constants for them.
      */
     private const string ABOVE_MAXIMUM_FORMAT = "Property '/%s': Number must be less than or equal to %d";
+    private const string TOO_MANY_ITEMS_FORMAT = "Property '/%s': Array should have at most %d items, %d found";
 
     /**
      * @var array<string, McpTestClient>
@@ -76,6 +77,15 @@ abstract class AbstractMcpTestCase extends AnzuWebTestCase
         self::assertStringContainsString(sprintf(self::ABOVE_MAXIMUM_FORMAT, $field, $maximum), (string) $result->error);
     }
 
+    /**
+     * The call sent one item more than the maximum.
+     */
+    protected static function assertToolArgumentHasTooManyItems(string $field, int $maximum, McpToolResult $result): void
+    {
+        self::assertTrue($result->isError);
+        self::assertStringContainsString(self::createTooManyItemsError($field, $maximum), (string) $result->error);
+    }
+
     protected static function assertToolUnknownId(string $field, int $id, string $resolverTool, McpToolResult $result): void
     {
         self::assertToolError(self::createUnknownIdError(field: $field, id: $id, resolverTool: $resolverTool), $result);
@@ -102,6 +112,11 @@ abstract class AbstractMcpTestCase extends AnzuWebTestCase
     protected static function createInvalidArgumentError(string $field, string $message): string
     {
         return McpToolArgumentsInputException::createInvalidArgument(propertyPath: $field, message: $message)->getMessage();
+    }
+
+    protected static function createTooManyItemsError(string $field, int $maximum): string
+    {
+        return sprintf(self::TOO_MANY_ITEMS_FORMAT, $field, $maximum, $maximum + 1);
     }
 
     protected static function createUnknownIdError(string $field, int $id, string $resolverTool): string

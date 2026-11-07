@@ -11,6 +11,8 @@ use MongoDB\Collection;
 final readonly class McpLogger
 {
     public const string COLLECTION_NAME = 'mcpLogs';
+    public const string LEVEL_NAME_FIELD = 'levelName';
+    public const string ERROR_FIELD = 'error';
 
     public const string LEVEL_NAME_INFO = 'info';
     public const string LEVEL_NAME_ERROR = 'error';
@@ -28,14 +30,14 @@ final readonly class McpLogger
     {
         $this->mcpLogCollection->insertOne([
             'datetime' => new UTCDateTime(AnzuApp::date()),
-            'levelName' => $this->resolveLevelName($error),
+            self::LEVEL_NAME_FIELD => $this->resolveLevelName($error),
             'tool' => $tool,
             'params' => $params,
             'userId' => $userId,
             'client' => $client,
             'contextId' => AnzuApp::getContextId(),
             'durationMs' => $durationMs,
-            'error' => $error,
+            self::ERROR_FIELD => $error,
             'hint' => self::HINT,
         ]);
     }

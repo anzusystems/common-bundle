@@ -744,7 +744,12 @@ final class ListNotesRequest
     private const int LIMIT_MAX = 50;
 
     #[McpExistingId(entity: Label::class, resolverTool: ListLabelsTool::NAME)]
-    #[McpField(description: 'Id of the label, as returned by {{ list_labels }}.', descriptionValues: ['list_labels' => ListLabelsTool::NAME])]
+    #[McpField(
+        description: <<<'TXT'
+            Id of the label, as returned by {{ list_labels }}.
+            TXT,
+        descriptionValues: ['list_labels' => ListLabelsTool::NAME],
+    )]
     #[Serialize]
     public int $labelId;
 
@@ -783,9 +788,9 @@ return new McpNoteListResponse(
 );
 ```
 
-A cursor the tool did not return throws `InvalidCursorException`, and `McpToolErrorResolver` answers it as an invalid
-`cursor` argument: `Invalid arguments: cursor: This value is not a nextCursor of this tool: …`
-(`McpToolErrorResolver::CURSOR_ARGUMENT`, `McpToolErrorResolver::INVALID_CURSOR_MESSAGE`).
+A cursor the tool did not return for the same arguments throws `InvalidCursorException`, and `McpToolErrorResolver`
+answers it as an invalid `cursor` argument: `Invalid arguments: cursor: The cursor is not a nextCursor of this list …`
+(`McpToolErrorResolver::CURSOR_ARGUMENT`, `InvalidCursorException::MESSAGE`).
 
 ## Log query bounds
 

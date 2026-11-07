@@ -61,7 +61,7 @@ final class PromotedPropertyAttributeSpacingFixer extends AbstractFixer implemen
 
     protected function applyFix(SplFileInfo $file, Tokens $tokens): void
     {
-        foreach (array_keys($tokens->findGivenKind(T_FUNCTION)) as $functionIndex) {
+        foreach ($tokens->findGivenKind(T_FUNCTION) |> array_keys(...) as $functionIndex) {
             $nameIndex = $tokens->getNextMeaningfulToken($functionIndex);
 
             if (null === $nameIndex || false === $tokens[$nameIndex]->equals([T_STRING, '__construct'], false)) {

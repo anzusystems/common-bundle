@@ -16,7 +16,18 @@ use LogicException;
 final readonly class KeysetCursorCodec
 {
     public const string DATE_FORMAT = 'Y-m-d\TH:i:s.up';
+    public const array FIELD_TYPES = [
+        Types::DATETIME_IMMUTABLE => self::DATE_VALUE,
+        Types::INTEGER => self::INT_VALUE,
+        Types::SMALLINT => self::INT_VALUE,
+        Types::STRING => self::STRING_VALUE,
+    ];
 
+    private const string DATE_VALUE = 'date';
+    private const string INT_VALUE = 'int';
+    private const string STRING_VALUE = 'string';
+    private const string QUERY_KEY = 'query';
+    private const string VALUES_KEY = 'values';
     private const string BASE64_CHARACTERS = '+/';
     private const string BASE64URL_CHARACTERS = '-_';
     private const string BASE64_PADDING = '=';
@@ -24,12 +35,16 @@ final readonly class KeysetCursorCodec
 
     /**
      * @param array<string, DateTimeInterface|int|string> $values
+     * @param string $query the fingerprint of the query the cursor continues
      *
      * @throws JsonException
      */
-    public function encode(array $values): string
+    public function encode(array $values, string $query): string
     {
-        return array_map($this->encodeValue(...), $values)
+        return [
+            self::QUERY_KEY => $query,
+            self::VALUES_KEY => array_map($this->encodeValue(...), $values),
+        ]
             |> (static fn (array $data): string => json_encode($data, flags: JSON_THROW_ON_ERROR))
             |> base64_encode(...)
             |> (static fn (string $base64): string => strtr(string: $base64, from: self::BASE64_CHARACTERS, to: self::BASE64URL_CHARACTERS))
@@ -37,17 +52,21 @@ final readonly class KeysetCursorCodec
     }
 
     /**
-     * @param array<string, string> $fieldTypes the Doctrine type (Types::DATETIME_IMMUTABLE, Types::INTEGER, Types::SMALLINT
-     *                                          or Types::STRING) of each field the cursor holds
+     * @param array<string, string> $fieldTypes the Doctrine type (a key of FIELD_TYPES) of each field the cursor holds
+     * @param string $query the fingerprint of the query, which must be the one the cursor was written for
      *
      * @return array<string, DateTimeImmutable|int|string>
      *
      * @throws InvalidCursorException
      */
-    public function decode(string $cursor, array $fieldTypes): array
+    public function decode(string $cursor, array $fieldTypes, string $query): array
     {
-        $data = $this->decodeObject($cursor);
-        if (count($data) !== count($fieldTypes)) {
+        $cursorData = $this->decodeObject($cursor);
+        if (array_keys($cursorData) !== [self::QUERY_KEY, self::VALUES_KEY] || $cursorData[self::QUERY_KEY] !== $query) {
+            throw new InvalidCursorException();
+        }
+        $data = $cursorData[self::VALUES_KEY];
+        if (false === is_array($data) || array_is_list($data) || count($data) !== count($fieldTypes)) {
             throw new InvalidCursorException();
         }
 
@@ -56,11 +75,11 @@ final readonly class KeysetCursorCodec
             if (false === array_key_exists($field, $data)) {
                 throw new InvalidCursorException();
             }
-            $values[$field] = match ($type) {
-                Types::DATETIME_IMMUTABLE => $this->decodeDate($data[$field]),
-                Types::INTEGER, Types::SMALLINT => $this->decodeInt($data[$field]),
-                Types::STRING => $this->decodeString($data[$field]),
-                default => throw new LogicException(sprintf('The keyset cursor field "%s" has the Doctrine type "%s", which a cursor cannot hold.', $field, $type)),
+            $values[$field] = match (self::FIELD_TYPES[$type] ?? null) {
+                self::DATE_VALUE => $this->decodeDate($data[$field]),
+                self::INT_VALUE => $this->decodeInt($data[$field]),
+                self::STRING_VALUE => $this->decodeString($data[$field]),
+                null => throw new LogicException(sprintf('The keyset cursor field "%s" has the Doctrine type "%s", which a cursor cannot hold.', $field, $type)),
             };
         }
 

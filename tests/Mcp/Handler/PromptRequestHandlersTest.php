@@ -39,7 +39,7 @@ final class PromptRequestHandlersTest extends TestCase
     private const string DENIED_PERMISSION = 'app_log_read';
     private const string TOOLLESS_PROMPT = 'greeting';
     private const string READ_PROMPT = 'example_prompt';
-    private const string LOG_PROMPT = 'user_activity';
+    private const string LOG_PROMPT = 'example_log_prompt';
     private const string DRAFT_PROMPT = 'example_draft_prompt';
     private const array TOOL_NAMES_BY_PROMPT = [
         self::TOOLLESS_PROMPT => [],

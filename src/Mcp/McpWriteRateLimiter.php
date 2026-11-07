@@ -8,7 +8,7 @@ use AnzuSystems\CommonBundle\Domain\User\CurrentAnzuUserProvider;
 use AnzuSystems\CommonBundle\Mcp\Exception\McpWriteRejectedException;
 use AnzuSystems\CommonBundle\Mcp\Model\McpToolDefinition;
 use Psr\Container\ContainerInterface;
-use Symfony\Component\RateLimiter\RateLimiterFactory;
+use Symfony\Component\RateLimiter\RateLimiterFactoryInterface;
 
 final readonly class McpWriteRateLimiter
 {
@@ -25,7 +25,7 @@ final readonly class McpWriteRateLimiter
         if (null === $rateLimiterName) {
             return;
         }
-        /** @var RateLimiterFactory $rateLimiter */
+        /** @var RateLimiterFactoryInterface $rateLimiter */
         $rateLimiter = $this->rateLimiters->get($rateLimiterName);
         $rateLimit = $rateLimiter
             ->create((string) $this->currentUserProvider->getCurrentUser()->getId())

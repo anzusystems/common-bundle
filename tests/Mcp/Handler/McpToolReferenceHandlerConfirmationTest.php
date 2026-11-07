@@ -90,7 +90,7 @@ final class McpToolReferenceHandlerConfirmationTest extends AbstractMcpToolRefer
         self::assertFalse($result->isError);
         self::assertSame(1, $this->writeRuns);
         self::assertSame(1, $this->previewRuns);
-        self::assertSame(McpLogger::LEVEL_NAME_INFO, $this->insertedDocuments[0]['levelName']);
+        self::assertSame(McpLogger::LEVEL_NAME_INFO, $this->insertedDocuments[0][McpLogger::LEVEL_NAME_FIELD]);
     }
 
     /**

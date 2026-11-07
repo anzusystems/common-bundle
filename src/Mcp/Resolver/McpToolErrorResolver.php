@@ -18,7 +18,6 @@ final readonly class McpToolErrorResolver
     public const string INVALID_ARGUMENTS_PREFIX = 'Invalid arguments: ';
     public const string VIOLATION_FORMAT = '%s: %s';
     public const string CURSOR_ARGUMENT = 'cursor';
-    public const string INVALID_CURSOR_MESSAGE = 'This value is not a nextCursor of this tool: pass the nextCursor of the previous response unchanged, or omit cursor for the first page.';
 
     private const string VIOLATION_SEPARATOR = ' ';
 
@@ -37,7 +36,7 @@ final readonly class McpToolErrorResolver
             $exception instanceof McpToolInputException => $exception->getMessage(),
             $exception instanceof ValidationException => $this->formatValidationException($exception),
             $exception instanceof InvalidCursorException => $this->formatInvalidArguments([
-                sprintf(self::VIOLATION_FORMAT, self::CURSOR_ARGUMENT, self::INVALID_CURSOR_MESSAGE),
+                sprintf(self::VIOLATION_FORMAT, self::CURSOR_ARGUMENT, $exception->getMessage()),
             ]),
             $exception instanceof AccessDeniedException => self::ACCESS_DENIED_MESSAGE,
             default => null,

@@ -23,18 +23,23 @@ final class KeysetCursorCodecTest extends TestCase
     private const int ID = 42;
     private const string SLUG = 'a/b+c?';
     private const string MICROSECOND_TIMESTAMP = 'U.u';
+    private const string QUERY = 'query-fingerprint';
+    private const string VALUES = '{"shownSince":"' . self::SHOWN_SINCE_UTC . '","id":1,"slug":"a"}';
 
     public function testCursorHoldsTheValuesWithTheDateInUtcAsUrlSafeBase64(): void
     {
         $cursor = new KeysetCursorCodec()
-            ->encode($this->createValues());
+            ->encode(values: $this->createValues(), query: self::QUERY);
 
         self::assertMatchesRegularExpression('/^[A-Za-z0-9_-]+$/', $cursor);
         self::assertSame(
             [
-                'shownSince' => self::SHOWN_SINCE_UTC,
-                'id' => self::ID,
-                'slug' => self::SLUG,
+                'query' => self::QUERY,
+                'values' => [
+                    'shownSince' => self::SHOWN_SINCE_UTC,
+                    'id' => self::ID,
+                    'slug' => self::SLUG,
+                ],
             ],
             json_decode((string) base64_decode(strtr(string: $cursor, from: '-_', to: '+/'), strict: true), associative: true),
         );
@@ -45,7 +50,11 @@ final class KeysetCursorCodecTest extends TestCase
         $values = $this->createValues();
         $codec = new KeysetCursorCodec();
 
-        $decoded = $codec->decode($codec->encode($values), self::FIELD_TYPES);
+        $decoded = $codec->decode(
+            cursor: $codec->encode(values: $values, query: self::QUERY),
+            fieldTypes: self::FIELD_TYPES,
+            query: self::QUERY,
+        );
 
         self::assertSame(array_keys(self::FIELD_TYPES), array_keys($decoded));
         self::assertInstanceOf(DateTimeImmutable::class, $decoded['shownSince']);
@@ -66,7 +75,7 @@ final class KeysetCursorCodecTest extends TestCase
         $this->expectExceptionObject(new InvalidCursorException());
 
         new KeysetCursorCodec()
-            ->decode($cursor, self::FIELD_TYPES);
+            ->decode(cursor: $cursor, fieldTypes: self::FIELD_TYPES, query: self::QUERY);
     }
 
     /**
@@ -79,16 +88,20 @@ final class KeysetCursorCodecTest extends TestCase
             'not base64' => ['not a cursor!'],
             'not JSON' => [self::toCursor('shownSince')],
             'JSON scalar' => [self::toCursor('5')],
-            'JSON list' => [self::toCursor('["' . self::SHOWN_SINCE_UTC . '", 1, "a"]')],
-            'missing field' => [self::toCursor('{"shownSince":"' . self::SHOWN_SINCE_UTC . '","id":1}')],
-            'unknown field instead of a known one' => [self::toCursor('{"shownSince":"' . self::SHOWN_SINCE_UTC . '","id":1,"name":"a"}')],
-            'extra field' => [self::toCursor('{"shownSince":"' . self::SHOWN_SINCE_UTC . '","id":1,"slug":"a","name":"a"}')],
-            'unreadable date' => [self::toCursor('{"shownSince":"yesterday","id":1,"slug":"a"}')],
-            'date without microseconds' => [self::toCursor('{"shownSince":"2026-08-21T08:00:00Z","id":1,"slug":"a"}')],
-            'date not a string' => [self::toCursor('{"shownSince":1,"id":1,"slug":"a"}')],
-            'id not a number' => [self::toCursor('{"shownSince":"' . self::SHOWN_SINCE_UTC . '","id":"x","slug":"a"}')],
-            'id not an integer' => [self::toCursor('{"shownSince":"' . self::SHOWN_SINCE_UTC . '","id":1.5,"slug":"a"}')],
-            'slug not a string' => [self::toCursor('{"shownSince":"' . self::SHOWN_SINCE_UTC . '","id":1,"slug":null}')],
+            'JSON list' => [self::toCursor('["' . self::QUERY . '", ' . self::VALUES . ']')],
+            'values without the query' => [self::toCursor(self::VALUES)],
+            'query of another list' => [self::toCursor('{"query":"another","values":' . self::VALUES . '}')],
+            'extra key next to the query and the values' => [self::toCursor('{"query":"' . self::QUERY . '","values":' . self::VALUES . ',"page":2}')],
+            'values a list' => [self::toValuesCursor('["' . self::SHOWN_SINCE_UTC . '", 1, "a"]')],
+            'missing field' => [self::toValuesCursor('{"shownSince":"' . self::SHOWN_SINCE_UTC . '","id":1}')],
+            'unknown field instead of a known one' => [self::toValuesCursor('{"shownSince":"' . self::SHOWN_SINCE_UTC . '","id":1,"name":"a"}')],
+            'extra field' => [self::toValuesCursor('{"shownSince":"' . self::SHOWN_SINCE_UTC . '","id":1,"slug":"a","name":"a"}')],
+            'unreadable date' => [self::toValuesCursor('{"shownSince":"yesterday","id":1,"slug":"a"}')],
+            'date without microseconds' => [self::toValuesCursor('{"shownSince":"2026-08-21T08:00:00Z","id":1,"slug":"a"}')],
+            'date not a string' => [self::toValuesCursor('{"shownSince":1,"id":1,"slug":"a"}')],
+            'id not a number' => [self::toValuesCursor('{"shownSince":"' . self::SHOWN_SINCE_UTC . '","id":"x","slug":"a"}')],
+            'id not an integer' => [self::toValuesCursor('{"shownSince":"' . self::SHOWN_SINCE_UTC . '","id":1.5,"slug":"a"}')],
+            'slug not a string' => [self::toValuesCursor('{"shownSince":"' . self::SHOWN_SINCE_UTC . '","id":1,"slug":null}')],
         ];
     }
 
@@ -97,7 +110,7 @@ final class KeysetCursorCodecTest extends TestCase
         $this->expectException(LogicException::class);
 
         new KeysetCursorCodec()
-            ->decode(self::toCursor('{"amount":"1.5"}'), ['amount' => Types::DECIMAL]);
+            ->decode(cursor: self::toValuesCursor('{"amount":"1.5"}'), fieldTypes: ['amount' => Types::DECIMAL], query: self::QUERY);
     }
 
     /**
@@ -110,6 +123,11 @@ final class KeysetCursorCodecTest extends TestCase
             'id' => self::ID,
             'slug' => self::SLUG,
         ];
+    }
+
+    private static function toValuesCursor(string $valuesJson): string
+    {
+        return self::toCursor('{"query":"' . self::QUERY . '","values":' . $valuesJson . '}');
     }
 
     private static function toCursor(string $json): string
