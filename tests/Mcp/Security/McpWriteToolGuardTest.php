@@ -38,7 +38,7 @@ final class McpWriteToolGuardTest extends TestCase
 {
     private const string READ_TOOL_NAME = 'list_examples';
     private const string WRITE_TOOL_NAME = 'create_example';
-    private const string TOOL_PERMISSION = 'cms_example_read';
+    private const string TOOL_PERMISSION = 'example_read';
     private const string PREVIEW_TOOL_NAME = 'preview_example';
     private const string LIMITER = 'example_write';
     private const string PREVIEW_HASH = 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';

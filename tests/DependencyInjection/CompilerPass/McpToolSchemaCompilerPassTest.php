@@ -12,6 +12,7 @@ use AnzuSystems\CommonBundle\Mcp\Factory\McpSchemaFactory;
 use AnzuSystems\CommonBundle\Mcp\Model\Decorator\McpAuditLogDecorator;
 use AnzuSystems\CommonBundle\Mcp\Model\Request\SearchAppLogsRequest;
 use AnzuSystems\CommonBundle\Mcp\Model\Response\McpLogsByContextResponse;
+use AnzuSystems\CommonBundle\Mcp\Resolver\McpToolSignatureResolver;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Tool\ExampleContextTool;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Tool\ExampleSearchTool;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Tool\ExampleWithoutInputTool;
@@ -30,9 +31,8 @@ use Symfony\Component\DependencyInjection\Definition;
 
 final class McpToolSchemaCompilerPassTest extends TestCase
 {
-    private const string SERVER_NAME = 'core_cms';
+    private const string SERVER_NAME = 'example';
     private const string ADD_TOOL_METHOD = 'addTool';
-    private const string INVOKE_METHOD = '__invoke';
     private const string DESCRIPTION = 'Example tool.';
     private const array PARAMETER_SCHEMA = [
         'type' => 'object',
@@ -102,7 +102,7 @@ final class McpToolSchemaCompilerPassTest extends TestCase
         $container = $this->createContainer(RateLimitedExampleTool::class);
         $container->getDefinition(sprintf(McpCompilerPass::BUILDER_ID_FORMAT, self::SERVER_NAME))
             ->addMethodCall(self::ADD_TOOL_METHOD, [
-                [SharedRateLimitedExampleTool::class, self::INVOKE_METHOD],
+                [SharedRateLimitedExampleTool::class, McpToolSignatureResolver::INVOKE_METHOD],
                 null,
                 null,
                 self::DESCRIPTION,
@@ -175,16 +175,16 @@ final class McpToolSchemaCompilerPassTest extends TestCase
                 InvalidParameterExampleTool::class,
                 McpConfigurationException::createInvalidToolParameter(
                     class: InvalidParameterExampleTool::class,
-                    method: self::INVOKE_METHOD,
+                    method: McpToolSignatureResolver::INVOKE_METHOD,
                     contextClass: RequestContext::class,
-                    parameter: 'siteId',
+                    parameter: 'groupId',
                 ),
             ],
             'array return type' => [
                 InvalidReturnExampleTool::class,
                 McpConfigurationException::createInvalidToolReturn(
                     class: InvalidReturnExampleTool::class,
-                    method: self::INVOKE_METHOD,
+                    method: McpToolSignatureResolver::INVOKE_METHOD,
                     resultClass: CallToolResult::class,
                     type: 'array',
                 ),
@@ -201,7 +201,7 @@ final class McpToolSchemaCompilerPassTest extends TestCase
         $container->setParameter(McpCompilerPass::SERVER_NAME_PARAM, self::SERVER_NAME);
         $container->setDefinition(sprintf(McpCompilerPass::BUILDER_ID_FORMAT, self::SERVER_NAME), new Definition())
             ->addMethodCall(self::ADD_TOOL_METHOD, [
-                [$toolClass, self::INVOKE_METHOD],
+                [$toolClass, McpToolSignatureResolver::INVOKE_METHOD],
                 null,
                 null,
                 self::DESCRIPTION,

@@ -43,8 +43,7 @@ use Symfony\Component\DependencyInjection\Definition;
 
 final class McpToolDefinitionsCompilerPassTest extends TestCase
 {
-    private const string SERVER_NAME = 'core_cms';
-    private const string DEFINITIONS_ARGUMENT = '$definitions';
+    private const string SERVER_NAME = 'example';
     private const string PERMISSION_ARGUMENT = '$permission';
     private const string READ_ONLY_ARGUMENT = '$readOnly';
     private const string CATEGORY_ARGUMENT = '$category';
@@ -53,7 +52,7 @@ final class McpToolDefinitionsCompilerPassTest extends TestCase
     private const string RATE_LIMITER_ARGUMENT = '$rateLimiter';
     private const string SIGNATURE_ARGUMENT = '$signature';
     private const string EXPLICIT_GRANT_ARGUMENT = '$explicitGrant';
-    private const string TOOL_PERMISSION = 'cms_example_read';
+    private const string TOOL_PERMISSION = 'app_log_read';
     private const string RATE_LIMITER_ID = 'limiter.example_write';
     private const string TOOL_TAG_METHOD = 'method';
     private const string READ_TOOL_METHOD = 'listExamples';
@@ -341,7 +340,7 @@ final class McpToolDefinitionsCompilerPassTest extends TestCase
     {
         return array_map(
             static fn (Definition $definition): mixed => $definition->getArgument($argument),
-            $container->getDefinition(McpToolDefinitions::class)->getArgument(self::DEFINITIONS_ARGUMENT),
+            $container->getDefinition(McpToolDefinitions::class)->getArgument(McpToolDefinitionsCompilerPass::DEFINITIONS_ARGUMENT),
         );
     }
 
@@ -354,7 +353,7 @@ final class McpToolDefinitionsCompilerPassTest extends TestCase
         $container->register(McpWriteRateLimiter::class)
             ->setArgument('$rateLimiters', null);
         $container->register(McpToolDefinitions::class)
-            ->setArgument(self::DEFINITIONS_ARGUMENT, []);
+            ->setArgument(McpToolDefinitionsCompilerPass::DEFINITIONS_ARGUMENT, []);
 
         return $container;
     }

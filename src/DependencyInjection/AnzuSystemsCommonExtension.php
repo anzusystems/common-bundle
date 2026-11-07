@@ -78,9 +78,9 @@ use AnzuSystems\CommonBundle\Mcp\Handler\FilterToolsListRequestHandler;
 use AnzuSystems\CommonBundle\Mcp\Handler\McpToolReferenceHandler;
 use AnzuSystems\CommonBundle\Mcp\Handler\StrictToolArgumentsRequestHandler;
 use AnzuSystems\CommonBundle\Mcp\McpRateLimiter;
-use AnzuSystems\CommonBundle\Mcp\Resolver\McpHostResolver;
 use AnzuSystems\CommonBundle\Mcp\Resolver\McpToolErrorResolver;
 use AnzuSystems\CommonBundle\Mcp\Security\McpDeleteDependencyProviderInterface;
+use AnzuSystems\CommonBundle\Mcp\Security\McpHostChecker;
 use AnzuSystems\CommonBundle\Mcp\Security\McpPreviewHashReservation;
 use AnzuSystems\CommonBundle\Mcp\Security\McpWriteConfirmation;
 use AnzuSystems\CommonBundle\Messenger\Message\AuditLogMessage;
@@ -695,7 +695,7 @@ final class AnzuSystemsCommonExtension extends Extension implements PrependExten
             ->replaceArgument('$server', new Reference(sprintf('mcp.server.%s', $serverName)));
 
         $container
-            ->getDefinition(McpHostResolver::class)
+            ->getDefinition(McpHostChecker::class)
             ->replaceArgument('$allowedHosts', $mcp['allowed_hosts']);
 
         $container

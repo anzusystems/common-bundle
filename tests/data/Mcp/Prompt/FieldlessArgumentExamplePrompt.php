@@ -13,13 +13,13 @@ use Mcp\Schema\Enum\Role;
 final readonly class FieldlessArgumentExamplePrompt
 {
     public const string NAME = 'fieldless_argument_example';
-    public const string ARGUMENT_NAME = 'site';
+    public const string ARGUMENT_NAME = 'topic';
 
     /**
-     * @param string $site name or id of the site
+     * @param string $topic name or id of the topic
      */
-    public function __invoke(string $site): PromptMessage
+    public function __invoke(string $topic): PromptMessage
     {
-        return new PromptMessage(Role::User, new TextContent($site));
+        return new PromptMessage(Role::User, new TextContent($topic));
     }
 }

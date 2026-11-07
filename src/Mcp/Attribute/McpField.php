@@ -15,7 +15,7 @@ use LogicException;
 #[Attribute(Attribute::TARGET_PROPERTY | Attribute::TARGET_METHOD | Attribute::TARGET_PARAMETER | Attribute::TARGET_CLASS_CONSTANT)]
 final readonly class McpField
 {
-    public const string PLACEHOLDER_PATTERN = '/{{ (\w+) }}/';
+    public const string PLACEHOLDER_PATTERN = '/{{ ([\w.\/-]+) }}/';
 
     private const string PLACEHOLDER_FORMAT = '{{ %s }}';
     private const string NAME_SEPARATOR = '", "';

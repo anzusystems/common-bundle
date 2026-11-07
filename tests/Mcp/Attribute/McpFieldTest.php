@@ -13,11 +13,19 @@ final class McpFieldTest extends TestCase
     public function testFillsEveryPlaceholder(): void
     {
         $field = new McpField('Call {{ tool }} with at most {{ max }} ids, then {{ tool }} again.', [
-            'tool' => 'get_articles',
+            'tool' => 'example_read',
             'max' => 10,
         ]);
 
-        self::assertSame('Call get_articles with at most 10 ids, then get_articles again.', $field->description);
+        self::assertSame('Call example_read with at most 10 ids, then example_read again.', $field->description);
+    }
+
+    public function testFillsAPlaceholderOfAToolNameWithDotsSlashesAndHyphens(): void
+    {
+        self::assertSame(
+            'Call logs.search/v-2.',
+            McpField::fillPlaceholders('Call {{ logs.search/v-2 }}.', ['logs.search/v-2' => 'logs.search/v-2']),
+        );
     }
 
     public function testKeepsADescriptionWithoutPlaceholders(): void
@@ -26,7 +34,7 @@ final class McpFieldTest extends TestCase
     }
 
     /**
-     * @dataProvider provideMismatchedValues
+     * @dataProvider mismatchedValuesProvider
      *
      * @param array<string, int|float|string> $values
      */
@@ -41,7 +49,7 @@ final class McpFieldTest extends TestCase
     /**
      * @return iterable<string, array{string, array<string, int|float|string>, string}>
      */
-    public static function provideMismatchedValues(): iterable
+    public static function mismatchedValuesProvider(): iterable
     {
         yield 'placeholder without value' => ['Call {{ tool }}.', [], 'Placeholders "tool" have no value'];
         yield 'misspelled placeholder' => ['Call {{ toll }}.', ['tool' => 'x'], 'Placeholders "toll" have no value'];

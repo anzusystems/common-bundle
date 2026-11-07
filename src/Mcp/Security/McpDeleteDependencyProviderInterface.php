@@ -16,7 +16,7 @@ interface McpDeleteDependencyProviderInterface
     public static function getSupportedEntity(): string;
 
     /**
-     * @return list<string> short English descriptions of what uses the entity, e.g. "embedded 3 times in articles";
+     * @return list<string> short English descriptions of what uses the entity, e.g. "linked 3 times from other records";
      *                      empty when nothing does
      */
     public function provideDependencies(object $entity): array;

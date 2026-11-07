@@ -7,7 +7,7 @@ namespace AnzuSystems\CommonBundle\Mcp\Controller;
 use AnzuSystems\CommonBundle\Helper\StringHelper;
 use AnzuSystems\CommonBundle\Log\Helper\AuditLogResourceHelper;
 use AnzuSystems\CommonBundle\Mcp\McpRateLimiter;
-use AnzuSystems\CommonBundle\Mcp\Resolver\McpHostResolver;
+use AnzuSystems\CommonBundle\Mcp\Security\McpHostChecker;
 use LogicException;
 use Mcp\Server;
 use Mcp\Server\Transport\StreamableHttpTransport;
@@ -35,12 +35,12 @@ final readonly class McpController
         private StreamFactoryInterface $streamFactory,
         private McpRateLimiter $rateLimiter,
         private LoggerInterface $logger,
-        McpHostResolver $hostResolver,
+        McpHostChecker $hostChecker,
     ) {
-        if (empty($hostResolver->allowedHosts)) {
+        if (empty($hostChecker->allowedHosts)) {
             throw new LogicException('MCP allowed_hosts must not be empty, every request would be rejected with 403.');
         }
-        $this->middlewareFactory = new MiddlewareFactory($hostResolver->allowedHosts);
+        $this->middlewareFactory = new MiddlewareFactory($hostChecker->allowedHosts);
     }
 
     public function handle(Request $request): Response

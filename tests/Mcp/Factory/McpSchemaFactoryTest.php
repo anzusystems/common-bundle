@@ -6,6 +6,7 @@ namespace AnzuSystems\CommonBundle\Tests\Mcp\Factory;
 
 use AnzuSystems\CommonBundle\Mcp\Factory\McpSchemaFactory;
 use AnzuSystems\CommonBundle\Mcp\Model\Decorator\McpToolCallLogDecorator;
+use AnzuSystems\CommonBundle\Mcp\Model\McpPageWindow;
 use AnzuSystems\CommonBundle\Mcp\Model\Response\McpLogsByContextResponse;
 use AnzuSystems\CommonBundle\Serializer\Handler\Handlers\McpDateTimeHandler;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Model\Request\ArrayExampleRequest;
@@ -20,7 +21,9 @@ use AnzuSystems\CommonBundle\Tests\Data\Mcp\Model\Request\EnumExampleRequest;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Model\Request\HookedExampleRequest;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Model\Request\McpDateExampleRequest;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Model\Request\NullableBareArrayExampleRequest;
+use AnzuSystems\CommonBundle\Tests\Data\Mcp\Model\Request\PageExampleRequest;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Model\Request\PreviewHashExampleRequest;
+use AnzuSystems\CommonBundle\Tests\Data\Mcp\Model\Request\PromotedExampleRequest;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Model\Request\UntypedCollectionExampleRequest;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Model\Request\UuidExampleRequest;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Model\Response\BareArrayExampleResponse;
@@ -377,6 +380,8 @@ final class McpSchemaFactoryTest extends TestCase
             'LessThanOrEqual' => ['lessThanOrEqual', ['type' => 'integer', 'maximum' => 10, 'default' => 1]],
             'Choice' => ['choice', ['type' => 'string', 'enum' => ['first', 'second'], 'default' => 'first']],
             'Choice on a nullable property keeps null' => ['nullableChoice', ['type' => ['null', 'string'], 'enum' => ['first', 'second', null], 'default' => null]],
+            'Choice with multiple limits each item' => ['multipleChoice', ['type' => 'array', 'items' => ['type' => 'string', 'enum' => ['first', 'second']], 'default' => []]],
+            'Choice with match false is left to the validator' => ['notMatchingChoice', ['type' => 'string', 'default' => 'third']],
         ];
     }
 
@@ -403,6 +408,33 @@ final class McpSchemaFactoryTest extends TestCase
             'Count with a minimum' => ['countMin', true],
             'no constraint that requires a value' => ['range', false],
         ];
+    }
+
+    public function testPageOfAPageRequestIsLimitedToThePageWindow(): void
+    {
+        $schema = new McpSchemaFactory()
+            ->createForClass(PageExampleRequest::class);
+
+        self::assertSame(
+            [
+                'type' => 'integer',
+                'minimum' => McpPageWindow::PAGE_MIN,
+                'maximum' => McpPageWindow::PAGE_MAX,
+                'description' => 'Page number, starting at 1.',
+                'default' => McpPageWindow::PAGE_MIN,
+            ],
+            $schema[McpSchemaFactory::PROPERTIES]['page'],
+        );
+        self::assertArrayNotHasKey(self::REQUIRED, $schema);
+    }
+
+    public function testPromotedPropertyTakesTheDefaultOfItsConstructorParameter(): void
+    {
+        $schema = new McpSchemaFactory()
+            ->createForClass(PromotedExampleRequest::class);
+
+        self::assertSame(['type' => 'integer', 'default' => PromotedExampleRequest::LIMIT_DEFAULT], $schema[McpSchemaFactory::PROPERTIES]['limit']);
+        self::assertSame(['query'], $schema[self::REQUIRED]);
     }
 
     public function testHookedRequestPropertyKeepsItsDefaultAndConstraints(): void

@@ -30,17 +30,17 @@ use Symfony\Bundle\SecurityBundle\Security;
 
 final class PromptRequestHandlersTest extends TestCase
 {
-    private const string READ_TOOL = 'list_sites';
+    private const string READ_TOOL = 'example_read';
     private const string LOG_TOOL = 'search_app_logs';
-    private const string DRAFT_TOOL = 'get_article_drafts';
-    private const string WRITE_TOOL = 'create_quiz';
-    private const string PREVIEW_TOOL = 'preview_quiz';
-    private const string GRANTED_PERMISSION = 'cms_site_read';
-    private const string DENIED_PERMISSION = 'cms_log_read';
+    private const string DRAFT_TOOL = 'example_explicit_grant';
+    private const string WRITE_TOOL = 'example_write';
+    private const string PREVIEW_TOOL = 'example_preview';
+    private const string GRANTED_PERMISSION = 'example_read';
+    private const string DENIED_PERMISSION = 'app_log_read';
     private const string TOOLLESS_PROMPT = 'greeting';
-    private const string READ_PROMPT = 'homepage_snapshot';
+    private const string READ_PROMPT = 'example_prompt';
     private const string LOG_PROMPT = 'user_activity';
-    private const string DRAFT_PROMPT = 'quiz_from_article';
+    private const string DRAFT_PROMPT = 'example_draft_prompt';
     private const array TOOL_NAMES_BY_PROMPT = [
         self::TOOLLESS_PROMPT => [],
         self::READ_PROMPT => [self::READ_TOOL],
@@ -49,7 +49,7 @@ final class PromptRequestHandlersTest extends TestCase
     ];
     private const int PAGE_SIZE = 20;
     private const int REQUEST_ID = 1;
-    private const array COMPLETION_ARGUMENT = ['name' => 'site', 'value' => 'sm'];
+    private const array COMPLETION_ARGUMENT = ['name' => 'topic', 'value' => 'ex'];
     private const string RESOURCE_URI = 'file:///example.txt';
 
     /**

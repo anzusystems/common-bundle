@@ -13,6 +13,7 @@ final readonly class McpDateWindowResolver
     public const int DATE_RANGE_MAX_DAYS = 31;
     public const int LOG_WINDOW_MAX_DAYS = self::DATE_RANGE_MAX_DAYS;
     public const string NOT_BEFORE_FROM_MESSAGE = 'This value must not be before {{ compared_value_path }}.';
+    public const string NOT_IN_FUTURE_MESSAGE = 'This value must not be in the future.';
 
     private const int LOG_WINDOW_DEFAULT_DAYS = 1;
 

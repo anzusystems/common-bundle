@@ -13,11 +13,12 @@ use Closure;
     name: ExampleWriteTool::NAME,
     description: 'Writes an example.',
     category: ExampleToolCategory::EXAMPLES,
-    permission: 'example_write',
+    permission: ExampleWriteTool::PERMISSION,
 )]
 final readonly class ExampleWriteTool
 {
     public const string NAME = 'example_write';
+    public const string PERMISSION = 'example_write';
 
     /**
      * @param Closure(ExampleWriteRequest): McpLogsByContextResponse $handler

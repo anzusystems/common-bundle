@@ -9,6 +9,7 @@ use AnzuSystems\CommonBundle\Mcp\Exception\McpWriteRejectedException;
 use AnzuSystems\CommonBundle\Mcp\Factory\McpPreviewHashFactory;
 use AnzuSystems\CommonBundle\Mcp\Handler\McpToolReferenceHandler;
 use AnzuSystems\CommonBundle\Mcp\Model\Response\McpLogsByContextResponse;
+use AnzuSystems\CommonBundle\Mcp\Resolver\McpToolSignatureResolver;
 use AnzuSystems\CommonBundle\Mcp\Security\McpPreviewHashReservation;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Model\Request\ExampleWritePreviewRequest;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Model\Response\ExampleWritePreviewResponse;
@@ -103,7 +104,7 @@ final class McpToolReferenceHandlerLimitTest extends AbstractMcpToolReferenceHan
 
         $askingResult = $this->callWriteTool($handler, $this->createModernArguments());
         $answeredResult = $this->callWriteTool($handler, $this->createModernArguments(
-            inputResponses: [self::CONFIRM_KEY => self::createAcceptedAnswer()],
+            inputResponses: [self::CONFIRM_KEY => $this->createAcceptedAnswer()],
         ));
 
         self::assertInstanceOf(InputRequiredResult::class, $askingResult);
@@ -152,7 +153,7 @@ final class McpToolReferenceHandlerLimitTest extends AbstractMcpToolReferenceHan
             toolArguments: [self::TITLE_FIELD => self::TITLE, self::HASH_FIELD => $this->createPreviewHash(ExampleResultWriteTool::NAME, null)],
             capabilities: new ClientCapabilities(),
         );
-        $reference = new ToolReference($this->createSdkTool(ExampleResultWriteTool::NAME), [ExampleResultWriteTool::class, self::INVOKE_METHOD]);
+        $reference = new ToolReference($this->createSdkTool(ExampleResultWriteTool::NAME), [ExampleResultWriteTool::class, McpToolSignatureResolver::INVOKE_METHOD]);
 
         $firstResult = $handler->handle($reference, $arguments);
         $secondResult = $handler->handle($reference, $arguments);

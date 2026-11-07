@@ -40,6 +40,9 @@ final class McpPromptDefinitionsCompilerPass implements CompilerPassInterface
                 continue;
             }
             $promptName = ElementMetadataResolver::resolveName($reflection, $prompt->name);
+            if (array_key_exists($promptName, $toolNamesByPrompt)) {
+                throw McpConfigurationException::createDuplicatePromptName($promptName);
+            }
             $this->assertToolsAreKnown(promptName: $promptName, promptToolNames: $prompt->tools, toolNames: $toolNames);
             $toolNamesByPrompt[$promptName] = $prompt->tools;
         }

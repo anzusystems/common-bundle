@@ -14,7 +14,7 @@ use Mcp\Server\RequestContext;
 
 #[AsMcpPrompt(
     name: ArgumentsExamplePrompt::NAME,
-    description: 'Lists the articles of a site.',
+    description: 'Lists the examples of a topic.',
     title: 'Arguments example',
 )]
 final readonly class ArgumentsExamplePrompt
@@ -25,12 +25,12 @@ final readonly class ArgumentsExamplePrompt
 
     public function __invoke(
         RequestContext $context,
-        #[McpField(description: 'Name or id of the site.')]
-        string $site,
-        #[McpField(description: 'Number of articles, at most {{ max }}.', descriptionValues: ['max' => self::LIMIT_MAX])]
+        #[McpField(description: 'Name or id of the topic.')]
+        string $topic,
+        #[McpField(description: 'Number of examples, at most {{ max }}.', descriptionValues: ['max' => self::LIMIT_MAX])]
         #[CompletionProvider(values: self::LIMIT_COMPLETIONS)]
         int $limit = 10,
     ): PromptMessage {
-        return new PromptMessage(Role::User, new TextContent(sprintf('List %d articles of %s.', $limit, $site)));
+        return new PromptMessage(Role::User, new TextContent(sprintf('List %d examples of %s.', $limit, $topic)));
     }
 }

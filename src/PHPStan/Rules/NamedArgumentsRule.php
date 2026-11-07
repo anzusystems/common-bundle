@@ -17,6 +17,7 @@ use PhpParser\Node\Expr\StaticCall;
 use PhpParser\Node\Identifier;
 use PhpParser\Node\Name;
 use PHPStan\Analyser\Scope;
+use PHPStan\Reflection\ClassReflection;
 use PHPStan\Reflection\ExtendedMethodReflection;
 use PHPStan\Reflection\FunctionReflection;
 use PHPStan\Reflection\ParameterReflection;
@@ -142,7 +143,7 @@ final readonly class NamedArgumentsRule implements Rule
     {
         $classReflection = $scope->getClassReflection();
 
-        return null !== $classReflection && $this->classNamespaceMatcher->matches($classReflection->getName());
+        return $classReflection instanceof ClassReflection && $this->classNamespaceMatcher->matches($classReflection->getName());
     }
 
     private function findCallee(CallLike $call, Scope $scope): ExtendedMethodReflection|FunctionReflection|null

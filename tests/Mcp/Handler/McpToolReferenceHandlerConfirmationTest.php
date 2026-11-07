@@ -9,6 +9,7 @@ use AnzuSystems\CommonBundle\Mcp\Exception\McpWriteRejectedException;
 use AnzuSystems\CommonBundle\Mcp\Log\McpLogger;
 use AnzuSystems\CommonBundle\Mcp\Log\McpToolCallLogger;
 use AnzuSystems\CommonBundle\Mcp\Model\Response\McpLogsByContextResponse;
+use AnzuSystems\CommonBundle\Mcp\Resolver\McpToolSignatureResolver;
 use AnzuSystems\CommonBundle\Mcp\Security\McpWriteConfirmation;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Model\Request\ExampleWriteRequest;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Model\Response\ExampleWritePreviewResponse;
@@ -48,13 +49,13 @@ final class McpToolReferenceHandlerConfirmationTest extends AbstractMcpToolRefer
                     self::CONFIRM_KEY => [
                         'method' => 'elicitation/create',
                         'params' => [
-                            'message' => self::translated(ExampleWritePreviewResponse::MESSAGE_KEY, self::LOCALE_SK),
+                            'message' => $this->translated(ExampleWritePreviewResponse::MESSAGE_KEY, self::LOCALE_SK),
                             'requestedSchema' => [
                                 'type' => 'object',
                                 'properties' => [
                                     McpWriteConfirmation::CONFIRM_FIELD => [
                                         'type' => 'boolean',
-                                        'title' => self::translated(McpWriteConfirmation::FIELD_TITLE_KEY, self::LOCALE_SK),
+                                        'title' => $this->translated(McpWriteConfirmation::FIELD_TITLE_KEY, self::LOCALE_SK),
                                     ],
                                 ],
                                 'required' => [McpWriteConfirmation::CONFIRM_FIELD],
@@ -82,7 +83,7 @@ final class McpToolReferenceHandlerConfirmationTest extends AbstractMcpToolRefer
         $handler = $this->createWriteHandler();
 
         $result = $this->callWriteTool($handler, $this->createModernArguments(
-            inputResponses: [self::CONFIRM_KEY => self::createAcceptedAnswer()],
+            inputResponses: [self::CONFIRM_KEY => $this->createAcceptedAnswer()],
         ));
 
         self::assertInstanceOf(CallToolResult::class, $result);
@@ -145,7 +146,7 @@ final class McpToolReferenceHandlerConfirmationTest extends AbstractMcpToolRefer
         $handler = $this->createWriteHandler();
 
         $result = $this->callWriteTool($handler, $this->createModernArguments(
-            inputResponses: [self::OTHER_CONFIRM_KEY => self::createAcceptedAnswer()],
+            inputResponses: [self::OTHER_CONFIRM_KEY => $this->createAcceptedAnswer()],
         ));
 
         self::assertInstanceOf(InputRequiredResult::class, $result);
@@ -252,7 +253,7 @@ final class McpToolReferenceHandlerConfirmationTest extends AbstractMcpToolRefer
         $toolArguments = ['level' => self::LEVEL, 'limit' => self::LIMIT];
 
         $result = $handler->handle(
-            new ToolReference($this->createSdkTool(ExampleSearchTool::NAME), [ExampleSearchTool::class, self::INVOKE_METHOD]),
+            new ToolReference($this->createSdkTool(ExampleSearchTool::NAME), [ExampleSearchTool::class, McpToolSignatureResolver::INVOKE_METHOD]),
             $this->createModernArguments(toolName: ExampleSearchTool::NAME, toolArguments: $toolArguments),
         );
 

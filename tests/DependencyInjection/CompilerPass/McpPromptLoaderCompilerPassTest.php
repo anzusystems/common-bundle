@@ -8,6 +8,7 @@ use AnzuSystems\CommonBundle\DependencyInjection\CompilerPass\McpCompilerPass;
 use AnzuSystems\CommonBundle\DependencyInjection\CompilerPass\McpPromptLoaderCompilerPass;
 use AnzuSystems\CommonBundle\Mcp\Exception\McpConfigurationException;
 use AnzuSystems\CommonBundle\Mcp\Loader\McpPromptLoader;
+use AnzuSystems\CommonBundle\Mcp\Resolver\McpToolSignatureResolver;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Prompt\ArgumentsExamplePrompt;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Prompt\FieldlessArgumentExamplePrompt;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Prompt\PlainExamplePrompt;
@@ -21,12 +22,11 @@ use Symfony\Component\DependencyInjection\Definition;
 
 final class McpPromptLoaderCompilerPassTest extends TestCase
 {
-    private const string SERVER_NAME = 'core_cms';
-    private const string INVOKE_METHOD = '__invoke';
+    private const string SERVER_NAME = 'example';
     private const string TITLE = 'Arguments example';
-    private const string DESCRIPTION = 'Lists the articles of a site.';
+    private const string DESCRIPTION = 'Lists the examples of a topic.';
     private const string ICON_SRC = 'https://example.com/icon.png';
-    private const array META = ['category' => 'articles'];
+    private const array META = ['category' => 'examples'];
     private const string LOADER_SERVICE = 'prompt_loader';
 
     public function testAsMcpPromptMovesFromAddPromptToTheLoader(): void
@@ -42,7 +42,7 @@ final class McpPromptLoaderCompilerPassTest extends TestCase
             [McpPromptLoaderCompilerPass::ADD_PROMPT_METHOD, McpPromptLoaderCompilerPass::ADD_LOADER_METHOD],
             array_column($methodCalls, 0),
         );
-        self::assertSame([PlainExamplePrompt::class, self::INVOKE_METHOD], $methodCalls[0][1][0]);
+        self::assertSame([PlainExamplePrompt::class, McpToolSignatureResolver::INVOKE_METHOD], $methodCalls[0][1][0]);
     }
 
     public function testLoaderRegistersArgumentsFromMcpFields(): void
@@ -58,10 +58,10 @@ final class McpPromptLoaderCompilerPassTest extends TestCase
         $reference = $registry->getPrompt(ArgumentsExamplePrompt::NAME);
         self::assertEquals(
             [
-                new PromptArgument(name: 'site', description: 'Name or id of the site.', required: true),
+                new PromptArgument(name: 'topic', description: 'Name or id of the topic.', required: true),
                 new PromptArgument(
                     name: 'limit',
-                    description: sprintf('Number of articles, at most %d.', ArgumentsExamplePrompt::LIMIT_MAX),
+                    description: sprintf('Number of examples, at most %d.', ArgumentsExamplePrompt::LIMIT_MAX),
                     required: false,
                 ),
             ],
@@ -71,7 +71,7 @@ final class McpPromptLoaderCompilerPassTest extends TestCase
         self::assertSame(self::DESCRIPTION, $reference->prompt->description);
         self::assertEquals([new Icon(self::ICON_SRC)], $reference->prompt->icons);
         self::assertSame(self::META, $reference->prompt->meta);
-        self::assertSame([ArgumentsExamplePrompt::class, self::INVOKE_METHOD], $reference->handler);
+        self::assertSame([ArgumentsExamplePrompt::class, McpToolSignatureResolver::INVOKE_METHOD], $reference->handler);
         self::assertEquals(
             ['limit' => new ListCompletionProvider(ArgumentsExamplePrompt::LIMIT_COMPLETIONS)],
             $reference->completionProviders,
@@ -101,7 +101,7 @@ final class McpPromptLoaderCompilerPassTest extends TestCase
         $builder = $container->setDefinition(sprintf(McpCompilerPass::BUILDER_ID_FORMAT, self::SERVER_NAME), new Definition());
         foreach ($promptClasses as $promptClass) {
             $builder->addMethodCall(McpPromptLoaderCompilerPass::ADD_PROMPT_METHOD, [
-                [$promptClass, self::INVOKE_METHOD],
+                [$promptClass, McpToolSignatureResolver::INVOKE_METHOD],
                 constant($promptClass . '::NAME'),
                 self::TITLE,
                 self::DESCRIPTION,

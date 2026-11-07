@@ -10,6 +10,7 @@ use AnzuSystems\CommonBundle\Serializer\Handler\Handlers\UuidArrayHandler;
 use AnzuSystems\SerializerBundle\Handler\HandlerResolver;
 use AnzuSystems\SerializerBundle\Handler\Handlers\BasicHandler;
 use AnzuSystems\SerializerBundle\Handler\Handlers\DateTimeHandler;
+use AnzuSystems\SerializerBundle\Handler\Handlers\EnumHandler;
 use AnzuSystems\SerializerBundle\Handler\Handlers\ObjectHandler;
 use AnzuSystems\SerializerBundle\Handler\Handlers\UuidHandler;
 use AnzuSystems\SerializerBundle\Metadata\MetadataFactory;
@@ -35,13 +36,14 @@ final class McpSerializerFactory
             RawArrayHandler::class => static fn (): RawArrayHandler => new RawArrayHandler(),
             UuidArrayHandler::class => static fn (): UuidArrayHandler => new UuidArrayHandler(new UuidHandler()),
             UuidHandler::class => static fn (): UuidHandler => new UuidHandler(),
+            EnumHandler::class => static fn (): EnumHandler => new EnumHandler(),
             McpDateTimeHandler::class => static fn (): McpDateTimeHandler => new McpDateTimeHandler(new DateTimeHandler(self::DATE_FORMAT)),
             ObjectHandler::class => static function () use (&$objectHandler): ObjectHandler {
                 /** @var ObjectHandler $objectHandler */
                 return $objectHandler;
             },
         ]);
-        $handlerResolver = new HandlerResolver($handlerLocator, [BasicHandler::class, RawArrayHandler::class, UuidArrayHandler::class, UuidHandler::class, McpDateTimeHandler::class, ObjectHandler::class]);
+        $handlerResolver = new HandlerResolver($handlerLocator, [BasicHandler::class, RawArrayHandler::class, UuidArrayHandler::class, UuidHandler::class, EnumHandler::class, McpDateTimeHandler::class, ObjectHandler::class]);
         $jsonSerializer = new JsonSerializer($handlerResolver, $metadataRegistry);
         $jsonDeserializer = new JsonDeserializer($handlerResolver, $metadataRegistry);
         $objectHandler = new ObjectHandler($jsonSerializer, $jsonDeserializer);

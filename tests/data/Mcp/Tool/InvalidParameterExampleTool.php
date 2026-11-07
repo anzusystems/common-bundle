@@ -12,7 +12,7 @@ use Doctrine\Common\Collections\ArrayCollection;
 
 #[AsMcpTool(
     name: InvalidParameterExampleTool::NAME,
-    description: 'Searches examples of a site.',
+    description: 'Searches examples of a group.',
     category: ExampleToolCategory::EXAMPLES,
     readOnly: true,
 )]
@@ -20,7 +20,7 @@ final readonly class InvalidParameterExampleTool
 {
     public const string NAME = 'invalid_parameter_example';
 
-    public function __invoke(SearchAppLogsRequest $request, int $siteId): McpLogsByContextResponse
+    public function __invoke(SearchAppLogsRequest $request, int $groupId): McpLogsByContextResponse
     {
         return new McpLogsByContextResponse(new McpLogsByContextResult(auditLogs: new ArrayCollection(), appLogs: new ArrayCollection(), mcpToolCalls: new ArrayCollection()));
     }

@@ -2,33 +2,33 @@
 
 declare(strict_types=1);
 
-namespace AnzuSystems\CommonBundle\Tests\Mcp\Resolver;
+namespace AnzuSystems\CommonBundle\Tests\Mcp\Security;
 
-use AnzuSystems\CommonBundle\Mcp\Resolver\McpHostResolver;
+use AnzuSystems\CommonBundle\Mcp\Security\McpHostChecker;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpFoundation\Request;
 
-final class McpHostResolverTest extends TestCase
+final class McpHostCheckerTest extends TestCase
 {
-    private const string MCP_HOST = 'core-cms-mcp.localhost';
-    private const string OTHER_MCP_HOST = 'core-cms-mcp2.localhost';
+    private const string MCP_HOST = 'app-mcp.localhost';
+    private const string OTHER_MCP_HOST = 'app-mcp2.localhost';
 
     /**
      * @dataProvider hostProvider
      */
     public function testOnlyAnAllowedHostIsTheMcpHost(string $host, bool $expectedMcpHost): void
     {
-        $resolver = new McpHostResolver([self::OTHER_MCP_HOST . ' ', ' ' . self::MCP_HOST, ' ']);
+        $checker = new McpHostChecker([self::OTHER_MCP_HOST . ' ', ' ' . self::MCP_HOST, ' ']);
         $request = Request::create(sprintf('http://%s/', $host));
 
-        self::assertSame($expectedMcpHost, $resolver->isMcpHost($request));
+        self::assertSame($expectedMcpHost, $checker->isMcpHost($request));
     }
 
     public function testAllowedHostsAreTrimmedAndEmptyOnesLeftOut(): void
     {
         self::assertSame(
             [self::OTHER_MCP_HOST, self::MCP_HOST],
-            new McpHostResolver([self::OTHER_MCP_HOST . ' ', ' ' . self::MCP_HOST, ' '])->allowedHosts,
+            new McpHostChecker([self::OTHER_MCP_HOST . ' ', ' ' . self::MCP_HOST, ' '])->allowedHosts,
         );
     }
 
@@ -41,7 +41,7 @@ final class McpHostResolverTest extends TestCase
             'mcp host' => [self::MCP_HOST, true],
             'mcp host with a root dot' => [self::MCP_HOST . '.', true],
             'second mcp host' => [self::OTHER_MCP_HOST, true],
-            'other host' => ['core-cms.localhost', false],
+            'other host' => ['app.localhost', false],
         ];
     }
 }

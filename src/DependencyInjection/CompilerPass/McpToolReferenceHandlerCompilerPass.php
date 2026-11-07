@@ -69,7 +69,7 @@ final class McpToolReferenceHandlerCompilerPass implements CompilerPassInterface
     {
         foreach ($builder->getMethodCalls() as [$method, $arguments]) {
             if (self::SET_CONTAINER_METHOD === $method) {
-                return $arguments[0] ?? null;
+                return array_first($arguments);
             }
         }
 

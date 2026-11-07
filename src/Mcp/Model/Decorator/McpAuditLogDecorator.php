@@ -38,11 +38,13 @@ final class McpAuditLogDecorator extends AbstractMcpLogDecorator
         get => $this->readInt($this->context, 'httpStatus');
     }
 
+    #[McpField(description: self::TRUNCATED_DESCRIPTION)]
     #[Serialize]
     public ?string $error {
         get => $this->readTruncated($this->context, 'error');
     }
 
+    #[McpField(description: self::TRUNCATED_DESCRIPTION)]
     #[Serialize]
     public ?string $exception {
         get => $this->readTruncated($this->context, 'exception');
@@ -59,13 +61,13 @@ final class McpAuditLogDecorator extends AbstractMcpLogDecorator
         get => $this->readInt($this->context, 'userId');
     }
 
-    #[McpField(description: 'The request body. Long values are truncated.')]
+    #[McpField(description: 'The request body. ' . self::TRUNCATED_DESCRIPTION)]
     #[Serialize]
     public ?string $content {
         get => $this->readTruncated($this->context, 'content');
     }
 
-    #[McpField(description: 'Long values are truncated.')]
+    #[McpField(description: self::TRUNCATED_DESCRIPTION)]
     #[Serialize]
     public ?string $response {
         get => $this->readTruncated($this->context, 'response');

@@ -14,13 +14,13 @@ use Symfony\Bundle\SecurityBundle\Security;
 
 final class McpToolAccessCheckerTest extends TestCase
 {
-    private const string GRANTED_TOOL = 'list_sites';
+    private const string GRANTED_TOOL = 'example_read';
     private const string DENIED_TOOL = 'search_app_logs';
-    private const string UNMAPPED_TOOL = 'list_authors';
-    private const string SECOND_GRANTED_TOOL = 'list_site_groups';
-    private const string PREVIEW_TOOL = 'preview_site_update';
-    private const string GRANTED_PERMISSION = 'cms_site_read';
-    private const string DENIED_PERMISSION = 'cms_log_read';
+    private const string UNMAPPED_TOOL = 'example_unmapped';
+    private const string SECOND_GRANTED_TOOL = 'example_second_read';
+    private const string PREVIEW_TOOL = 'example_preview';
+    private const string GRANTED_PERMISSION = 'example_read';
+    private const string DENIED_PERMISSION = 'app_log_read';
 
     public function testDeniedAndUnmappedToolsAreDenied(): void
     {

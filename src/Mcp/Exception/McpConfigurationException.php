@@ -51,6 +51,11 @@ final class McpConfigurationException extends LogicException
         return new self(sprintf('The MCP tool name "%s" is registered by more than one tool (%s), every tool name must be unique.', $toolName, implode(self::TOOL_NAME_SEPARATOR, $toolMethods)));
     }
 
+    public static function createDuplicatePromptName(string $promptName): self
+    {
+        return new self(sprintf('The MCP prompt name "%s" is registered by more than one prompt, every prompt name must be unique.', $promptName));
+    }
+
     /**
      * @param list<string> $toolMethods
      */

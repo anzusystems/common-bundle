@@ -27,9 +27,9 @@ use AnzuSystems\CommonBundle\Mcp\McpToolDefinitions;
 use AnzuSystems\CommonBundle\Mcp\McpWriteRateLimiter;
 use AnzuSystems\CommonBundle\Mcp\Resolver\McpContextIdResolver;
 use AnzuSystems\CommonBundle\Mcp\Resolver\McpDateWindowResolver;
-use AnzuSystems\CommonBundle\Mcp\Resolver\McpHostResolver;
 use AnzuSystems\CommonBundle\Mcp\Resolver\McpToolErrorResolver;
 use AnzuSystems\CommonBundle\Mcp\Security\McpDeleteGuard;
+use AnzuSystems\CommonBundle\Mcp\Security\McpHostChecker;
 use AnzuSystems\CommonBundle\Mcp\Security\McpInputEnricherInterface;
 use AnzuSystems\CommonBundle\Mcp\Security\McpPreviewHashReservation;
 use AnzuSystems\CommonBundle\Mcp\Security\McpPromptAccessChecker;
@@ -182,18 +182,18 @@ return static function (ContainerConfigurator $configurator): void {
         ->arg('$streamFactory', service('mcp.psr17_factory'))
         ->arg('$rateLimiter', service(McpRateLimiter::class))
         ->arg('$logger', service('logger'))
-        ->arg('$hostResolver', service(McpHostResolver::class))
+        ->arg('$hostChecker', service(McpHostChecker::class))
         ->tag('controller.service_arguments')
         ->tag('monolog.logger', ['channel' => 'mcp'])
         ->public()
     ;
 
-    $services->set(McpHostResolver::class)
+    $services->set(McpHostChecker::class)
         ->arg('$allowedHosts', null)
     ;
 
     $services->set(McpHostRouteListener::class)
-        ->arg('$mcpHostResolver', service(McpHostResolver::class))
+        ->arg('$mcpHostChecker', service(McpHostChecker::class))
         ->arg('$mcpPod', null)
         ->tag('kernel.event_listener', ['event' => KernelEvents::REQUEST, 'priority' => McpHostRouteListener::PRIORITY])
     ;

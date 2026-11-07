@@ -49,6 +49,7 @@ final class McpToolCallLogDecorator extends AbstractMcpLogDecorator
         get => $this->readInt($this->document, 'durationMs');
     }
 
+    #[McpField(description: self::TRUNCATED_DESCRIPTION)]
     #[Serialize]
     public ?string $error {
         get => $this->readTruncated($this->document, 'error');

@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace AnzuSystems\CommonBundle\Tests\Mcp\Event\Listener;
 
 use AnzuSystems\CommonBundle\Mcp\Event\Listener\McpHostRouteListener;
-use AnzuSystems\CommonBundle\Mcp\Resolver\McpHostResolver;
+use AnzuSystems\CommonBundle\Mcp\Security\McpHostChecker;
 use AnzuSystems\CommonBundle\Tests\AnzuKernelTestCase;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpKernel\Event\RequestEvent;
@@ -14,9 +14,9 @@ use Symfony\Component\HttpKernel\HttpKernelInterface;
 
 final class McpHostRouteListenerTest extends AnzuKernelTestCase
 {
-    private const string MCP_HOST = 'core-cms-mcp.localhost';
-    private const string APP_HOST = 'core-cms.localhost';
-    private const string PATH = '/api/adm/v1/quiz';
+    private const string MCP_HOST = 'app-mcp.localhost';
+    private const string APP_HOST = 'app.localhost';
+    private const string PATH = '/api/adm/v1/example';
 
     /**
      * @dataProvider requestProvider
@@ -30,7 +30,7 @@ final class McpHostRouteListenerTest extends AnzuKernelTestCase
     ): void {
         $request = Request::create(sprintf('http://%s%s', $host, self::PATH));
         $request->attributes->set(McpHostRouteListener::ALLOWED_ON_MCP_HOST, $marked);
-        $listener = new McpHostRouteListener(new McpHostResolver([self::MCP_HOST]), $mcpPod);
+        $listener = new McpHostRouteListener(new McpHostChecker([self::MCP_HOST]), $mcpPod);
 
         if ($expectNotFound) {
             $this->expectException(NotFoundHttpException::class);

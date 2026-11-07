@@ -69,7 +69,7 @@ abstract class AbstractMcpToolReferenceHandlerTestCase extends TestCase
     protected const int USER_ID = 42;
     protected const int LIMIT = 5;
     protected const int LIMIT_INVALID = 0;
-    protected const string TOOL_PERMISSION = 'cms_test_read';
+    protected const string TOOL_PERMISSION = 'example_read';
     protected const string BACKEND_ERROR_MESSAGE = 'Backend is temporarily unavailable, retry the call.';
     protected const string INPUT_ERROR_MESSAGE = 'Invalid input.';
     protected const string MUST_NOT_RUN_MESSAGE = 'must not run';
@@ -79,7 +79,6 @@ abstract class AbstractMcpToolReferenceHandlerTestCase extends TestCase
     protected const string LEVEL = 'ERROR';
     protected const string TITLE_FIELD = 'title';
     protected const string LIMIT_VIOLATION = 'limit: This value should be between 1 and 50.';
-    protected const string INVOKE_METHOD = '__invoke';
     protected const string SECRET = 'test_secret';
     // The HMAC of the write tool, WRITE_ARGUMENTS and no current state under SECRET.
     protected const string PREVIEW_HASH = 'd04da74f4926e319f2beddde58330604183699c996a026576e10c10cc8a1e375';
@@ -127,7 +126,7 @@ abstract class AbstractMcpToolReferenceHandlerTestCase extends TestCase
     /**
      * @return array<string, mixed>
      */
-    protected static function createAcceptedAnswer(): array
+    protected function createAcceptedAnswer(): array
     {
         return [
             self::ACTION_FIELD => self::ACTION_ACCEPT,
@@ -135,7 +134,7 @@ abstract class AbstractMcpToolReferenceHandlerTestCase extends TestCase
         ];
     }
 
-    protected static function translated(string $key, ?string $locale): string
+    protected function translated(string $key, ?string $locale): string
     {
         return $key . self::LOCALE_SEPARATOR . $locale;
     }
@@ -155,7 +154,7 @@ abstract class AbstractMcpToolReferenceHandlerTestCase extends TestCase
     protected function callWriteTool(McpToolReferenceHandler $handler, array $arguments): CallToolResult|InputRequiredResult
     {
         return $handler->handle(
-            new ToolReference($this->createSdkTool(ExampleWriteTool::NAME), [ExampleWriteTool::class, self::INVOKE_METHOD]),
+            new ToolReference($this->createSdkTool(ExampleWriteTool::NAME), [ExampleWriteTool::class, McpToolSignatureResolver::INVOKE_METHOD]),
             $arguments,
         );
     }
@@ -202,7 +201,7 @@ abstract class AbstractMcpToolReferenceHandlerTestCase extends TestCase
             ->willReturnCallback(function (string $id, array $parameters = [], ?string $domain = null, ?string $locale = null): string {
                 $this->translations[] = ['id' => $id, 'parameters' => $parameters, 'domain' => $domain, 'locale' => $locale];
 
-                return self::translated($id, $locale);
+                return $this->translated($id, $locale);
             });
 
         return $translator;
@@ -279,7 +278,7 @@ abstract class AbstractMcpToolReferenceHandlerTestCase extends TestCase
     ): CallToolResult {
         $toolArguments = is_int($limit) ? ['level' => self::LEVEL, 'limit' => $limit] : [];
         $result = $handler->handle(
-            new ToolReference($this->createSdkTool($toolName), [$toolClass, self::INVOKE_METHOD]),
+            new ToolReference($this->createSdkTool($toolName), [$toolClass, McpToolSignatureResolver::INVOKE_METHOD]),
             $this->createArguments($toolName, $toolArguments),
         );
         self::assertInstanceOf(CallToolResult::class, $result);
@@ -396,7 +395,7 @@ abstract class AbstractMcpToolReferenceHandlerTestCase extends TestCase
         if (is_object($previewTool)) {
             $readOnlyToolNames[] = $previewTool::NAME;
             $writeToolNamesByPreview[$previewTool::NAME] = $tool::NAME;
-            $registry->registerTool($this->createSdkTool($previewTool::NAME), [$previewTool::class, self::INVOKE_METHOD]);
+            $registry->registerTool($this->createSdkTool($previewTool::NAME), [$previewTool::class, McpToolSignatureResolver::INVOKE_METHOD]);
             $services[$previewTool::class] = static fn (): object => $previewTool;
             $toolSignatures[$previewTool::NAME] = new McpToolSignatureResolver()->resolve($previewTool::class);
         }

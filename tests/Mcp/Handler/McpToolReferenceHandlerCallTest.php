@@ -7,6 +7,7 @@ namespace AnzuSystems\CommonBundle\Tests\Mcp\Handler;
 use AnzuSystems\CommonBundle\Mcp\Log\McpLogger;
 use AnzuSystems\CommonBundle\Mcp\Model\Response\McpLogsByContextResponse;
 use AnzuSystems\CommonBundle\Mcp\Resolver\McpToolErrorResolver;
+use AnzuSystems\CommonBundle\Mcp\Resolver\McpToolSignatureResolver;
 use AnzuSystems\CommonBundle\Mcp\Security\McpInputEnricherInterface;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Tool\ExampleContextTool;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Tool\ExampleSearchTool;
@@ -80,7 +81,7 @@ final class McpToolReferenceHandlerCallTest extends AbstractMcpToolReferenceHand
         );
 
         $result = $handler->handle(
-            new ToolReference($this->createSdkTool(ExampleSearchTool::NAME), [ExampleSearchTool::class, self::INVOKE_METHOD]),
+            new ToolReference($this->createSdkTool(ExampleSearchTool::NAME), [ExampleSearchTool::class, McpToolSignatureResolver::INVOKE_METHOD]),
             $this->createModernArguments(toolName: ExampleSearchTool::NAME, toolArguments: []),
         );
 
@@ -108,7 +109,7 @@ final class McpToolReferenceHandlerCallTest extends AbstractMcpToolReferenceHand
         );
 
         $handler->handle(
-            new ToolReference($this->createSdkTool(ExampleSearchTool::NAME), [ExampleSearchTool::class, self::INVOKE_METHOD]),
+            new ToolReference($this->createSdkTool(ExampleSearchTool::NAME), [ExampleSearchTool::class, McpToolSignatureResolver::INVOKE_METHOD]),
             $this->createModernArguments(toolName: ExampleSearchTool::NAME, toolArguments: []),
         );
 
@@ -126,7 +127,7 @@ final class McpToolReferenceHandlerCallTest extends AbstractMcpToolReferenceHand
         );
 
         $handler->handle(
-            new ToolReference($this->createSdkTool(ExampleWithoutInputTool::NAME), [ExampleWithoutInputTool::class, self::INVOKE_METHOD]),
+            new ToolReference($this->createSdkTool(ExampleWithoutInputTool::NAME), [ExampleWithoutInputTool::class, McpToolSignatureResolver::INVOKE_METHOD]),
             $this->createModernArguments(toolName: ExampleWithoutInputTool::NAME, toolArguments: []),
         );
     }

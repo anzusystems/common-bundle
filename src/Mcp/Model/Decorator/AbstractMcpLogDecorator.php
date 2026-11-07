@@ -13,6 +13,7 @@ abstract class AbstractMcpLogDecorator
 {
     public const int FIELD_TRUNCATE_LENGTH = 2_000;
     public const string TRUNCATED_SUFFIX = '…(truncated)';
+    public const string TRUNCATED_DESCRIPTION = 'Values longer than ' . self::FIELD_TRUNCATE_LENGTH . ' characters are cut and end with "' . self::TRUNCATED_SUFFIX . '".';
 
     private const string FIELD_DATETIME = 'datetime';
     private const string FIELD_CONTEXT = 'context';

@@ -35,7 +35,7 @@ final class McpDateWindowResolverTest extends TestCase
         self::assertTrue($window->truncated);
     }
 
-    public function testArticleWindowKeepsExplicitRangeWithinCap(): void
+    public function testDateRangeKeepsExplicitRangeWithinCap(): void
     {
         $window = $this->resolveDateRange('2026-07-01T00:00:00+00:00', '2026-07-10T00:00:00+00:00');
 
@@ -44,7 +44,7 @@ final class McpDateWindowResolverTest extends TestCase
         self::assertFalse($window->truncated);
     }
 
-    public function testArticleWindowUntilIsCappedToMaxDaysAfterFrom(): void
+    public function testDateRangeUntilIsCappedToMaxDaysAfterFrom(): void
     {
         $window = $this->resolveDateRange('2026-01-01T00:00:00+00:00', '2026-06-01T00:00:00+00:00');
 
@@ -52,7 +52,7 @@ final class McpDateWindowResolverTest extends TestCase
         self::assertTrue($window->truncated);
     }
 
-    public function testArticleWindowWithoutDatesIsNotTruncated(): void
+    public function testDateRangeWithoutDatesIsNotTruncated(): void
     {
         $window = $this->resolveDateRange(null, null);
         $length = $window->from->diff($window->until);
@@ -61,7 +61,7 @@ final class McpDateWindowResolverTest extends TestCase
         self::assertSame(McpDateWindowResolver::DATE_RANGE_MAX_DAYS, (int) $length->days);
     }
 
-    public function testOpenEndedArticleWindowOlderThanCapIsTruncated(): void
+    public function testOpenEndedDateRangeOlderThanCapIsTruncated(): void
     {
         $window = $this->resolveDateRange('2020-01-01T00:00:00+00:00', null);
 

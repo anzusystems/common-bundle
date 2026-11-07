@@ -60,6 +60,17 @@ final class ConstraintExampleRequest
     #[Serialize]
     public ?string $nullableChoice = null;
 
+    /**
+     * @var list<string>
+     */
+    #[Assert\Choice(choices: ['first', 'second'], multiple: true)]
+    #[Serialize]
+    public array $multipleChoice = [];
+
+    #[Assert\Choice(choices: ['first', 'second'], match: false)]
+    #[Serialize]
+    public string $notMatchingChoice = 'third';
+
     #[Assert\NotBlank]
     #[Serialize]
     public string $notBlank = '';

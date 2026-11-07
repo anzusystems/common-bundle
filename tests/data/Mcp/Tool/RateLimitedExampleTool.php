@@ -13,7 +13,7 @@ use Closure;
     name: RateLimitedExampleTool::NAME,
     description: 'Writes an example.',
     category: ExampleToolCategory::EXAMPLES,
-    permission: 'example_write',
+    permission: ExampleWriteTool::PERMISSION,
     rateLimiter: self::RATE_LIMITER,
 )]
 final readonly class RateLimitedExampleTool

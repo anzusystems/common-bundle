@@ -96,7 +96,7 @@ final class PromotedPropertyAttributeSpacingFixerTest extends TestCase
             final class Foo
             {
                 public function __construct(
-                    Quiz $decorated,
+                    Example $decorated,
 
                     string $adminUrl,
 
@@ -111,7 +111,7 @@ final class PromotedPropertyAttributeSpacingFixerTest extends TestCase
             final class Foo
             {
                 public function __construct(
-                    Quiz $decorated,
+                    Example $decorated,
                     string $adminUrl,
 
                     #[Serialize]

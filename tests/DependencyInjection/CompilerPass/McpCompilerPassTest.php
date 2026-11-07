@@ -18,11 +18,11 @@ use Symfony\Component\DependencyInjection\Definition;
 
 final class McpCompilerPassTest extends TestCase
 {
-    private const string SERVER_NAME = 'core_cms';
-    private const string CONTROLLER_ID = 'mcp.server.core_cms.controller';
-    private const string BUILDER_ID = 'mcp.server.core_cms.builder';
+    private const string SERVER_NAME = 'example';
+    private const string CONTROLLER_ID = 'mcp.server.example.controller';
+    private const string BUILDER_ID = 'mcp.server.example.builder';
     private const string TAGGED_SERVICE_ID = 'tagged_service';
-    private const string TOOL_PERMISSION = 'cms_example_read';
+    private const string TOOL_PERMISSION = 'app_log_read';
     private const string SET_INSTRUCTIONS_METHOD = 'setInstructions';
     private const string INSTRUCTIONS_FILE = __DIR__ . '/../../data/Mcp/instructions.md';
     private const string OWN_INSTRUCTIONS = 'The instructions of the bundle config.';

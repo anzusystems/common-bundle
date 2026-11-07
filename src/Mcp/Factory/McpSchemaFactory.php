@@ -15,6 +15,7 @@ use ReflectionAttribute;
 use ReflectionClass;
 use ReflectionEnumBackedCase;
 use ReflectionMethod;
+use ReflectionParameter;
 use ReflectionProperty;
 use Symfony\Component\TypeInfo\Type;
 use Symfony\Component\TypeInfo\Type\BackedEnumType;
@@ -107,7 +108,7 @@ final class McpSchemaFactory
             $name = $serialize->serializedName ?? $this->resolveSerializedName($member);
             $constraints = $this->resolveConstraints($member);
             $schema = $this->applyConstraints($this->createForMember($member), $constraints);
-            $default = $member instanceof ReflectionProperty && $member->hasDefaultValue() ? $member->getDefaultValue() : null;
+            $default = $member instanceof ReflectionProperty && $this->hasDefaultValue($member) ? $this->getDefaultValue($member) : null;
             $description = $this->createDescription($member, $default);
             if (is_string($description)) {
                 $schema[self::DESCRIPTION] = $description;
@@ -121,7 +122,7 @@ final class McpSchemaFactory
 
                 continue;
             }
-            $properties[$name][self::DEFAULT] = $this->normalizeDefault($member->getDefaultValue());
+            $properties[$name][self::DEFAULT] = $this->normalizeDefault($this->getDefaultValue($member));
         }
 
         $schema = [self::TYPE => self::TYPE_OBJECT, self::PROPERTIES => $properties];
@@ -164,7 +165,8 @@ final class McpSchemaFactory
     }
 
     /**
-     * The field's own description followed by the described values of its backed enum, the default one marked.
+     * The field's own description, the format of an McpDateTimeHandler date and the described values of its backed
+     * enum, the default one marked.
      */
     private function createDescription(ReflectionProperty|ReflectionMethod $member, mixed $default): ?string
     {
@@ -375,12 +377,32 @@ final class McpSchemaFactory
                 $constraint instanceof Assert\GreaterThanOrEqual => $this->applyBounds(schema: $schema, minKey: self::MINIMUM, min: $constraint->value, maxKey: self::MAXIMUM, max: null),
                 $constraint instanceof Assert\LessThan => $this->applyExclusiveBound(schema: $schema, inclusiveKey: self::MAXIMUM, exclusiveKey: self::EXCLUSIVE_MAXIMUM, value: $constraint->value, step: -1),
                 $constraint instanceof Assert\LessThanOrEqual => $this->applyBounds(schema: $schema, minKey: self::MINIMUM, min: null, maxKey: self::MAXIMUM, max: $constraint->value),
-                $constraint instanceof Assert\Choice && is_array($constraint->choices) => $this->applyChoices($schema, array_values($constraint->choices)),
+                $constraint instanceof Assert\Choice => $this->applyChoice($schema, $constraint),
                 default => $schema,
             };
         }
 
         return $schema;
+    }
+
+    /**
+     * A Choice with match: false forbids its choices, which the enum cannot say, so the validator alone checks it.
+     *
+     * @param array<string, mixed> $schema
+     *
+     * @return array<string, mixed>
+     */
+    private function applyChoice(array $schema, Assert\Choice $choice): array
+    {
+        if (false === is_array($choice->choices) || false === $choice->match) {
+            return $schema;
+        }
+        $choices = array_values($choice->choices);
+        if ($choice->multiple) {
+            return [...$schema, self::ITEMS => $this->applyChoices((array) ($schema[self::ITEMS] ?? []), $choices)];
+        }
+
+        return $this->applyChoices($schema, $choices);
     }
 
     /**
@@ -483,7 +505,7 @@ final class McpSchemaFactory
      */
     private function isRequired(ReflectionProperty $property, array $constraints): bool
     {
-        if (false === $property->hasDefaultValue()) {
+        if (false === $this->hasDefaultValue($property)) {
             return true;
         }
         foreach ($constraints as $constraint) {
@@ -499,6 +521,34 @@ final class McpSchemaFactory
         }
 
         return false;
+    }
+
+    /**
+     * A promoted property has no default of its own: the default belongs to its constructor parameter.
+     */
+    private function hasDefaultValue(ReflectionProperty $property): bool
+    {
+        if ($property->isPromoted()) {
+            return $this->getPromotedParameter($property)
+                ->isDefaultValueAvailable();
+        }
+
+        return $property->hasDefaultValue();
+    }
+
+    private function getDefaultValue(ReflectionProperty $property): mixed
+    {
+        if ($property->isPromoted()) {
+            return $this->getPromotedParameter($property)
+                ->getDefaultValue();
+        }
+
+        return $property->getDefaultValue();
+    }
+
+    private function getPromotedParameter(ReflectionProperty $property): ReflectionParameter
+    {
+        return new ReflectionParameter([$property->class, '__construct'], $property->getName());
     }
 
     private function resolveSerializedName(ReflectionProperty|ReflectionMethod $member): string

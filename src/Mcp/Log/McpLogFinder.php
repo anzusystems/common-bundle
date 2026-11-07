@@ -68,7 +68,7 @@ final readonly class McpLogFinder
         $documents = $this->journalLogRepository->findLatest(
             from: $window->from,
             until: $window->until,
-            levelName: $request->level,
+            levelName: $request->level?->value,
             messageContains: $request->messageContains,
             contextId: $this->contextIdResolver->resolveOptional($request->contextId),
             limit: $request->limit + self::LOOKAHEAD,

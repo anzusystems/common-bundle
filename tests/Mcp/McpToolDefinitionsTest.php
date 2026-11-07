@@ -11,13 +11,13 @@ use PHPUnit\Framework\TestCase;
 
 final class McpToolDefinitionsTest extends TestCase
 {
-    private const string READ_TOOL = 'list_sites';
-    private const string WRITE_TOOL = 'update_site';
-    private const string OTHER_WRITE_TOOL = 'delete_site';
-    private const string UNMAPPED_TOOL = 'list_authors';
-    private const string PREVIEW_TOOL = 'preview_site_update';
-    private const string TOOL_CATEGORY = 'sites';
-    private const string PERMISSION = 'cms_site_read';
+    private const string READ_TOOL = 'example_read';
+    private const string WRITE_TOOL = 'example_write';
+    private const string OTHER_WRITE_TOOL = 'example_other_write';
+    private const string UNMAPPED_TOOL = 'example_unmapped';
+    private const string PREVIEW_TOOL = 'example_preview';
+    private const string TOOL_CATEGORY = 'examples';
+    private const string PERMISSION = 'example_read';
 
     public function testToolNamesListEveryToolWithAPermissionWithoutThePreview(): void
     {

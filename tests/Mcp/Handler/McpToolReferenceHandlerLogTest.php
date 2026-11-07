@@ -9,6 +9,7 @@ use AnzuSystems\CommonBundle\Mcp\Handler\McpToolReferenceHandler;
 use AnzuSystems\CommonBundle\Mcp\Log\McpLogger;
 use AnzuSystems\CommonBundle\Mcp\Log\McpToolCallLogger;
 use AnzuSystems\CommonBundle\Mcp\Model\Response\McpLogsByContextResponse;
+use AnzuSystems\CommonBundle\Mcp\Resolver\McpToolSignatureResolver;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Tool\ExampleErrorResultTool;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Tool\ExampleErrorResultWithoutKeyTool;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Tool\ExampleSearchTool;
@@ -76,7 +77,7 @@ final class McpToolReferenceHandlerLogTest extends AbstractMcpToolReferenceHandl
         $toolArguments = ['level' => self::LEVEL, 'limit' => self::LIMIT];
 
         $handler->handle(
-            new ToolReference($this->createSdkTool(ExampleSearchTool::NAME), [ExampleSearchTool::class, self::INVOKE_METHOD]),
+            new ToolReference($this->createSdkTool(ExampleSearchTool::NAME), [ExampleSearchTool::class, McpToolSignatureResolver::INVOKE_METHOD]),
             $toolArguments + [
                 self::SESSION_ARGUMENT => $session,
                 self::REQUEST_ARGUMENT => new CallToolRequest(ExampleSearchTool::NAME, $toolArguments),

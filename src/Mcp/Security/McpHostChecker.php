@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace AnzuSystems\CommonBundle\Mcp\Resolver;
+namespace AnzuSystems\CommonBundle\Mcp\Security;
 
 use AnzuSystems\CommonBundle\Helper\StringHelper;
 use Symfony\Component\HttpFoundation\Request;
 
-final readonly class McpHostResolver
+final readonly class McpHostChecker
 {
     private const string HOST_ROOT_DOT = '.';
 

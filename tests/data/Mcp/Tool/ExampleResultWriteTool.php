@@ -13,7 +13,7 @@ use Mcp\Schema\Result\CallToolResult;
     name: ExampleResultWriteTool::NAME,
     description: 'Writes an example and builds its own result.',
     category: ExampleToolCategory::EXAMPLES,
-    permission: 'example_write',
+    permission: ExampleWriteTool::PERMISSION,
 )]
 final readonly class ExampleResultWriteTool
 {

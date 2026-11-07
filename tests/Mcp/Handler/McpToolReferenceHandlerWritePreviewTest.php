@@ -11,6 +11,7 @@ use AnzuSystems\CommonBundle\Mcp\Handler\McpToolReferenceHandler;
 use AnzuSystems\CommonBundle\Mcp\Log\McpLogger;
 use AnzuSystems\CommonBundle\Mcp\Model\Response\McpLogsByContextResponse;
 use AnzuSystems\CommonBundle\Mcp\Resolver\McpToolErrorResolver;
+use AnzuSystems\CommonBundle\Mcp\Resolver\McpToolSignatureResolver;
 use AnzuSystems\CommonBundle\Tests\Data\Entity\User;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Exception\ExampleToolCallRejectedException;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Exception\ExampleToolInputException;
@@ -251,7 +252,7 @@ final class McpToolReferenceHandlerWritePreviewTest extends AbstractMcpToolRefer
         $handler = $this->createWriteHandler();
 
         $result = $handler->handle(
-            new ToolReference($this->createSdkTool(ExampleWritePreviewTool::NAME), [ExampleWritePreviewTool::class, self::INVOKE_METHOD]),
+            new ToolReference($this->createSdkTool(ExampleWritePreviewTool::NAME), [ExampleWritePreviewTool::class, McpToolSignatureResolver::INVOKE_METHOD]),
             $this->createModernArguments(toolName: ExampleWritePreviewTool::NAME, toolArguments: [self::TITLE_FIELD => self::TITLE]),
         );
 
@@ -264,7 +265,7 @@ final class McpToolReferenceHandlerWritePreviewTest extends AbstractMcpToolRefer
         $handler = $this->createWriteHandler(writable: false);
 
         $result = $handler->handle(
-            new ToolReference($this->createSdkTool(ExampleWritePreviewTool::NAME), [ExampleWritePreviewTool::class, self::INVOKE_METHOD]),
+            new ToolReference($this->createSdkTool(ExampleWritePreviewTool::NAME), [ExampleWritePreviewTool::class, McpToolSignatureResolver::INVOKE_METHOD]),
             $this->createModernArguments(toolName: ExampleWritePreviewTool::NAME, toolArguments: [self::TITLE_FIELD => self::TITLE]),
         );
 

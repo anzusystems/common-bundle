@@ -30,6 +30,7 @@ final class AnzuSystemsCommonExtensionTest extends TestCase
     private const string HOST_LOCK_FACTORY_ID = 'app.mcp.lock_factory';
     private const string LOCK_FACTORY_ARGUMENT = '$lockFactory';
     private const string FALLBACK_LOCALE = 'sk';
+    private const string CACHE_POOL_ID = 'example.cache';
 
     public function testRateLimiterLocksTheSlidingWindowWithARedisLockFactory(): void
     {
@@ -103,10 +104,10 @@ final class AnzuSystemsCommonExtensionTest extends TestCase
 
     public function testPreviewHashReservationUsesTheCachePoolOfTheRateLimiter(): void
     {
-        $container = $this->buildContainer(rateLimiter: ['cache_pool' => 'example.cache']);
+        $container = $this->buildContainer(rateLimiter: ['cache_pool' => self::CACHE_POOL_ID]);
 
         self::assertEquals(
-            new Reference('example.cache'),
+            new Reference(self::CACHE_POOL_ID),
             $container->getDefinition(McpPreviewHashReservation::class)->getArgument('$cachePool'),
         );
     }
@@ -126,7 +127,7 @@ final class AnzuSystemsCommonExtensionTest extends TestCase
         $registry = $container->getDefinition(McpToolReferenceHandler::class)
             ->getArgument('$registry');
         self::assertInstanceOf(Reference::class, $registry);
-        self::assertSame('mcp.server.core_cms.registry', (string) $registry);
+        self::assertSame('mcp.server.example.registry', (string) $registry);
     }
 
     private function buildContainer(array $rateLimiter = [], array $mcp = []): ContainerBuilder
@@ -170,7 +171,7 @@ final class AnzuSystemsCommonExtensionTest extends TestCase
             ],
             'mcp' => $mcp + [
                 'enabled' => true,
-                'server_name' => 'core_cms',
+                'server_name' => 'example',
                 'allowed_hosts' => ['mcp.localhost'],
                 'log_tools_permission' => 'mcp_tool_searchAppLogs',
                 'rate_limiter' => $rateLimiter,

@@ -27,8 +27,8 @@ final class McpDeleteGuardTest extends TestCase
     private const string FRESH_OFFSET = '-1 hour';
     private const string MAX_AGE_OFFSET = '-' . McpDeleteGuard::MAX_AGE_DAYS . ' days';
     private const string TOO_OLD_OFFSET = self::MAX_AGE_OFFSET . ' -1 second';
-    private const string FIRST_DEPENDENCY = 'embedded 3 times in articles';
-    private const string SECOND_DEPENDENCY = 'pinned on 1 site';
+    private const string FIRST_DEPENDENCY = 'linked 3 times from other records';
+    private const string SECOND_DEPENDENCY = 'shared with 1 group';
 
     /**
      * @dataProvider refusalProvider

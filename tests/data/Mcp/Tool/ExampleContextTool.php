@@ -28,7 +28,7 @@ final readonly class ExampleContextTool
 
         return new CallToolResult(
             [new TextContent((string) $toolName)],
-            structuredContent: ['tool' => $toolName, 'level' => $request->level],
+            structuredContent: ['tool' => $toolName, 'level' => $request->level?->value],
         );
     }
 }

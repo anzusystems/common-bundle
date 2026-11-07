@@ -25,11 +25,11 @@ final class SearchAuditLogsRequest
     #[Serialize]
     public bool $onlyErrors = true;
 
-    #[McpField(description: 'Case-insensitive substring match on the request path, e.g. "article".')]
+    #[McpField(description: 'Case-insensitive substring match on the request path, e.g. "user".')]
     #[Serialize]
     public ?string $pathContains = null;
 
-    #[McpField(description: 'Exact resource name of the affected entity as stored in the audit record, e.g. "articleKindStandard".')]
+    #[McpField(description: 'Exact resource name of the affected entity as stored in the audit record, e.g. "user".')]
     #[Serialize]
     public ?string $resourceName = null;
 }

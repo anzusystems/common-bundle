@@ -12,6 +12,7 @@ use AnzuSystems\CommonBundle\Mcp\Model\Request\SearchAppLogsRequest;
 use AnzuSystems\CommonBundle\Mcp\Model\Response\McpLogsByContextResponse;
 use AnzuSystems\CommonBundle\Mcp\Resolver\McpDateWindowResolver;
 use AnzuSystems\CommonBundle\Mcp\Resolver\McpToolErrorResolver;
+use AnzuSystems\CommonBundle\Mcp\Resolver\McpToolSignatureResolver;
 use AnzuSystems\CommonBundle\Serializer\Handler\Handlers\McpDateTimeHandler;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Exception\ExampleToolInputException;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Tool\ExampleSearchTool;
@@ -29,6 +30,7 @@ final class McpToolReferenceHandlerErrorTest extends AbstractMcpToolReferenceHan
     private const string INVALID_DATE = 'not-a-date';
     private const string JULY_FIRST = '2026-07-01';
     private const string JULY_TENTH = '2026-07-10T00:00:00+02:00';
+    private const string FAR_FUTURE = '2099-01-01';
 
     public function testInvalidRequestIsReturnedAsToolErrorWithoutRunningTheTool(): void
     {
@@ -83,6 +85,14 @@ final class McpToolReferenceHandlerErrorTest extends AbstractMcpToolReferenceHan
                     McpToolErrorResolver::VIOLATION_FORMAT,
                     self::UNTIL,
                     strtr(McpDateWindowResolver::NOT_BEFORE_FROM_MESSAGE, ['{{ compared_value_path }}' => self::FROM]),
+                ),
+            ],
+            'from in the future without until' => [
+                [self::FROM => self::FAR_FUTURE],
+                McpToolErrorResolver::INVALID_ARGUMENTS_PREFIX . sprintf(
+                    McpToolErrorResolver::VIOLATION_FORMAT,
+                    self::FROM,
+                    McpDateWindowResolver::NOT_IN_FUTURE_MESSAGE,
                 ),
             ],
         ];
@@ -174,7 +184,11 @@ final class McpToolReferenceHandlerErrorTest extends AbstractMcpToolReferenceHan
                     ->addFormattedError(self::TITLE_FIELD, ValidationException::ERROR_FIELD_EMPTY)
                     ->addFormattedError(self::QUESTIONS_FIELD, ValidationException::ERROR_FIELD_LENGTH_MIN)
                     ->addFormattedError(self::QUESTIONS_FIELD, ValidationException::ERROR_FIELD_INVALID),
-                McpToolErrorResolver::INVALID_ARGUMENTS_PREFIX . 'title: error_field_empty questions: error_field_length_min questions: error_field_invalid',
+                McpToolErrorResolver::INVALID_ARGUMENTS_PREFIX . implode(' ', [
+                    sprintf(McpToolErrorResolver::VIOLATION_FORMAT, self::TITLE_FIELD, ValidationException::ERROR_FIELD_EMPTY),
+                    sprintf(McpToolErrorResolver::VIOLATION_FORMAT, self::QUESTIONS_FIELD, ValidationException::ERROR_FIELD_LENGTH_MIN),
+                    sprintf(McpToolErrorResolver::VIOLATION_FORMAT, self::QUESTIONS_FIELD, ValidationException::ERROR_FIELD_INVALID),
+                ]),
             ],
             'access denied' => [
                 new AccessDeniedException(),
@@ -208,7 +222,7 @@ final class McpToolReferenceHandlerErrorTest extends AbstractMcpToolReferenceHan
         $result = $this->callToolWithoutInput($handler);
 
         self::assertSame(
-            McpToolErrorResolver::INVALID_ARGUMENTS_PREFIX . 'title: error_field_empty',
+            McpToolErrorResolver::INVALID_ARGUMENTS_PREFIX . sprintf(McpToolErrorResolver::VIOLATION_FORMAT, self::TITLE_FIELD, ValidationException::ERROR_FIELD_EMPTY),
             $result->structuredContent[McpToolReferenceHandler::ERROR_KEY],
         );
     }
@@ -240,7 +254,7 @@ final class McpToolReferenceHandlerErrorTest extends AbstractMcpToolReferenceHan
     private function callSearchTool(McpToolReferenceHandler $handler, array $arguments): CallToolResult
     {
         $result = $handler->handle(
-            new ToolReference($this->createSdkTool(ExampleSearchTool::NAME), [ExampleSearchTool::class, self::INVOKE_METHOD]),
+            new ToolReference($this->createSdkTool(ExampleSearchTool::NAME), [ExampleSearchTool::class, McpToolSignatureResolver::INVOKE_METHOD]),
             $this->createArguments(ExampleSearchTool::NAME, $arguments),
         );
         self::assertInstanceOf(CallToolResult::class, $result);

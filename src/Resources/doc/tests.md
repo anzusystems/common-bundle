@@ -21,12 +21,12 @@ what a client sees: the token, the input schema of the SDK, the `tools/list` fil
 implements `createMcpToken()`, `getMcpHost()` and `getMcpPath()`.
 
 ```php
-final class ListDesksToolTest extends AbstractMcpTestCase
+final class ListLabelsToolTest extends AbstractMcpTestCase
 {
-    public function testForeignSiteGroupIsDenied(): void
+    public function testForeignLabelGroupIsDenied(): void
     {
         $result = $this->getMcpClient(User::ID_LIMITED)
-            ->callTool(ListDesksTool::class, ['siteGroupId' => self::FOREIGN_ID]);
+            ->callTool(ListLabelsTool::class, ['labelGroupId' => self::FOREIGN_ID]);
 
         self::assertToolAccessDenied($result);
     }
@@ -37,6 +37,8 @@ final class ListDesksToolTest extends AbstractMcpTestCase
   on the first call. `callTool()` returns `McpToolResult` with `isError`, `error` and `data`.
 * `assertToolSucceeded()`, `assertToolError()`, `assertToolAccessDenied()`, `assertToolInvalidArgument()`,
   `assertToolUnknownId()` and `assertToolUnknownIds()` compare the whole message, so another refusal cannot pass for this one.
+* `assertToolArgumentAboveMaximum()` checks the refusal of a number above the `maximum` of the input schema; the SDK
+  adds a prefix to that message, so it checks only the part with the field and the maximum.
 * `assertToolWarning()` and `assertToolNextStep()` check that the response has this exact text in `warnings` or `nextSteps`.
 * A value the input schema refuses never reaches the validator of the request: the test expects the error of the SDK.
 * The entity manager is cleared between requests. Load an entity after the call, and load it again to change it after a preview.

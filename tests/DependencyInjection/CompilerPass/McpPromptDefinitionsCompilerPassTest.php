@@ -9,6 +9,7 @@ use AnzuSystems\CommonBundle\DependencyInjection\CompilerPass\McpToolDefinitions
 use AnzuSystems\CommonBundle\Mcp\Exception\McpConfigurationException;
 use AnzuSystems\CommonBundle\Mcp\McpPromptDefinitions;
 use AnzuSystems\CommonBundle\Mcp\McpToolDefinitions;
+use AnzuSystems\CommonBundle\Tests\Data\Mcp\Prompt\DuplicateNameExamplePrompt;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Prompt\ExamplePrompt;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Prompt\PlainExamplePrompt;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Prompt\UnknownToolExamplePrompt;
@@ -42,6 +43,16 @@ final class McpPromptDefinitionsCompilerPassTest extends TestCase
             UnknownToolExamplePrompt::NAME,
             UnknownToolExamplePrompt::UNKNOWN_TOOL_NAME,
         ));
+
+        new McpPromptDefinitionsCompilerPass()
+            ->process($container);
+    }
+
+    public function testTwoPromptsWithOneNameFailAtCompileTime(): void
+    {
+        $container = $this->createMcpContainer([ExamplePrompt::class, DuplicateNameExamplePrompt::class]);
+
+        $this->expectExceptionObject(McpConfigurationException::createDuplicatePromptName(ExamplePrompt::NAME));
 
         new McpPromptDefinitionsCompilerPass()
             ->process($container);

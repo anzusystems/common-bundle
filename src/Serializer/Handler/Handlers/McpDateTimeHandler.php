@@ -26,7 +26,7 @@ final class McpDateTimeHandler extends AbstractHandler
     public const string INVALID_VALUE_MESSAGE = '"%s" is not an ISO 8601 date-time, e.g. "2026-07-09T06:00:00+02:00".';
 
     private const string UTC_TIMEZONE = 'UTC';
-    private const string ISO_8601_PATTERN = '/^\d{4}-\d{2}-\d{2}(T\d{2}:\d{2}(:\d{2}(\.\d{1,6})?)?(Z|[+-]\d{2}:?\d{2})?)?$/';
+    private const string ISO_8601_PATTERN = '/^\d{4}-\d{2}-\d{2}(T\d{2}:\d{2}(:\d{2}(\.\d{1,6})?)?(Z|[+-]\d{2}(:?\d{2})?)?)?$/';
 
     public function __construct(
         private readonly DateTimeHandler $dateTimeHandler,

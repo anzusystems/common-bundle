@@ -8,6 +8,7 @@ use AnzuSystems\CommonBundle\DependencyInjection\CompilerPass\McpCompilerPass;
 use AnzuSystems\CommonBundle\DependencyInjection\CompilerPass\McpToolReferenceHandlerCompilerPass;
 use AnzuSystems\CommonBundle\Mcp\Exception\McpConfigurationException;
 use AnzuSystems\CommonBundle\Mcp\Handler\McpToolReferenceHandler;
+use AnzuSystems\CommonBundle\Mcp\Resolver\McpToolSignatureResolver;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Tool\ExampleSearchTool;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Tool\ExampleTool;
 use Mcp\Capability\Registry\ReferenceHandler;
@@ -18,15 +19,15 @@ use Symfony\Component\DependencyInjection\Reference;
 
 final class McpToolReferenceHandlerCompilerPassTest extends TestCase
 {
-    private const string SERVER_NAME = 'core_cms';
+    private const string SERVER_NAME = 'example';
     private const string HANDLER_LOCATOR_ID = '.service_locator.example';
     private const string INNER_ARGUMENT = '$inner';
     private const string SET_CONTAINER_METHOD = 'setContainer';
     private const string SET_REFERENCE_HANDLER_METHOD = 'setReferenceHandler';
     private const string APP_RENDERER_ID = 'mcp.app.renderer';
     private const string APP_TEMPLATE = 'mcp/example.html.twig';
-    private const string INVOKE_METHOD = '__invoke';
     private const string READ_TOOL_METHOD = 'listExamples';
+    private const string APP_TOOL_KEY_SEPARATOR = '::';
 
     public function testWrapsTheSdkHandlerOnTheHandlerLocatorWhenTheServerHasNoReferenceHandler(): void
     {
@@ -69,10 +70,10 @@ final class McpToolReferenceHandlerCompilerPassTest extends TestCase
         $container = $this->createContainer();
         $container->register(ExampleSearchTool::class);
         $container->setParameter(McpToolReferenceHandlerCompilerPass::APP_TOOL_TEMPLATES_PARAM, [
-            self::SERVER_NAME => [ExampleSearchTool::class . '::' . self::INVOKE_METHOD => self::APP_TEMPLATE],
+            self::SERVER_NAME => [ExampleSearchTool::class . self::APP_TOOL_KEY_SEPARATOR . McpToolSignatureResolver::INVOKE_METHOD => self::APP_TEMPLATE],
         ]);
 
-        $this->expectExceptionObject(McpConfigurationException::createAppTemplateOnAsMcpTool(ExampleSearchTool::class, ExampleSearchTool::class . '::' . self::INVOKE_METHOD));
+        $this->expectExceptionObject(McpConfigurationException::createAppTemplateOnAsMcpTool(ExampleSearchTool::class, ExampleSearchTool::class . self::APP_TOOL_KEY_SEPARATOR . McpToolSignatureResolver::INVOKE_METHOD));
 
         new McpToolReferenceHandlerCompilerPass()
             ->process($container);
@@ -83,7 +84,7 @@ final class McpToolReferenceHandlerCompilerPassTest extends TestCase
         $container = $this->createContainer();
         $container->register(ExampleTool::class);
         $container->setParameter(McpToolReferenceHandlerCompilerPass::APP_TOOL_TEMPLATES_PARAM, [
-            self::SERVER_NAME => [ExampleTool::class . '::' . self::READ_TOOL_METHOD => self::APP_TEMPLATE],
+            self::SERVER_NAME => [ExampleTool::class . self::APP_TOOL_KEY_SEPARATOR . self::READ_TOOL_METHOD => self::APP_TEMPLATE],
         ]);
 
         new McpToolReferenceHandlerCompilerPass()

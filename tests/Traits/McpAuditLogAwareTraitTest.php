@@ -14,7 +14,7 @@ use Symfony\Component\HttpFoundation\RequestStack;
 final class McpAuditLogAwareTraitTest extends TestCase
 {
     private const int USER_ID = 5;
-    private const string RESOURCE_NAME = 'quiz';
+    private const string RESOURCE_NAME = 'example';
 
     public function testEntityReachesTheMainRequest(): void
     {

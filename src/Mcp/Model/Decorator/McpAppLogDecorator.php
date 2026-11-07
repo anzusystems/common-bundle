@@ -15,7 +15,7 @@ final class McpAppLogDecorator extends AbstractMcpLogDecorator
         get => $this->readString($this->document, JournalLogRepository::FIELD_LEVEL_NAME);
     }
 
-    #[McpField(description: 'Long values are truncated.')]
+    #[McpField(description: self::TRUNCATED_DESCRIPTION)]
     #[Serialize]
     public ?string $message {
         get => $this->readTruncated($this->document, 'message');

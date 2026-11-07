@@ -22,14 +22,14 @@ use Symfony\Bundle\SecurityBundle\Security;
 
 final class FilterToolsListRequestHandlerTest extends TestCase
 {
-    private const string GRANTED_TOOL_NAME = 'list_sites';
+    private const string GRANTED_TOOL_NAME = 'example_read';
     private const string DENIED_TOOL_NAME = 'search_app_logs';
-    private const string GRANTED_WRITE_TOOL_NAME = 'create_quiz';
-    private const string NOT_GRANTED_WRITE_TOOL_NAME = 'update_robots_txt';
-    private const string GRANTED_PREVIEW_TOOL_NAME = 'preview_quiz';
-    private const string NOT_GRANTED_PREVIEW_TOOL_NAME = 'preview_robots_txt_update';
-    private const string GRANTED_PERMISSION = 'cms_site_read';
-    private const string DENIED_PERMISSION = 'cms_log_read';
+    private const string GRANTED_WRITE_TOOL_NAME = 'example_write';
+    private const string NOT_GRANTED_WRITE_TOOL_NAME = 'example_other_write';
+    private const string GRANTED_PREVIEW_TOOL_NAME = 'example_preview';
+    private const string NOT_GRANTED_PREVIEW_TOOL_NAME = 'example_other_preview';
+    private const string GRANTED_PERMISSION = 'example_read';
+    private const string DENIED_PERMISSION = 'app_log_read';
     private const int PAGE_SIZE = 20;
     private const int REQUEST_ID = 1;
 

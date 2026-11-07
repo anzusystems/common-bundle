@@ -33,7 +33,7 @@ infrastructure after a bundle upgrade.
            allowed_hosts: '%env(csv:ANZU_MCP_ALLOWED_HOSTS)%'
            pod: '%env(bool:ANZU_MCP_POD)%'
            confirmation_fallback_locale: 'sk'
-           log_tools_permission: cms_log_read
+           log_tools_permission: app_log_read
            tool_error_exceptions:
                App\Exception\SomeBackendException: 'Backend is temporarily unavailable, retry the call.'
            rate_limiter:
@@ -129,28 +129,28 @@ its `__invoke()` takes the request DTO and returns the response.
 
 ```php
 #[AsMcpTool(
-    name: ListKeywordsTool::NAME,
+    name: ListLabelsTool::NAME,
     description: <<<'TXT'
-        Searches active keywords (editorial topic tags) by name.
-        Filter {{ list_published_articles }} by the returned ids.
+        Searches labels by name.
+        Filter {{ list_notes }} by the returned ids.
         TXT,
-    category: McpToolCategory::KEYWORDS,
-    permission: Permission::CMS_KEYWORD_READ,
-    descriptionValues: ['list_published_articles' => ListPublishedArticlesTool::NAME],
+    category: McpToolCategory::LABELS,
+    permission: Permission::LABEL_READ,
+    descriptionValues: ['list_notes' => ListNotesTool::NAME],
     readOnly: true,
 )]
-final readonly class ListKeywordsTool
+final readonly class ListLabelsTool
 {
-    public const string NAME = 'list_keywords';
+    public const string NAME = 'list_labels';
 
     public function __construct(
-        private KeywordRepositoryMcpDecorator $keywordRepoMcpDecorator,
+        private LabelRepositoryMcpDecorator $labelRepoMcpDecorator,
     ) {
     }
 
-    public function __invoke(ListKeywordsRequest $request): McpKeywordListResponse
+    public function __invoke(ListLabelsRequest $request): McpLabelListResponse
     {
-        return $this->keywordRepoMcpDecorator->getList($request);
+        return $this->labelRepoMcpDecorator->getList($request);
     }
 }
 ```
@@ -190,10 +190,11 @@ final readonly class ListKeywordsTool
   object, `array<X>` is a list, and a bare `array` fails the compilation the same way. A class without a `#[Serialize]`
   member, e.g. `DateTimeImmutable`, fails it too, because its schema would refuse every value. A `DateTimeImmutable`
   with `#[Serialize(handler: McpDateTimeHandler::class)]` (also nullable) is a string, and the schema appends
-  `McpDateTimeHandler::FORMAT_DESCRIPTION` to its description: the handler reads any ISO 8601 value the
-  `DateTimeImmutable` constructor accepts, a date alone included, reads a value without an offset as UTC and returns
-  it in UTC. The schema has no `format: date-time`, which requires an offset. An unreadable value is answered with
-  `Invalid arguments: <field>: "<value>" is not an ISO 8601 date-time, …` before the validator runs.
+  `McpDateTimeHandler::FORMAT_DESCRIPTION` to its description: the handler reads a calendar date `YYYY-MM-DD` with
+  an optional time (`THH:MM`, seconds and a fraction optional) and an optional offset (`Z`, `+HH`, `+HHMM` or `+HH:MM`),
+  reads a value without an offset as UTC and returns it in UTC. The schema has no `format: date-time`, which requires
+  an offset. An unreadable value is answered with `Invalid arguments: <field>: "<value>" is not an ISO 8601 date-time,
+  …` before the validator runs.
 * The return class is the response: the pass appends a `Returns:` list of its `#[Serialize]` properties to the
   description, because clients hand the model the description and the input schema, not necessarily an output schema.
 * `#[McpField(description: …, descriptionValues: […])]` describes a DTO property, a response property, a prompt argument (see
@@ -217,28 +218,28 @@ A list of objects is a `Collection<int, X>` with `#[Serialize(type: X::class)]`:
 * `NamedArgumentsRule` reports a call with more than two arguments that are not all named in the namespaces of `anzuNamedArguments.classNamespaces`. A call with a value for a variadic parameter, a spread or no known signature is left alone.
 
 ```php
-final class ListKeywordsRequest
+final class ListLabelsRequest
 {
     private const int QUERY_LENGTH_MAX = 100;
 
     #[Assert\NotBlank]
     #[Assert\Length(max: self::QUERY_LENGTH_MAX)]
-    #[McpField(description: 'Keyword name to search for; ignores diacritics and lists the best matches first.')]
+    #[McpField(description: 'Label name to search for; ignores diacritics and lists the best matches first.')]
     #[Serialize]
     public string $query = App::EMPTY_STRING {
         set => trim($value);
     }
 }
 
-final class McpKeywordListResponse
+final class McpLabelListResponse
 {
     /**
-     * @param Collection<int, McpKeywordDecorator> $keywords
+     * @param Collection<int, McpLabelDecorator> $labels
      */
     public function __construct(
-        #[McpField(description: 'Best matches; narrow the query when the expected keyword is missing.')]
-        #[Serialize(type: McpKeywordDecorator::class)]
-        public private(set) Collection $keywords,
+        #[McpField(description: 'Best matches; narrow the query when the expected label is missing.')]
+        #[Serialize(type: McpLabelDecorator::class)]
+        public private(set) Collection $labels,
     ) {
     }
 }
@@ -300,10 +301,10 @@ A host tool declares it in the attribute:
 
 ```php
 #[AsMcpTool(
-    name: ListSitesTool::NAME,
-    description: 'Lists the sites.',
-    category: McpToolCategory::SITES,
-    permission: Permission::CMS_SITE_READ,
+    name: ListLabelsTool::NAME,
+    description: 'Lists the labels.',
+    category: McpToolCategory::LABELS,
+    permission: Permission::LABEL_READ,
     readOnly: true,
 )]
 ```
@@ -313,17 +314,17 @@ checks the input itself on the first line of `__invoke()`, like a controller. A 
 comes from a trait of the host:
 
 ```php
-public function __invoke(ListBoxItemHistoryRequest $request): McpBoxItemHistoryResponse
+public function __invoke(ListNoteHistoryRequest $request): McpNoteHistoryResponse
 {
-    $this->denyAccessUnlessGranted(Permission::CMS_BOX_MCP_INNER_ACCESS, $request);
+    $this->denyAccessUnlessGranted(Permission::NOTE_MCP_INNER_ACCESS, $request);
 
-    return $this->boxRepoMcpDecorator->getItemHistoryList($request);
+    return $this->noteRepoMcpDecorator->getHistoryList($request);
 }
 ```
 
 `McpToolReferenceHandler` answers the `AccessDeniedException` with the usual access error. Before the tool runs it calls the
-host service `McpInputEnricherInterface` for every input, which narrows it to what the user may read, e.g. an empty site
-filter to the allowed sites. It leaves values sent by the client alone, so the voter still refuses a foreign site. The host
+host service `McpInputEnricherInterface` for every input, which narrows it to what the user may read, e.g. an empty label
+filter to the allowed labels. It leaves values sent by the client alone, so the voter still refuses a foreign label. The host
 sets the alias of the interface to its service. Without one an empty filter stays empty.
 
 Nothing in the bundle enforces that check, so the host names its scoped requests for the PHPStan rule:
@@ -332,7 +333,7 @@ Nothing in the bundle enforces that check, so the host names its scoped requests
 parameters:
     anzuMcpToolInputPermission:
         inputPermissions:
-            'App\Mcp\Model\McpBoxIdsAwareInterface': 'App\Security\Permission::CMS_BOX_MCP_INNER_ACCESS'
+            'App\Mcp\Model\McpLabelIdsAwareInterface': 'App\Security\Permission::NOTE_MCP_INNER_ACCESS'
 ```
 
 A log tool of this bundle (`search_app_logs`, `search_audit_logs`, `get_logs_by_context`) cannot know the permissions of
@@ -341,7 +342,7 @@ its host, so the host names the one permission they share:
 ```yaml
 anzu_systems_common:
     mcp:
-        log_tools_permission: cms_log_read
+        log_tools_permission: app_log_read
 ```
 
 `McpToolDefinitionsCompilerPass` builds `McpToolDefinitions` from the attributes, in the order of the tool services. An
@@ -400,9 +401,9 @@ every read tool, or it disappears for clients without the write grant:
 
 ```php
 #[AsMcpTool(
-    name: ListSitesTool::NAME,
+    name: ListLabelsTool::NAME,
     description: '…',
-    category: McpToolCategory::SITES,
+    category: McpToolCategory::LABELS,
     readOnly: true,
 )]
 ```
@@ -414,11 +415,11 @@ A preview is a read tool that shows what a write tool would save and changes not
 
 ```php
 #[AsMcpTool(
-    name: PreviewQuizTool::NAME,
+    name: PreviewNoteTool::NAME,
     description: '…',
-    category: McpToolCategory::QUIZZES,
+    category: McpToolCategory::NOTES,
     readOnly: true,
-    previewOf: CreateQuizTool::NAME,
+    previewOf: CreateNoteTool::NAME,
 )]
 ```
 
@@ -448,7 +449,7 @@ reservation.
 The schema does not list the field as `required` (`#[McpField(requiredBySchema: false)]`), because the SDK would refuse a
 missing value with a generic error before the validator could name the preview to call.
 
-`#[AsMcpTool(rateLimiter: 'quiz_write')]` names a limiter of `framework.rate_limiter`, the budget of writes per user on top
+`#[AsMcpTool(rateLimiter: 'note_write')]` names a limiter of `framework.rate_limiter`, the budget of writes per user on top
 of `McpRateLimiter`. A write that passed its preview takes one token before the tool runs, tools naming one limiter share
 it and the error names them. A call without a change or refused by its preview takes none. `McpToolSchemaCompilerPass`
 adds a sentence about the limit to the description of the tool, naming the tools that share it, so a description does not
@@ -528,21 +529,21 @@ the row is locked.
 A host reports what uses an entity with one `McpDeleteDependencyProviderInterface` per entity class:
 
 ```php
-final readonly class QuizDeleteDependencyProvider implements McpDeleteDependencyProviderInterface
+final readonly class NoteDeleteDependencyProvider implements McpDeleteDependencyProviderInterface
 {
     public static function getSupportedEntity(): string
     {
-        return Quiz::class;
+        return Note::class;
     }
 
     public function provideDependencies(object $entity): array
     {
-        if (false === $entity instanceof Quiz) {
+        if (false === $entity instanceof Note) {
             throw new UnexpectedValueException(sprintf('Unsupported entity "%s".', get_debug_type($entity)));
         }
-        $embedCount = $entity->getEmbeds()->count();
+        $linkCount = $entity->getIncomingLinks()->count();
 
-        return $embedCount > 0 ? [sprintf('embedded %d times in articles', $embedCount)] : [];
+        return $linkCount > 0 ? [sprintf('linked %d times from other notes', $linkCount)] : [];
     }
 }
 ```
@@ -565,7 +566,7 @@ Without such a service, or when it returns an empty `new McpToolScope()`, read t
 
 A read tool declared with `#[AsMcpTool(explicitGrant: true)]` is not in "every read tool": `readToolNames: null` and a
 request without a scope leave it out, so it is granted only when `readToolNames` names it. Use it for a tool whose data
-someone should decide to send to the model provider when they create the token, e.g. the drafts of articles.
+someone should decide to send to the model provider when they create the token, e.g. private notes.
 `McpToolDefinitions::find($toolName)->explicitGrant` tells a host which tools to leave out of its "every read tool"
 choice. A write tool is granted only by name anyway, so the flag changes nothing there. The scope only
 narrows: a tool in the scope still needs its permission. A tool outside the scope is hidden from `tools/list` and
@@ -581,27 +582,27 @@ the SDK `#[McpPrompt]` with the tools the prompt leads the agent to call, and re
 
 ```php
 #[AsMcpPrompt(
-    name: HomepageSnapshotPrompt::NAME,
-    description: 'Shows the boxes of the homepage of a site with their articles and reads.',
-    tools: [ListSitesTool::NAME, ListBoxesTool::NAME, GetBoxCurrentItemsTool::NAME, GetArticlesTool::NAME],
+    name: LabelDigestPrompt::NAME,
+    description: 'Summarizes the notes with a label.',
+    tools: [ListLabelsTool::NAME, ListNotesTool::NAME, GetNotesTool::NAME],
 )]
-final readonly class HomepageSnapshotPrompt
+final readonly class LabelDigestPrompt
 {
     use McpPromptMessageTrait;
 
-    public const string NAME = 'homepage_snapshot';
+    public const string NAME = 'label_digest';
 
     private const string TEXT = <<<'TXT'
-        Show the homepage of the site "{{ site }}".
-        1. Resolve the site with {{ list_sites }}.
+        Summarize the notes with the label "{{ label }}".
+        1. Resolve the label with {{ list_labels }}.
         …
         TXT;
 
     public function __invoke(
-        #[McpField(description: 'Name, domain or id of the site.')]
-        string $site,
+        #[McpField(description: 'Name or id of the label.')]
+        string $label,
     ): PromptMessage {
-        return $this->createUserMessage(self::TEXT, ['site' => $site]);
+        return $this->createUserMessage(self::TEXT, ['label' => $label]);
     }
 }
 ```
@@ -612,7 +613,7 @@ final readonly class HomepageSnapshotPrompt
   error `-32602` with `Access denied — the current MCP user is
   not allowed to use every tool of the prompt "<prompt>".` A prompt has no permission of its own. A prompt without
   tools, or one declared by the plain `#[McpPrompt]`, is seen by everyone.
-- **Tools in the text.** The text names a tool only as `{{ <tool name> }}`, e.g. `{{ list_sites }}`.
+- **Tools in the text.** The text names a tool only as `{{ <tool name> }}`, e.g. `{{ list_labels }}`.
   `createUserMessage()` replaces every placeholder of a tool in `tools` by its name and every `{{ <argument> }}` by the
   value of that argument, in one pass, so an argument value is never read as a placeholder. A placeholder that is
   neither in `tools` nor an argument throws `McpConfigurationException` naming the prompt, so a tool the text names
@@ -628,8 +629,8 @@ final readonly class HomepageSnapshotPrompt
   completion providers. A parameter without `#[McpField]` fails the container compilation with
   `McpConfigurationException`. A prompt declared by the plain `#[McpPrompt]` keeps the SDK registration.
 - **Compile-time check.** `McpPromptDefinitionsCompilerPass` collects the tools of every `#[AsMcpPrompt]` into
-  `McpPromptDefinitions`; a tool that is not an MCP tool of the server fails the container compilation with
-  `McpConfigurationException`.
+  `McpPromptDefinitions`; a tool that is not an MCP tool of the server and a prompt name that two prompts use fail the
+  container compilation with `McpConfigurationException`.
 
 ## Tool errors
 
@@ -639,11 +640,11 @@ and builds each message in a static `create*()` method. The constructor is prote
 anywhere else:
 
 ```php
-final class McpQuizToolInputException extends McpToolInputException
+final class McpNoteToolInputException extends McpToolInputException
 {
-    public static function createNotDescribable(int $quizId): self
+    public static function createNotDescribable(int $noteId): self
     {
-        return new self(sprintf('Quiz "%d" uses image answers, which MCP cannot keep: tell the user to edit it in the admin.', $quizId));
+        return new self(sprintf('Note "%d" has attachments, which MCP cannot keep: tell the user to edit it in the admin.', $noteId));
     }
 }
 ```
@@ -662,12 +663,15 @@ A message tells the model what to do next, so it is prose, not an error code.
 
 The resolver does not check the order of the two dates. The request refuses an `until` before `from` itself with
 `#[Assert\GreaterThanOrEqual(propertyPath: 'from', message: McpDateWindowResolver::NOT_BEFORE_FROM_MESSAGE)]`, so the
-agent gets `Invalid arguments: until: This value must not be before from.` like any other invalid argument.
+agent gets `Invalid arguments: until: This value must not be before from.` like any other invalid argument. The log
+requests (`McpLogSearchRequestTrait`) refuse a `from` in the future the same way
+(`McpDateWindowResolver::NOT_IN_FUTURE_MESSAGE`), so a local time read as UTC does not end in an empty result.
 
 Pagination is checked by the input schema instead: a request declares
 `#[Assert\Range(min: McpPageWindow::PAGE_MIN, max: McpPageWindow::PAGE_MAX)]` on `page` and
 `#[Assert\Range(min: McpPageWindow::LIMIT_MIN, max: <its maximum>)]` on `limit`, so the SDK refuses a page or limit
-outside them before the tool runs. `McpPageWindow` gives the tool the `offset`.
+outside them before the tool runs. `McpPageRequestTrait` declares `page` this way, with `PAGE_MIN` as its default.
+`McpPageWindow` gives the tool the `offset`.
 
 Tools must surface a shortened window. `warnings` report only what the server finds out while it answers, such as a
 shortened window, more records than the limit or a search that did not finish; an argument the tool cannot use is
@@ -729,13 +733,13 @@ narrows the scan. Assumptions behind the bounds:
 entity and tells the client which tool lists the valid ids, so an agent does not guess them:
 
 ```php
-#[McpExistingId(entity: Site::class, resolverTool: ListSitesTool::NAME)]
-public ?int $siteId = null;
+#[McpExistingId(entity: Label::class, resolverTool: ListLabelsTool::NAME)]
+public ?int $labelId = null;
 ```
 
 `McpExistingIdValidator` reads the ids with one query through `AnzuRepositoryInterface::findExistingIds()` of the
 entity's repository; `null` and `[]` pass without a query. An unknown id
-fails with `Unknown id "5" — no such record exists. Resolve it via list_sites instead of guessing the id.`, unknown ids
+fails with `Unknown id "5" — no such record exists. Resolve it via list_labels instead of guessing the id.`, unknown ids
 of a list with one violation naming each of them once. An entity whose repository does not implement
 `AnzuRepositoryInterface` is a `LogicException`.
 The validator is registered also without the `mcp` section.
@@ -747,14 +751,14 @@ deleted between the check and the first read throws `EntityNotFoundException`, s
 
 With the section enabled, `McpHostRouteListener` answers 404 to every main request that comes to a host of
 `allowed_hosts` or to a pod with `pod: true`, unless its route has the `McpHostRouteListener::ALLOWED_ON_MCP_HOST`
-default. It runs on `kernel.request` with priority 24, after the router. `McpHostResolver` trims the hosts and leaves out
-empty ones, and `McpController` reads them from it, so both see one list. core-cms runs the MCP endpoint on its own pods
+default. It runs on `kernel.request` with priority 24, after the router. `McpHostChecker` trims the hosts and leaves out
+empty ones, and `McpController` reads them from it, so both see one list. A host can run the MCP endpoint on its own pods
 and hosts:
 
 ```php
 'mcp' => [
-    'allowed_hosts' => env('CORE_CMS_MCP_ALLOWED_HOSTS')->csv(),
-    'pod' => env('CORE_CMS_MCP_POD')->bool(),
+    'allowed_hosts' => env('APP_MCP_ALLOWED_HOSTS')->csv(),
+    'pod' => env('APP_MCP_POD')->bool(),
 ],
 ```
 
