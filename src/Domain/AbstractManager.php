@@ -118,7 +118,7 @@ abstract class AbstractManager
     ): static {
         // Remove removed.
         $removeElementFn ??= static fn (Collection $oldCollection, BaseIdentifiableInterface $del): bool => $oldCollection->removeElement($del);
-        foreach (CollectionHelper::colDiff($oldCollection, $newCollection, $colDiffFn) as $del) {
+        foreach (CollectionHelper::colDiff(collectionOne: $oldCollection, collectionTwo: $newCollection, colDiffFn: $colDiffFn) as $del) {
             $removeElementFn($oldCollection, $del);
         }
 
@@ -138,8 +138,10 @@ abstract class AbstractManager
         }
 
         // Add new.
-        $addElementFn ??= static fn (Collection $oldCollection, BaseIdentifiableInterface $add): mixed => $oldCollection->add($add);
-        foreach (CollectionHelper::colDiff($newCollection, $oldCollection, $colDiffFn) as $add) {
+        $addElementFn ??= static function (Collection $oldCollection, BaseIdentifiableInterface $add): void {
+            $oldCollection->add($add);
+        };
+        foreach (CollectionHelper::colDiff(collectionOne: $newCollection, collectionTwo: $oldCollection, colDiffFn: $colDiffFn) as $add) {
             $addElementFn($oldCollection, $add);
         }
 

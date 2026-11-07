@@ -53,7 +53,6 @@ return ECSConfig::configure()
         ArrayListItemNewlineFixer::class => null,
         PhpdocToCommentFixer::class => null,
         PhpdocAlignFixer::class => null,
-        ClassAttributesSeparationFixer::class => null,
         PhpdocInlineTagNormalizerFixer::class => null,
         GeneralPhpdocTagRenameFixer::class => null,
         SingleLineThrowFixer::class => null,
@@ -70,7 +69,7 @@ return ECSConfig::configure()
     ])
     ->withConfiguredRule(NoSuperfluousPhpdocTagsFixer::class, ['remove_inheritdoc' => false, 'allow_mixed' => false])
     ->withConfiguredRule(ClassDefinitionFixer::class, ['multi_line_extends_each_single_line' => false])
-    ->withConfiguredRule(ClassAttributesSeparationFixer::class, ['elements' => ['method', 'property']])
+    ->withConfiguredRule(ClassAttributesSeparationFixer::class, ['elements' => ['case' => 'none']])
     ->withConfiguredRule(ArraySyntaxFixer::class, ['syntax' => 'short'])
     ->withConfiguredRule(ListSyntaxFixer::class, ['syntax' => 'short'])
     ->withConfiguredRule(PropertySpacingSniff::class, ['minLinesCountBeforeWithComment' => 1, 'maxLinesCountBeforeWithComment' => 1, 'maxLinesCountBeforeWithoutComment' => 0])

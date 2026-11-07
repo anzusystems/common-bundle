@@ -61,7 +61,6 @@ use AnzuSystems\CommonBundle\Exception\Handler\ValidationExceptionHandler;
 use AnzuSystems\CommonBundle\HealthCheck\HealthChecker;
 use AnzuSystems\CommonBundle\HealthCheck\Module\DataMountModule;
 use AnzuSystems\CommonBundle\HealthCheck\Module\ForwardIpModule;
-use AnzuSystems\CommonBundle\HealthCheck\Module\ModuleInterface;
 use AnzuSystems\CommonBundle\HealthCheck\Module\MongoModule;
 use AnzuSystems\CommonBundle\HealthCheck\Module\MysqlModule;
 use AnzuSystems\CommonBundle\HealthCheck\Module\OpCacheModule;
@@ -71,24 +70,30 @@ use AnzuSystems\CommonBundle\Log\Factory\LogContextFactory;
 use AnzuSystems\CommonBundle\Log\LogFacade;
 use AnzuSystems\CommonBundle\Log\Repository\AuditLogRepository;
 use AnzuSystems\CommonBundle\Log\Repository\JournalLogRepository;
+use AnzuSystems\CommonBundle\Mcp\Attribute\AsMcpTool;
 use AnzuSystems\CommonBundle\Mcp\Controller\McpController;
+use AnzuSystems\CommonBundle\Mcp\Event\Listener\McpHostRouteListener;
+use AnzuSystems\CommonBundle\Mcp\Handler\FilterPromptsListRequestHandler;
 use AnzuSystems\CommonBundle\Mcp\Handler\FilterToolsListRequestHandler;
+use AnzuSystems\CommonBundle\Mcp\Handler\McpToolReferenceHandler;
 use AnzuSystems\CommonBundle\Mcp\Handler\StrictToolArgumentsRequestHandler;
 use AnzuSystems\CommonBundle\Mcp\McpRateLimiter;
-use AnzuSystems\CommonBundle\Mcp\McpToolExecutor;
-use AnzuSystems\CommonBundle\Mcp\Security\McpToolAccessChecker;
+use AnzuSystems\CommonBundle\Mcp\Resolver\McpToolErrorResolver;
+use AnzuSystems\CommonBundle\Mcp\Security\McpDeleteDependencyProviderInterface;
+use AnzuSystems\CommonBundle\Mcp\Security\McpHostChecker;
+use AnzuSystems\CommonBundle\Mcp\Security\McpPreviewHashReservation;
+use AnzuSystems\CommonBundle\Mcp\Security\McpWriteConfirmation;
 use AnzuSystems\CommonBundle\Messenger\Message\AuditLogMessage;
 use AnzuSystems\CommonBundle\Messenger\Message\JournalLogMessage;
-use AnzuSystems\CommonBundle\Request\ParamConverter\ApiFilterParamConverter;
-use AnzuSystems\CommonBundle\Request\ParamConverter\EnumParamConverter;
-use AnzuSystems\CommonBundle\Request\ParamConverter\ValueObjectParamConverter;
 use AnzuSystems\CommonBundle\Request\ValueResolver\ApiFilterParamValueResolver;
 use AnzuSystems\CommonBundle\Request\ValueResolver\ArrayStringValueResolver;
 use AnzuSystems\CommonBundle\Request\ValueResolver\ValueObjectValueResolver;
 use AnzuSystems\CommonBundle\Security\PermissionConfig;
 use AnzuSystems\CommonBundle\Serializer\Exception\SerializerExceptionHandler;
 use AnzuSystems\CommonBundle\Serializer\Handler\Handlers\GeolocationHandler;
+use AnzuSystems\CommonBundle\Serializer\Handler\Handlers\McpDateTimeHandler;
 use AnzuSystems\CommonBundle\Serializer\Handler\Handlers\RawArrayHandler;
+use AnzuSystems\CommonBundle\Serializer\Handler\Handlers\UuidArrayHandler;
 use AnzuSystems\CommonBundle\Serializer\Handler\Handlers\ValueObjectHandler;
 use AnzuSystems\CommonBundle\Serializer\Service\BsonConverter;
 use AnzuSystems\CommonBundle\Util\ResourceLocker;
@@ -96,6 +101,8 @@ use AnzuSystems\CommonBundle\Validator\Constraints\EntityExistsValidator;
 use AnzuSystems\CommonBundle\Validator\Constraints\UniqueEntityDtoValidator;
 use AnzuSystems\CommonBundle\Validator\Constraints\UniqueEntityValidator;
 use AnzuSystems\CommonBundle\Validator\Validator;
+use AnzuSystems\SerializerBundle\Handler\Handlers\DateTimeHandler;
+use AnzuSystems\SerializerBundle\Handler\Handlers\UuidHandler;
 use AnzuSystems\SerializerBundle\Metadata\MetadataRegistry;
 use AnzuSystems\SerializerBundle\Serializer;
 use Doctrine\ORM\EntityManagerInterface;
@@ -103,7 +110,6 @@ use Exception;
 use LogicException;
 use MongoDB;
 use Psr\Container\ContainerInterface as PsrContainerInterface;
-use Sensio\Bundle\FrameworkExtraBundle\Request\ParamConverter\ParamConverterInterface;
 use Symfony\AI\McpBundle\McpBundle;
 use Symfony\Component\Cache\Psr16Cache;
 use Symfony\Component\Config\FileLocator;
@@ -126,6 +132,8 @@ use Symfony\Component\RateLimiter\Storage\CacheStorage;
 
 final class AnzuSystemsCommonExtension extends Extension implements PrependExtensionInterface
 {
+    public const string USER_ENTITY_CLASS_PARAM = 'anzu_systems_common.user_entity_class';
+
     private const string MCP_TOOL_NAMESPACE = 'AnzuSystems\\CommonBundle\\Mcp\\Tool\\';
     private const string MCP_SESSION_STORE_CACHE = 'cache';
     private const int MCP_PAGINATION_LIMIT_DEFAULT = 50;
@@ -292,6 +300,8 @@ final class AnzuSystemsCommonExtension extends Extension implements PrependExten
             ->replaceArgument('$appRedis', new Reference($settings['app_redis']))
             ->replaceArgument('$unlockedCommands', $settings['unlocked_commands']);
 
+        $container->setParameter(self::USER_ENTITY_CLASS_PARAM, $settings['user_entity_class']);
+
         $container
             ->getDefinition(CurrentAnzuUserProvider::class)
             ->replaceArgument('$userEntityClass', $settings['user_entity_class']);
@@ -358,8 +368,7 @@ final class AnzuSystemsCommonExtension extends Extension implements PrependExten
 
         $handlers = $errors['exception_handlers'];
 
-        /** @psalm-var callable(class-string<ExceptionHandlerInterface>):bool $hasHandler */
-        $hasHandler = static fn (string $handler): bool => in_array($handler, $handlers, true);
+        $hasHandler = static fn (string $handler): bool => in_array(needle: $handler, haystack: $handlers, strict: true);
         $debug = 'prod' !== $container->getParameter('kernel.environment');
 
         if (DefaultExceptionHandler::class === $errors['default_exception_handler']) {
@@ -427,8 +436,7 @@ final class AnzuSystemsCommonExtension extends Extension implements PrependExten
             return;
         }
 
-        /** @psalm-var callable(class-string<ModuleInterface>):bool $hasModule */
-        $hasModule = static fn (string $module): bool => in_array($module, $modules, true);
+        $hasModule = static fn (string $module): bool => in_array(needle: $module, haystack: $modules, strict: true);
 
         if ($hasModule(RedisModule::class)) {
             $definition = new Definition(RedisModule::class);
@@ -529,7 +537,7 @@ final class AnzuSystemsCommonExtension extends Extension implements PrependExten
             'ssl' => $journalLogMongo['ssl'],
         ]);
         $container->setDefinition('anzu_systems_common.logs.journal_log_client', $journalLogClientDefinition);
-        $container->registerAliasForArgument('anzu_systems_common.logs.journal_log_client', MongoDB\Client::class, '$journalLogClient');
+        $container->registerAliasForArgument(id: 'anzu_systems_common.logs.journal_log_client', type: MongoDB\Client::class, name: '$journalLogClient');
 
         $auditLogMongo = $logs['audit']['mongo'];
         $auditLogClientDefinition = new Definition(MongoDB\Client::class);
@@ -540,21 +548,21 @@ final class AnzuSystemsCommonExtension extends Extension implements PrependExten
             'ssl' => $auditLogMongo['ssl'],
         ]);
         $container->setDefinition('anzu_systems_common.logs.audit_log_client', $auditLogClientDefinition);
-        $container->registerAliasForArgument('anzu_systems_common.logs.audit_log_client', MongoDB\Client::class, '$auditLogClient');
+        $container->registerAliasForArgument(id: 'anzu_systems_common.logs.audit_log_client', type: MongoDB\Client::class, name: '$auditLogClient');
 
         $journalLogCollectionDefinition = new Definition(MongoDB\Collection::class);
         $journalLogCollectionDefinition->setFactory([new Reference('anzu_systems_common.logs.journal_log_client'), 'selectCollection']);
         $journalLogCollectionDefinition->setArgument('$databaseName', $journalLogMongo['database']);
         $journalLogCollectionDefinition->setArgument('$collectionName', $journalLogMongo['collection']);
         $container->setDefinition('anzu_mongo_journal_log_collection', $journalLogCollectionDefinition);
-        $container->registerAliasForArgument('anzu_mongo_journal_log_collection', MongoDB\Collection::class, '$journalLogCollection');
+        $container->registerAliasForArgument(id: 'anzu_mongo_journal_log_collection', type: MongoDB\Collection::class, name: '$journalLogCollection');
 
         $auditLogCollectionDefinition = new Definition(MongoDB\Collection::class);
         $auditLogCollectionDefinition->setFactory([new Reference('anzu_systems_common.logs.audit_log_client'), 'selectCollection']);
         $auditLogCollectionDefinition->setArgument('$databaseName', $auditLogMongo['database']);
         $auditLogCollectionDefinition->setArgument('$collectionName', $auditLogMongo['collection']);
         $container->setDefinition('anzu_mongo_audit_log_collection', $auditLogCollectionDefinition);
-        $container->registerAliasForArgument('anzu_mongo_audit_log_collection', MongoDB\Collection::class, '$auditLogCollection');
+        $container->registerAliasForArgument(id: 'anzu_mongo_audit_log_collection', type: MongoDB\Collection::class, name: '$auditLogCollection');
 
         $definition = $this->createControllerDefinition(LogController::class, [
             '$auditLogRepo' => new Reference(AuditLogRepository::class),
@@ -626,11 +634,16 @@ final class AnzuSystemsCommonExtension extends Extension implements PrependExten
         if ([] === $mcp['allowed_hosts']) {
             throw new LogicException('The "mcp" config section requires non-empty "allowed_hosts", otherwise every request is rejected with 403.');
         }
-        if ([] === $mcp['tool_permissions']) {
-            throw new LogicException('The "mcp" config section requires non-empty "tool_permissions", otherwise every tool is hidden and every tool call is denied.');
+
+        if (null === $mcp['log_tools_permission']) {
+            throw new LogicException('The "mcp" config section requires "log_tools_permission", the permission of the host that may read logs through the log tools.');
         }
 
         $loader->load('mcp.php');
+
+        $container
+            ->registerForAutoconfiguration(McpDeleteDependencyProviderInterface::class)
+            ->addTag(AnzuSystemsCommonBundle::TAG_MCP_DELETE_DEPENDENCY_PROVIDER);
 
         $mongo = $this->resolveMcpLogMongo();
         $clientDefinition = new Definition(MongoDB\Client::class);
@@ -641,22 +654,24 @@ final class AnzuSystemsCommonExtension extends Extension implements PrependExten
             'ssl' => $mongo['ssl'],
         ]);
         $container->setDefinition('anzu_mongo_mcp_log_client', $clientDefinition);
-        $container->registerAliasForArgument('anzu_mongo_mcp_log_client', MongoDB\Client::class, '$mcpLogClient');
+        $container->registerAliasForArgument(id: 'anzu_mongo_mcp_log_client', type: MongoDB\Client::class, name: '$mcpLogClient');
 
         $databaseDefinition = new Definition(MongoDB\Database::class);
         $databaseDefinition->setFactory([new Reference('anzu_mongo_mcp_log_client'), 'selectDatabase']);
         $databaseDefinition->setArgument('$databaseName', $mongo['database']);
         $container->setDefinition('anzu_mongo_mcp_log_database', $databaseDefinition);
-        $container->registerAliasForArgument('anzu_mongo_mcp_log_database', MongoDB\Database::class, '$mcpLogDatabase');
+        $container->registerAliasForArgument(id: 'anzu_mongo_mcp_log_database', type: MongoDB\Database::class, name: '$mcpLogDatabase');
 
         $collectionDefinition = new Definition(MongoDB\Collection::class);
         $collectionDefinition->setFactory([new Reference('anzu_mongo_mcp_log_client'), 'selectCollection']);
         $collectionDefinition->setArgument('$databaseName', $mongo['database']);
         $collectionDefinition->setArgument('$collectionName', $mongo['collection']);
         $container->setDefinition('anzu_mongo_mcp_log_collection', $collectionDefinition);
-        $container->registerAliasForArgument('anzu_mongo_mcp_log_collection', MongoDB\Collection::class, '$mcpLogCollection');
+        $container->registerAliasForArgument(id: 'anzu_mongo_mcp_log_collection', type: MongoDB\Collection::class, name: '$mcpLogCollection');
 
         $container->setParameter(McpCompilerPass::SERVER_NAME_PARAM, $mcp['server_name']);
+        $container->setParameter(AsMcpTool::LOG_TOOLS_PERMISSION_PARAM, $mcp['log_tools_permission']);
+        $container->setParameter(McpCompilerPass::INSTRUCTIONS_FILE_PARAM, $mcp['instructions_file']);
 
         $sessionCacheDefinition = new Definition(Psr16Cache::class);
         $sessionCacheDefinition->setArgument('$pool', new Reference($mcp['session']['cache_pool']));
@@ -677,26 +692,47 @@ final class AnzuSystemsCommonExtension extends Extension implements PrependExten
         $serverName = $mcp['server_name'];
         $container
             ->getDefinition(McpController::class)
-            ->replaceArgument('$server', new Reference(sprintf('mcp.server.%s', $serverName)))
+            ->replaceArgument('$server', new Reference(sprintf('mcp.server.%s', $serverName)));
+
+        $container
+            ->getDefinition(McpHostChecker::class)
             ->replaceArgument('$allowedHosts', $mcp['allowed_hosts']);
+
+        $container
+            ->getDefinition(McpHostRouteListener::class)
+            ->replaceArgument('$mcpPod', $mcp['pod']);
 
         $registryReference = new Reference(sprintf('mcp.server.%s.registry', $serverName));
         $container
             ->getDefinition(StrictToolArgumentsRequestHandler::class)
             ->replaceArgument('$registry', $registryReference);
 
+        $paginationLimit = $this->resolveMcpPaginationLimit($container, $serverName);
         $container
             ->getDefinition(FilterToolsListRequestHandler::class)
             ->replaceArgument('$registry', $registryReference)
-            ->replaceArgument('$pageSize', $this->resolveMcpPaginationLimit($container, $serverName));
+            ->replaceArgument('$pageSize', $paginationLimit);
 
         $container
-            ->getDefinition(McpToolExecutor::class)
+            ->getDefinition(FilterPromptsListRequestHandler::class)
+            ->replaceArgument('$registry', $registryReference)
+            ->replaceArgument('$pageSize', $paginationLimit);
+
+        $container
+            ->getDefinition(McpToolReferenceHandler::class)
+            ->replaceArgument('$registry', $registryReference);
+
+        $container
+            ->getDefinition(McpPreviewHashReservation::class)
+            ->replaceArgument('$cachePool', new Reference($mcp['rate_limiter']['cache_pool']));
+
+        $container
+            ->getDefinition(McpWriteConfirmation::class)
+            ->replaceArgument('$fallbackLocale', $mcp['confirmation_fallback_locale']);
+
+        $container
+            ->getDefinition(McpToolErrorResolver::class)
             ->replaceArgument('$toolErrorExceptions', $mcp['tool_error_exceptions']);
-
-        $container
-            ->getDefinition(McpToolAccessChecker::class)
-            ->replaceArgument('$toolPermissions', $mcp['tool_permissions']);
 
         $container
             ->getDefinition(CreateMcpLogCollectionCommand::class)
@@ -770,6 +806,18 @@ final class AnzuSystemsCommonExtension extends Extension implements PrependExten
             (new Definition(RawArrayHandler::class))
                 ->addTag(AnzuSystemsCommonBundle::TAG_SERIALIZER_HANDLER)
         );
+        $container->setDefinition(
+            UuidArrayHandler::class,
+            new Definition(UuidArrayHandler::class)
+                ->setArgument('$uuidHandler', new Reference(UuidHandler::class))
+                ->addTag(AnzuSystemsCommonBundle::TAG_SERIALIZER_HANDLER)
+        );
+        $container->setDefinition(
+            McpDateTimeHandler::class,
+            new Definition(McpDateTimeHandler::class)
+                ->setArgument('$dateTimeHandler', new Reference(DateTimeHandler::class))
+                ->addTag(AnzuSystemsCommonBundle::TAG_SERIALIZER_HANDLER)
+        );
 
         $container->setDefinition(
             BsonConverter::class,
@@ -778,10 +826,6 @@ final class AnzuSystemsCommonExtension extends Extension implements PrependExten
         );
     }
 
-    /**
-     * @psalm-suppress UndefinedClass
-     * @psalm-suppress MissingDependency
-     */
     private function loadValueResolvers(ContainerBuilder $container): void
     {
         if (interface_exists(ValueResolverInterface::class)) {
@@ -796,21 +840,6 @@ final class AnzuSystemsCommonExtension extends Extension implements PrependExten
             $container
                 ->register(ArrayStringValueResolver::class)
                 ->addTag('controller.argument_value_resolver', ['priority' => 150])
-            ;
-        }
-
-        if (interface_exists(ParamConverterInterface::class)) {
-            $container
-                ->register(ApiFilterParamConverter::class)
-                ->addTag('request.param_converter', ['priority' => false, 'converter' => ApiFilterParamConverter::class])
-            ;
-            $container
-                ->register(ValueObjectParamConverter::class)
-                ->addTag('request.param_converter', ['priority' => false, 'converter' => ValueObjectParamConverter::class])
-            ;
-            $container
-                ->register(EnumParamConverter::class)
-                ->addTag('request.param_converter', ['priority' => false, 'converter' => EnumParamConverter::class])
             ;
         }
     }

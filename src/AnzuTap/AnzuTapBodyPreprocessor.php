@@ -20,13 +20,13 @@ class AnzuTapBodyPreprocessor
     protected function minifyHtml(string $html): string
     {
         /** @var string $html */
-        $html = preg_replace('/^\\s+|\\s+$/mu', '', $html);
+        $html = preg_replace(pattern: '/^\\s+|\\s+$/mu', replacement: '', subject: $html);
         /** @var string $html */
-        $html = preg_replace('/\\s+(<\\/?(?:area|article|aside|base(?:font)?|blockquote|body'
+        $html = preg_replace(pattern: '/\\s+(<\\/?(?:area|article|aside|base(?:font)?|blockquote|body'
             . '|canvas|caption|center|col(?:group)?|dd|dir|div|dl|dt|fieldset|figcaption|figure|footer|form'
             . '|frame(?:set)?|h[1-6]|head|header|hgroup|hr|html|legend|li|link|main|map|menu|meta|nav'
             . '|ol|opt(?:group|ion)|output|p|param|section|t(?:able|body|head|d|h||r|foot|itle)'
-            . '|ul|video)\\b[^>]*>)/iu', '$1', $html);
+            . '|ul|video)\\b[^>]*>)/iu', replacement: '$1', subject: $html);
 
         return $html;
     }

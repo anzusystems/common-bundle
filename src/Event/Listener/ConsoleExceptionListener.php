@@ -25,7 +25,7 @@ final readonly class ConsoleExceptionListener
     {
         $exception = $event->getError();
         foreach ($this->ignoredExceptions as $ignoredException) {
-            if (is_a($exception::class, $ignoredException, true)) {
+            if (is_a(object_or_class: $exception::class, class: $ignoredException, allow_string: true)) {
                 return;
             }
         }

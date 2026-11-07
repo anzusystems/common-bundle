@@ -6,6 +6,9 @@ namespace AnzuSystems\CommonBundle\Csv\CsvRowAccessor;
 
 use SplFileObject;
 
+/**
+ * @phpstan-consistent-constructor
+ */
 abstract class AbstractCsvRowAccessor implements CsvRowAccessorInterface
 {
     protected const string ID = 'id';
@@ -17,9 +20,6 @@ abstract class AbstractCsvRowAccessor implements CsvRowAccessorInterface
     protected array $indexMap = [];
     protected int $lastIndex = 0;
 
-    /**
-     * @psalm-suppress UnsafeInstantiation
-     */
     public static function getInstance(SplFileObject $csv): static
     {
         return (new static())
@@ -31,7 +31,7 @@ abstract class AbstractCsvRowAccessor implements CsvRowAccessorInterface
     {
         $index = 0;
         foreach ($this->readHeaders($csv) as $header) {
-            if (in_array($header, static::HEADERS, true)) {
+            if (in_array(needle: $header, haystack: static::HEADERS, strict: true)) {
                 $this->indexMap[(string) $header] = $index;
                 $this->lastIndex = $index;
             }

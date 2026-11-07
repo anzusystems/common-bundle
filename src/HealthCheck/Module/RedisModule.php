@@ -20,6 +20,6 @@ final class RedisModule implements ModuleInterface
 
     public function isHealthy(): bool
     {
-        return (bool) $this->appRedis->set('health_check', '1', 1);
+        return (bool) $this->appRedis->setex(key: 'health_check', expire: 1, value: '1');
     }
 }

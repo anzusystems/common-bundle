@@ -4,26 +4,46 @@ declare(strict_types=1);
 
 namespace Symfony\Component\DependencyInjection\Loader\Configurator;
 
+use AnzuSystems\CommonBundle\AnzuSystemsCommonBundle;
 use AnzuSystems\CommonBundle\Command\CreateMcpLogCollectionCommand;
 use AnzuSystems\CommonBundle\Domain\User\CurrentAnzuUserProvider;
 use AnzuSystems\CommonBundle\Log\Repository\AuditLogRepository;
 use AnzuSystems\CommonBundle\Log\Repository\JournalLogRepository;
 use AnzuSystems\CommonBundle\Mcp\Controller\McpController;
+use AnzuSystems\CommonBundle\Mcp\Event\Listener\McpHostRouteListener;
+use AnzuSystems\CommonBundle\Mcp\Factory\McpPreviewHashFactory;
+use AnzuSystems\CommonBundle\Mcp\Handler\FilterPromptsListRequestHandler;
 use AnzuSystems\CommonBundle\Mcp\Handler\FilterToolsListRequestHandler;
+use AnzuSystems\CommonBundle\Mcp\Handler\McpToolReferenceHandler;
+use AnzuSystems\CommonBundle\Mcp\Handler\RejectUngrantedPromptRequestHandler;
 use AnzuSystems\CommonBundle\Mcp\Handler\StrictToolArgumentsRequestHandler;
 use AnzuSystems\CommonBundle\Mcp\Log\McpLogFinder;
 use AnzuSystems\CommonBundle\Mcp\Log\McpLogger;
 use AnzuSystems\CommonBundle\Mcp\Log\McpLogRepository;
+use AnzuSystems\CommonBundle\Mcp\Log\McpToolCallLogger;
+use AnzuSystems\CommonBundle\Mcp\McpPromptDefinitions;
 use AnzuSystems\CommonBundle\Mcp\McpRateLimiter;
-use AnzuSystems\CommonBundle\Mcp\McpToolExecutor;
+use AnzuSystems\CommonBundle\Mcp\McpToolDefinitions;
+use AnzuSystems\CommonBundle\Mcp\McpWriteRateLimiter;
 use AnzuSystems\CommonBundle\Mcp\Resolver\McpContextIdResolver;
 use AnzuSystems\CommonBundle\Mcp\Resolver\McpDateWindowResolver;
-use AnzuSystems\CommonBundle\Mcp\Resolver\McpPageWindowResolver;
+use AnzuSystems\CommonBundle\Mcp\Resolver\McpToolErrorResolver;
+use AnzuSystems\CommonBundle\Mcp\Security\McpDeleteGuard;
+use AnzuSystems\CommonBundle\Mcp\Security\McpHostChecker;
+use AnzuSystems\CommonBundle\Mcp\Security\McpInputEnricherInterface;
+use AnzuSystems\CommonBundle\Mcp\Security\McpPreviewHashReservation;
+use AnzuSystems\CommonBundle\Mcp\Security\McpPromptAccessChecker;
 use AnzuSystems\CommonBundle\Mcp\Security\McpToolAccessChecker;
+use AnzuSystems\CommonBundle\Mcp\Security\McpToolScopeProviderInterface;
+use AnzuSystems\CommonBundle\Mcp\Security\McpWriteConfirmation;
+use AnzuSystems\CommonBundle\Mcp\Security\McpWriteToolGuard;
 use AnzuSystems\CommonBundle\Mcp\Tool\GetLogsByContextTool;
 use AnzuSystems\CommonBundle\Mcp\Tool\SearchAppLogsTool;
 use AnzuSystems\CommonBundle\Mcp\Tool\SearchAuditLogsTool;
 use AnzuSystems\SerializerBundle\Serializer;
+use Symfony\Component\HttpKernel\KernelEvents;
+use Symfony\Component\Validator\Validator\ValidatorInterface;
+use Symfony\Contracts\Translation\TranslatorInterface;
 
 return static function (ContainerConfigurator $configurator): void {
     $services = $configurator->services();
@@ -38,24 +58,48 @@ return static function (ContainerConfigurator $configurator): void {
 
     $services->set(McpDateWindowResolver::class);
 
-    $services->set(McpPageWindowResolver::class);
-
     $services->set(StrictToolArgumentsRequestHandler::class)
         ->arg('$registry', null)
-        ->arg('$logger', service('logger'))
+        ->arg('$toolAccessChecker', service(McpToolAccessChecker::class))
+        ->arg('$toolCallLogger', service(McpToolCallLogger::class))
         ->tag('mcp.request_handler')
-        ->tag('monolog.logger', ['channel' => 'mcp'])
+    ;
+
+    $services->set(McpToolDefinitions::class)
+        ->arg('$definitions', [])
     ;
 
     $services->set(McpToolAccessChecker::class)
-        ->arg('$toolPermissions', null)
+        ->arg('$toolDefinitions', service(McpToolDefinitions::class))
         ->arg('$security', service('security.helper'))
+        ->arg('$toolScopeProvider', service(McpToolScopeProviderInterface::class)->nullOnInvalid())
     ;
 
     $services->set(FilterToolsListRequestHandler::class)
         ->arg('$registry', null)
         ->arg('$toolAccessChecker', service(McpToolAccessChecker::class))
         ->arg('$pageSize', null)
+        ->tag('mcp.request_handler')
+    ;
+
+    $services->set(McpPromptDefinitions::class)
+        ->arg('$toolNamesByPrompt', [])
+    ;
+
+    $services->set(McpPromptAccessChecker::class)
+        ->arg('$promptDefinitions', service(McpPromptDefinitions::class))
+        ->arg('$toolAccessChecker', service(McpToolAccessChecker::class))
+    ;
+
+    $services->set(FilterPromptsListRequestHandler::class)
+        ->arg('$registry', null)
+        ->arg('$promptAccessChecker', service(McpPromptAccessChecker::class))
+        ->arg('$pageSize', null)
+        ->tag('mcp.request_handler')
+    ;
+
+    $services->set(RejectUngrantedPromptRequestHandler::class)
+        ->arg('$promptAccessChecker', service(McpPromptAccessChecker::class))
         ->tag('mcp.request_handler')
     ;
 
@@ -76,14 +120,46 @@ return static function (ContainerConfigurator $configurator): void {
         ->arg('$contextIdResolver', service(McpContextIdResolver::class))
     ;
 
-    $services->set(McpToolExecutor::class)
+    $services->set(McpWriteToolGuard::class)
+        ->arg('$toolAccessChecker', service(McpToolAccessChecker::class))
+        ->arg('$requestStack', service('request_stack'))
+        ->arg('$writeConfirmation', service(McpWriteConfirmation::class))
+        ->arg('$writeRateLimiter', service(McpWriteRateLimiter::class))
+        ->arg('$previewHashReservation', service(McpPreviewHashReservation::class))
+    ;
+
+    $services->set(McpPreviewHashReservation::class)
+        ->arg('$cachePool', null)
+        ->arg('$currentUserProvider', service(CurrentAnzuUserProvider::class))
+    ;
+
+    $services->set(McpDeleteGuard::class)
+        ->arg('$currentUserProvider', service(CurrentAnzuUserProvider::class))
+        ->arg('$dependencyProviders', tagged_locator(
+            tag: AnzuSystemsCommonBundle::TAG_MCP_DELETE_DEPENDENCY_PROVIDER,
+            defaultIndexMethod: 'getSupportedEntity',
+        ))
+    ;
+
+    $services->set(McpWriteConfirmation::class)
+        ->arg('$translator', service(TranslatorInterface::class))
+        ->arg('$currentUserProvider', service(CurrentAnzuUserProvider::class))
+        ->arg('$fallbackLocale', null)
+    ;
+
+    $services->set(McpPreviewHashFactory::class)
+        ->arg('$serializer', service(Serializer::class))
+        ->arg('$secret', param('kernel.secret'))
+    ;
+
+    $services->set(McpToolErrorResolver::class)
+        ->arg('$toolErrorExceptions', null)
+    ;
+
+    $services->set(McpToolCallLogger::class)
         ->arg('$currentUserProvider', service(CurrentAnzuUserProvider::class))
         ->arg('$logger', service('logger'))
         ->arg('$mcpLogger', service(McpLogger::class))
-        ->arg('$toolAccessChecker', service(McpToolAccessChecker::class))
-        ->arg('$validator', service('validator'))
-        ->arg('$serializer', service(Serializer::class))
-        ->arg('$toolErrorExceptions', null)
         ->tag('monolog.logger', ['channel' => 'mcp'])
     ;
 
@@ -106,10 +182,20 @@ return static function (ContainerConfigurator $configurator): void {
         ->arg('$streamFactory', service('mcp.psr17_factory'))
         ->arg('$rateLimiter', service(McpRateLimiter::class))
         ->arg('$logger', service('logger'))
-        ->arg('$allowedHosts', null)
+        ->arg('$hostChecker', service(McpHostChecker::class))
         ->tag('controller.service_arguments')
         ->tag('monolog.logger', ['channel' => 'mcp'])
         ->public()
+    ;
+
+    $services->set(McpHostChecker::class)
+        ->arg('$allowedHosts', null)
+    ;
+
+    $services->set(McpHostRouteListener::class)
+        ->arg('$mcpHostChecker', service(McpHostChecker::class))
+        ->arg('$mcpPod', null)
+        ->tag('kernel.event_listener', ['event' => KernelEvents::REQUEST, 'priority' => McpHostRouteListener::PRIORITY])
     ;
 
     $services->set(CreateMcpLogCollectionCommand::class)
@@ -119,21 +205,39 @@ return static function (ContainerConfigurator $configurator): void {
         ->tag('console.command')
     ;
 
+    $services->set(McpWriteRateLimiter::class)
+        ->arg('$rateLimiters', null)
+        ->arg('$toolDefinitions', service(McpToolDefinitions::class))
+        ->arg('$currentUserProvider', service(CurrentAnzuUserProvider::class))
+    ;
+
+    $services->set(McpToolReferenceHandler::class)
+        ->arg('$inner', null)
+        ->arg('$toolAccessChecker', service(McpToolAccessChecker::class))
+        ->arg('$writeToolGuard', service(McpWriteToolGuard::class))
+        ->arg('$toolDefinitions', service(McpToolDefinitions::class))
+        ->arg('$previewHashFactory', service(McpPreviewHashFactory::class))
+        ->arg('$registry', null)
+        ->arg('$toolErrorResolver', service(McpToolErrorResolver::class))
+        ->arg('$toolCallLogger', service(McpToolCallLogger::class))
+        ->arg('$validator', service(ValidatorInterface::class))
+        ->arg('$serializer', service(Serializer::class))
+        ->arg('$requestStack', service('request_stack'))
+        ->arg('$inputEnricher', service(McpInputEnricherInterface::class)->nullOnInvalid())
+    ;
+
     $services->set(SearchAppLogsTool::class)
         ->arg('$logFinder', service(McpLogFinder::class))
-        ->arg('$toolExecutor', service(McpToolExecutor::class))
         ->tag('mcp.tool')
     ;
 
     $services->set(SearchAuditLogsTool::class)
         ->arg('$logFinder', service(McpLogFinder::class))
-        ->arg('$toolExecutor', service(McpToolExecutor::class))
         ->tag('mcp.tool')
     ;
 
     $services->set(GetLogsByContextTool::class)
         ->arg('$logFinder', service(McpLogFinder::class))
-        ->arg('$toolExecutor', service(McpToolExecutor::class))
         ->tag('mcp.tool')
     ;
 };

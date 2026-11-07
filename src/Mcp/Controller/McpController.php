@@ -7,6 +7,7 @@ namespace AnzuSystems\CommonBundle\Mcp\Controller;
 use AnzuSystems\CommonBundle\Helper\StringHelper;
 use AnzuSystems\CommonBundle\Log\Helper\AuditLogResourceHelper;
 use AnzuSystems\CommonBundle\Mcp\McpRateLimiter;
+use AnzuSystems\CommonBundle\Mcp\Security\McpHostChecker;
 use LogicException;
 use Mcp\Server;
 use Mcp\Server\Transport\StreamableHttpTransport;
@@ -26,9 +27,6 @@ final readonly class McpController
 
     private MiddlewareFactory $middlewareFactory;
 
-    /**
-     * @param list<string> $allowedHosts
-     */
     public function __construct(
         private Server $server,
         private HttpMessageFactoryInterface $httpMessageFactory,
@@ -37,13 +35,12 @@ final readonly class McpController
         private StreamFactoryInterface $streamFactory,
         private McpRateLimiter $rateLimiter,
         private LoggerInterface $logger,
-        array $allowedHosts,
+        McpHostChecker $hostChecker,
     ) {
-        $hosts = array_values(array_filter(array_map(trim(...), $allowedHosts), StringHelper::isNotEmpty(...)));
-        if ([] === $hosts) {
+        if (empty($hostChecker->allowedHosts)) {
             throw new LogicException('MCP allowed_hosts must not be empty, every request would be rejected with 403.');
         }
-        $this->middlewareFactory = new MiddlewareFactory($hosts);
+        $this->middlewareFactory = new MiddlewareFactory($hostChecker->allowedHosts);
     }
 
     public function handle(Request $request): Response
@@ -52,11 +49,11 @@ final readonly class McpController
         $this->rateLimiter->checkRateLimit($this->resolveMessageCount($request));
 
         $transport = new StreamableHttpTransport(
-            $this->httpMessageFactory->createRequest($request),
-            $this->responseFactory,
-            $this->streamFactory,
-            $this->logger,
-            $this->middlewareFactory->create(),
+            request: $this->httpMessageFactory->createRequest($request),
+            responseFactory: $this->responseFactory,
+            streamFactory: $this->streamFactory,
+            logger: $this->logger,
+            middleware: $this->middlewareFactory->create(),
         );
 
         $psrResponse = $this->server->run($transport);

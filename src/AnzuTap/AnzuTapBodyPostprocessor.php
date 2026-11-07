@@ -67,7 +67,7 @@ class AnzuTapBodyPostprocessor
     {
         $children = [];
         foreach ($node->getContent() as $child) {
-            if (false === in_array($child->getType(), $allowedNodes, true)) {
+            if (false === in_array(needle: $child->getType(), haystack: $allowedNodes, strict: true)) {
                 $text = $node->getNodeText();
                 if (is_string($text)) {
                     $textNode = new AnzuTapTextNode($text);
@@ -125,7 +125,7 @@ class AnzuTapBodyPostprocessor
 
         $moveShakingNodesBefore = true;
         foreach ($rootNode->getContent() as $node) {
-            $isShakingNode = in_array($node->getType(), $nodeTypesToShake, true);
+            $isShakingNode = in_array(needle: $node->getType(), haystack: $nodeTypesToShake, strict: true);
 
             if ($isShakingNode) {
                 $resNodes[] = $node;
@@ -168,7 +168,7 @@ class AnzuTapBodyPostprocessor
         $nodesToKeep = [];
 
         foreach ($rootNode->getContent() as $node) {
-            $isShakingNode = in_array($node->getType(), $nodeTypesToShake, true);
+            $isShakingNode = in_array(needle: $node->getType(), haystack: $nodeTypesToShake, strict: true);
 
             if ($isShakingNode) {
                 $nodesToShake[] = $node;

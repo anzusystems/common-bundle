@@ -31,7 +31,7 @@ class TextNodeTransformer extends AbstractNodeTransformer
     {
         $text = $this->getText(
             $element,
-            in_array($parent?->getType(), self::ALLOW_EMPTY_TEXT_TYPES, true)
+            in_array(needle: $parent?->getType(), haystack: self::ALLOW_EMPTY_TEXT_TYPES, strict: true)
         );
         // empty text nodes are not allowed by tip-tap
         if (null === $text) {

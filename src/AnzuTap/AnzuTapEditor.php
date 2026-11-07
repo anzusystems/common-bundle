@@ -41,7 +41,7 @@ final class AnzuTapEditor
         $this->clear();
 
         $body = new AnzuTapDocNode();
-        $this->processChildren($node, $body, $body);
+        $this->processChildren(node: $node, anzuTapParentNode: $body, root: $body);
         $this->postprocessor->postprocess($body);
 
         return $body;
@@ -61,7 +61,7 @@ final class AnzuTapEditor
 
         $body = new AnzuTapDocNode();
         if (false === (null === $bodyNode)) {
-            $this->processChildren($bodyNode, $body, $body);
+            $this->processChildren(node: $bodyNode, anzuTapParentNode: $body, root: $body);
             $this->postprocessor->postprocess($body);
         }
 
@@ -119,7 +119,7 @@ final class AnzuTapEditor
                     $this->storedMarks[] = $mark;
 
                     if ($childNode->hasChildNodes()) {
-                        $nodes = array_merge($nodes, $this->processChildren($childNode, $anzuTapParentNode, $root));
+                        $nodes = array_merge($nodes, $this->processChildren(node: $childNode, anzuTapParentNode: $anzuTapParentNode, root: $root));
                     }
 
                     if ($mark) {
@@ -131,11 +131,11 @@ final class AnzuTapEditor
             }
 
             $nodeTransformer = $this->getNodeTransformer($childNode);
-            $anzuTapNode = $this->processNode($childNode, $nodeTransformer, $anzuTapParentNode);
+            $anzuTapNode = $this->processNode(node: $childNode, nodeTransformer: $nodeTransformer, anzuTapParentNode: $anzuTapParentNode);
 
             if (null === $anzuTapNode) {
                 if ($childNode->hasChildNodes() && false === $nodeTransformer->skipChildren()) {
-                    $nodes = array_merge($nodes, $this->processChildren($childNode, $anzuTapParentNode, $root));
+                    $nodes = array_merge($nodes, $this->processChildren(node: $childNode, anzuTapParentNode: $anzuTapParentNode, root: $root));
                 }
 
                 continue;
@@ -146,7 +146,7 @@ final class AnzuTapEditor
             }
 
             if ($childNode->hasChildNodes() && false === $nodeTransformer->skipChildren()) {
-                $this->processChildren($childNode, $anzuTapNode, $root);
+                $this->processChildren(node: $childNode, anzuTapParentNode: $anzuTapNode, root: $root);
             }
 
             if (0 === count($anzuTapNode->getContent())) {
@@ -178,8 +178,7 @@ final class AnzuTapEditor
         AnzuNodeTransformerInterface $nodeTransformer,
         AnzuTapNodeInterface $anzuTapParentNode,
     ): ?AnzuTapNodeInterface {
-        /** @psalm-suppress PossiblyInvalidArgument */
-        $transformedNode = $nodeTransformer->transform($node, $this->embedContainer, $anzuTapParentNode);
+        $transformedNode = $nodeTransformer->transform(element: $node, embedContainer: $this->embedContainer, parent: $anzuTapParentNode);
 
         if (null === $transformedNode) {
             return null;

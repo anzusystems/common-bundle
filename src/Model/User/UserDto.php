@@ -43,8 +43,7 @@ class UserDto extends BaseUserDto
 
     public static function createFromUser(AnzuUser $user): static
     {
-        /** @psalm-suppress UndefinedMethod */
-        return parent::createFromUser($user)
+        $userDto = parent::createFromUser($user)
             ->setRoles($user->getRoles())
             ->setPermissions($user->getPermissions())
             ->setResolvedPermissions($user->getResolvedPermissions())
@@ -52,9 +51,11 @@ class UserDto extends BaseUserDto
             ->setEnabled($user->isEnabled())
             ->setCreatedAt($user->getCreatedAt())
             ->setModifiedAt($user->getModifiedAt())
-            ->setCreatedBy($user->getCreatedBy())
-            ->setModifiedBy($user->getModifiedBy())
         ;
+        $userDto->setCreatedBy($user->getCreatedBy());
+        $userDto->setModifiedBy($user->getModifiedBy());
+
+        return $userDto;
     }
 
     public function getRoles(): array

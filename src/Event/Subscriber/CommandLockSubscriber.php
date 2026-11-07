@@ -47,7 +47,7 @@ final class CommandLockSubscriber implements EventSubscriberInterface
             $command = $command->getCommand();
         }
 
-        if ($command instanceof Command && false === in_array($command::class, $this->unlockedCommands, true)) {
+        if ($command instanceof Command && false === in_array(needle: $command::class, haystack: $this->unlockedCommands, strict: true)) {
             $this->setLockName($command, $event->getInput());
             $this->lock = $this->createLock();
             if (false === $this->lock->acquire()) {
@@ -55,7 +55,7 @@ final class CommandLockSubscriber implements EventSubscriberInterface
 
                 return;
             }
-            file_put_contents($this->getPidFilename(), (string) getmypid(), LOCK_EX);
+            file_put_contents(filename: $this->getPidFilename(), data: (string) getmypid(), flags: LOCK_EX);
         }
     }
 
@@ -88,9 +88,9 @@ final class CommandLockSubscriber implements EventSubscriberInterface
         }
 
         $this->lockName = (string) preg_replace(
-            '/[^a-zA-z_]/',
-            '_',
-            ltrim($this->getNameFromArgs($input->getArguments()), '_')
+            pattern: '/[^a-zA-z_]/',
+            replacement: '_',
+            subject: ltrim($this->getNameFromArgs($input->getArguments()), '_')
         );
     }
 

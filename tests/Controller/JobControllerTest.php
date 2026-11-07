@@ -35,7 +35,7 @@ final class JobControllerTest extends AbstractControllerTest
             ->setTargetUserId(AnzuApp::getUserIdAdmin())
             ->setAnonymizeUser(true)
         ;
-        $responseCreate = $this->post('/job/user-data-delete', $job, JobUserDataDelete::class);
+        $responseCreate = $this->post(uri: '/job/user-data-delete', content: $job, deserializationClass: JobUserDataDelete::class);
         $this->assertSame($job->getTargetUserId(), $responseCreate->getTargetUserId());
         $this->assertSame($job->isAnonymizeUser(), $responseCreate->isAnonymizeUser());
         $this->assertSame(JobStatus::Default, $responseCreate->getStatus());

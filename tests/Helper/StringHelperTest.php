@@ -170,8 +170,7 @@ final class StringHelperTest extends TestCase
             $this->assertSame(strtolower($result), $result);
 
             // Verify it's suitable for alphabet filtering
-            $this->assertTrue(ctype_alpha($result) || '' === $result);
-            $this->assertTrue(mb_strlen($result) <= 1);
+            $this->assertTrue(ctype_alpha($result));
         }
     }
 

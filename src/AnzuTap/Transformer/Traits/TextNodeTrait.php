@@ -18,10 +18,10 @@ trait TextNodeTrait
         }
 
         /** @var string $text */
-        $text = preg_replace('/\s{2,}/', ' ', $text);
+        $text = preg_replace(pattern: '/\s{2,}/', replacement: ' ', subject: $text);
         /** @var string $text */
-        $text = preg_replace('/(\xc2\xa0|\xc2\xa0\s|\s\xc2\xa0)+/', "\xc2\xa0", $text);
+        $text = preg_replace(pattern: '/(\xc2\xa0|\xc2\xa0\s|\s\xc2\xa0)+/', replacement: "\xc2\xa0", subject: $text);
 
-        return preg_replace('/(\xc2\xa0\s)+/', "\xc2\xa0", $text);
+        return preg_replace(pattern: '/(\xc2\xa0\s)+/', replacement: "\xc2\xa0", subject: $text);
     }
 }

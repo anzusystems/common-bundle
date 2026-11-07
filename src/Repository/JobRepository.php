@@ -37,7 +37,7 @@ final class JobRepository extends AbstractAnzuRepository
             ->where('job.status IN (:statuses)')
             ->andWhere('job.scheduledAt <= :scheduledAt')
             ->setParameter('statuses', $statusStrings)
-            ->setParameter('scheduledAt', new DateTimeImmutable(), Types::DATETIME_IMMUTABLE)
+            ->setParameter(key: 'scheduledAt', value: new DateTimeImmutable(), type: Types::DATETIME_IMMUTABLE)
             ->orderBy('job.priority', Order::Descending->value)
             ->addOrderBy('job.scheduledAt', Order::Ascending->value)
             ->addOrderBy('job.id', Order::Ascending->value)

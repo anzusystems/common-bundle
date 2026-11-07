@@ -28,7 +28,7 @@ final class LogContextContentProcessor
         }
 
         try {
-            $decodedContent = json_decode($content, associative: true, flags: JSON_THROW_ON_ERROR);
+            $decodedContent = json_decode(json: $content, associative: true, flags: JSON_THROW_ON_ERROR);
         } catch (JsonException) {
             return $record;
         }

@@ -1,0 +1,32 @@
+includes:
+    - src/PHPStan/rules.neon
+
+parameters:
+    anzuNamedArguments:
+        classNamespaces:
+            - 'AnzuSystems\CommonBundle'
+    tmpDir: var/cache/phpstan
+    level: 5
+    paths:
+        - src
+        - tests
+    scanFiles:
+        - tests/data/PHPStan/Mcp/InputPermission/tools.php
+    excludePaths:
+        - src/CodingStandard
+        - src/DependencyInjection/Configuration.php
+        # PHP-CS-Fixer comes only inside the ECS phar, PHPStan cannot see its classes (same reason as src/CodingStandard).
+        - tests/CodingStandard
+        # The fixtures of the PHPStan rule tests break the rules on purpose.
+        - tests/data/PHPStan
+    ignoreErrors:
+        # The bundle ships these traits for host applications; nothing in src uses them.
+        - identifier: trait.unused
+        # The test checks that the serializer reads private properties of a parent class, nothing else reads them.
+        -
+            identifier: property.onlyWritten
+            path: tests/data/Mcp/Model/Request/ParentExampleRequest.php
+        # The relation holds the test User, the getter keeps the AnzuUser type of the contracts entity it overrides.
+        -
+            identifier: return.type
+            path: tests/data/Entity/PermissionGroup.php

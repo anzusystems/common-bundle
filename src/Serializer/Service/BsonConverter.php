@@ -7,6 +7,7 @@ namespace AnzuSystems\CommonBundle\Serializer\Service;
 use AnzuSystems\SerializerBundle\Exception\SerializerException;
 use AnzuSystems\SerializerBundle\Metadata\Metadata;
 use AnzuSystems\SerializerBundle\Metadata\MetadataRegistry;
+use AnzuSystems\SerializerBundle\Service\PropertyAccessor;
 use ArrayObject;
 use DateTimeImmutable;
 use MongoDB\BSON\ObjectId;
@@ -18,11 +19,12 @@ final class BsonConverter
 {
     public function __construct(
         private readonly MetadataRegistry $metadataRegistry,
+        private readonly PropertyAccessor $propertyAccessor = new PropertyAccessor(),
     ) {
     }
 
     /**
-     * @template T
+     * @template T of object
      *
      * @param class-string<T> $className
      *
@@ -44,7 +46,7 @@ final class BsonConverter
                 continue;
             }
             try {
-                $object->{$metadata->setter}($value);
+                $this->propertyAccessor->setValue(object: $object, metadata: $metadata, value: $value);
             } catch (Throwable) {
                 throw new SerializerException('Unable to deserialize "' . $name . '". Check type.');
             }

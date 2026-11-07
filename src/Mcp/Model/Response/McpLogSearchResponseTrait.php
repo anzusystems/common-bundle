@@ -4,60 +4,62 @@ declare(strict_types=1);
 
 namespace AnzuSystems\CommonBundle\Mcp\Model\Response;
 
+use AnzuSystems\CommonBundle\Mcp\Attribute\McpField;
+use AnzuSystems\CommonBundle\Mcp\Model\Decorator\AbstractMcpLogDecorator;
 use AnzuSystems\CommonBundle\Mcp\Model\McpLogSearchResult;
 use AnzuSystems\CommonBundle\Mcp\Resolver\McpDateWindowResolver;
 use AnzuSystems\SerializerBundle\Attributes\Serialize;
 use DateTimeInterface;
 
+/**
+ * @template T of AbstractMcpLogDecorator
+ */
 trait McpLogSearchResponseTrait
 {
-    private const string WINDOW_TRUNCATED_WARNING = 'The requested window was longer than the %d-day cap and was '
-        . 'shortened: only records between from and until were searched, the rest of the requested range was not. '
-        . 'Repeat the search on the remaining days.';
-    private const string MORE_RECORDS_WARNING = 'Only the first %d matching records were returned and more exist. '
-        . 'Narrow the filters or the window instead of raising the limit.';
+    use McpWarningsTrait;
 
-    private readonly McpLogSearchResult $result;
-    private readonly string $hint;
-
+    #[McpField(description: 'Start of the time window actually searched.')]
     #[Serialize]
-    public function getFrom(): string
-    {
-        return $this->result->window->from->format(DateTimeInterface::ATOM);
+    public string $from {
+        get => $this->result->window->from->format(DateTimeInterface::ATOM);
+    }
+
+    #[McpField(description: 'End of the time window actually searched.')]
+    #[Serialize]
+    public string $until {
+        get => $this->result->window->until->format(DateTimeInterface::ATOM);
     }
 
     #[Serialize]
-    public function getUntil(): string
-    {
-        return $this->result->window->until->format(DateTimeInterface::ATOM);
-    }
-
-    #[Serialize]
-    public function getLimit(): int
-    {
-        return $this->result->limit;
-    }
-
-    #[Serialize]
-    public function getHint(): string
-    {
-        return $this->hint;
+    public int $limit {
+        get => $this->result->limit;
     }
 
     /**
-     * @return list<string>
+     * @param McpLogSearchResult<T> $result
      */
-    #[Serialize]
-    public function getWarnings(): array
-    {
-        $warnings = [];
-        if ($this->result->window->truncated) {
-            $warnings[] = sprintf(self::WINDOW_TRUNCATED_WARNING, McpDateWindowResolver::LOG_WINDOW_MAX_DAYS);
-        }
-        if ($this->result->hasMore) {
-            $warnings[] = sprintf(self::MORE_RECORDS_WARNING, $this->result->limit);
-        }
+    public function __construct(
+        private readonly McpLogSearchResult $result,
+    ) {
+    }
 
-        return $warnings;
+    private function windowTruncatedWarning(): string
+    {
+        return sprintf(
+            'The requested window was longer than the %d-day cap and was shortened: only records between from and until were searched, the rest of the requested range was not. Repeat the search on the remaining days.',
+            McpDateWindowResolver::LOG_WINDOW_MAX_DAYS,
+        );
+    }
+
+    private function moreRecordsWarning(int $limit): string
+    {
+        return sprintf('Only the first %d matching records were returned and more exist. Narrow the filters or the window instead of raising the limit.', $limit);
+    }
+
+    protected function getWarnings(): McpNotes
+    {
+        return new McpNotes()
+            ->addIf($this->result->window->truncated, $this->windowTruncatedWarning())
+            ->addIf($this->result->hasMore, $this->moreRecordsWarning($this->result->limit));
     }
 }

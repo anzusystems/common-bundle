@@ -132,7 +132,7 @@ class ApiQuery
         foreach ($this->apiParams->getFilter() as $filterVariant => $filter) {
             foreach ($filter as $field => $value) {
                 /** @var string $fieldName */
-                $fieldName = str_replace('.', '_', $field);
+                $fieldName = str_replace(search: '.', replace: '_', subject: $field);
                 $paramName = $fieldName . '_' . ++$iter;
 
                 $this->applyFieldCallbacks($field, $value);
@@ -143,7 +143,7 @@ class ApiQuery
                 switch ($filterVariant) {
                     case ApiParams::FILTER_CUSTOM:
                         foreach ($this->customFilters as $customFilter) {
-                            $customFilter->apply($this->dqb, $field, $value);
+                            $customFilter->apply(dqb: $this->dqb, field: $field, value: $value);
                         }
                         break;
                     case ApiParams::FILTER_STARTS_WITH:
@@ -162,7 +162,7 @@ class ApiQuery
 
                         break;
                     case ApiParams::FILTER_MEMBER_OF:
-                        foreach ($this->getFilterValue($filterVariant, $field, $value) as $member) {
+                        foreach ($this->getFilterValue(filterName: $filterVariant, field: $field, value: $value) as $member) {
                             $this->dqb->andWhere(":{$paramName} MEMBER OF t.{$field}");
                             $this->dqb->setParameter($paramName, $member);
                         }
@@ -178,7 +178,7 @@ class ApiQuery
                         );
                         $this->dqb->setParameter(
                             $paramName,
-                            $this->getFilterValue($filterVariant, $field, $value)
+                            $this->getFilterValue(filterName: $filterVariant, field: $field, value: $value)
                         );
                 }
             }
@@ -192,7 +192,7 @@ class ApiQuery
      */
     private function getFilterValue(string $filterName, string $field, mixed $value): mixed
     {
-        if (in_array($filterName, ApiParams::ARRAY_FILTERS, true)) {
+        if (in_array(needle: $filterName, haystack: ApiParams::ARRAY_FILTERS, strict: true)) {
             return explode(',', $value);
         }
 
@@ -207,7 +207,6 @@ class ApiQuery
         }
 
         if (self::UUID_TYPE === $fieldDbType && class_exists(Uuid::class)) {
-            /** @psalm-suppress UndefinedClass */
             return Uuid::fromString($value)->toBinary();
         }
 

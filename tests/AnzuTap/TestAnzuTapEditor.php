@@ -6,11 +6,13 @@ namespace AnzuSystems\CommonBundle\Tests\AnzuTap;
 
 use AnzuSystems\CommonBundle\AnzuTap\AnzuTapEditor;
 use AnzuSystems\CommonBundle\Model\AnzuTap\AnzuTapBody;
+use Symfony\Component\DependencyInjection\Attribute\Target;
 
 final readonly class TestAnzuTapEditor
 {
     public function __construct(
-        private AnzuTapEditor $testEditor
+        #[Target('testEditor')]
+        private AnzuTapEditor $testEditor,
     ) {
     }
 

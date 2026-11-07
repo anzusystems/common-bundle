@@ -26,7 +26,7 @@ final class UniqueEntity extends Constraint
         ?array $groups = null,
         mixed $payload = null,
     ) {
-        parent::__construct($options, $groups, $payload);
+        parent::__construct(options: $options, groups: $groups, payload: $payload);
     }
 
     public function getTargets(): string

@@ -45,7 +45,7 @@ final readonly class ExceptionListener
         }
 
         foreach ($this->ignoredExceptions as $ignoredException) {
-            if (is_a($exception::class, $ignoredException, true)) {
+            if (is_a(object_or_class: $exception::class, class: $ignoredException, allow_string: true)) {
                 return;
             }
         }
@@ -73,7 +73,7 @@ final readonly class ExceptionListener
 
         foreach ($handlers as $exceptionHandler) {
             foreach ($exceptionHandler->getSupportedExceptionClasses() as $supportedExceptionClass) {
-                if (is_a($throwable, $supportedExceptionClass, true)) {
+                if (is_a(object_or_class: $throwable, class: $supportedExceptionClass, allow_string: true)) {
                     return $exceptionHandler;
                 }
             }

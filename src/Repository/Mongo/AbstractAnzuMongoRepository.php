@@ -63,7 +63,7 @@ abstract class AbstractAnzuMongoRepository
             )
             ->setTotalCount($totalCount)
             ->setData(
-                array_slice($data, 0, $apiParams->getLimit())
+                array_slice(array: $data, offset: 0, length: $apiParams->getLimit())
             )
         ;
     }

@@ -16,7 +16,7 @@ final class ArrayStringValueResolver implements ValueResolverInterface
     {
         $attribute = $argument->getAttributesOfType(ArrayStringParam::class)[0] ?? null;
         if ($attribute instanceof ArrayStringParam) {
-            return $this->resolveArrayStringParam($argument->getName(), $attribute, $request);
+            return $this->resolveArrayStringParam(paramName: $argument->getName(), arrayStringParam: $attribute, request: $request);
         }
 
         return [];

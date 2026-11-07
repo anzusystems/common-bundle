@@ -15,9 +15,7 @@ interface ExceptionHandlerInterface
     public function getErrorResponse(Throwable $exception): JsonResponse;
 
     /**
-     * @template T of Throwable
-     *
-     * @return array<class-string<T>>
+     * @return array<class-string<Throwable>>
      */
     public function getSupportedExceptionClasses(): array;
 }

@@ -24,7 +24,7 @@ final class JournalLogRepository extends AbstractLogRepository
         protected BsonConverter $bsonConverter,
         protected int $queryMaxTimeMs = ApiQueryMongo::DEFAULT_QUERY_MAX_TIME_MS,
     ) {
-        parent::__construct($journalLogCollection, $serializer, $this->bsonConverter, $queryMaxTimeMs);
+        parent::__construct(collection: $journalLogCollection, serializer: $serializer, bsonConverter: $this->bsonConverter, queryMaxTimeMs: $queryMaxTimeMs);
     }
 
     /**

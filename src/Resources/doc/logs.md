@@ -143,4 +143,4 @@ anzu_systems_common:
         read_role: ROLE_SUPER_ADMIN
 ```
 
-If the MCP server is enabled, map the log tools (`search_audit_logs`, `search_app_logs`, `get_logs_by_context`) in `mcp.tool_permissions` to the same role, otherwise the logs stay readable through MCP.
+If the MCP server is enabled, set `mcp.log_tools_permission` of the log tools (`search_audit_logs`, `search_app_logs`, `get_logs_by_context`) to the same role, otherwise the logs stay readable through MCP.

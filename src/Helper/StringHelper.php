@@ -40,7 +40,7 @@ final class StringHelper
             $string = trim($string);
         }
 
-        return mb_substr($string, 0, $maxLength);
+        return mb_substr(string: $string, start: 0, length: $maxLength);
     }
 
     public static function shorthandString(
@@ -48,7 +48,7 @@ final class StringHelper
         int $maxLength,
     ): string {
         if (mb_strlen($string) > $maxLength) {
-            return mb_substr($string, 0, $maxLength) . self::SHORTHAND_SUFFIX;
+            return mb_substr(string: $string, start: 0, length: $maxLength) . self::SHORTHAND_SUFFIX;
         }
 
         return $string;
@@ -56,8 +56,7 @@ final class StringHelper
 
     public static function extractFirstLetter(string $string): string
     {
-        /** @psalm-suppress PossiblyNullArgument */
-        return (new UnicodeString(trim(preg_replace('/[^\p{L}]+/u', self::EMPTY_STRING, $string))))
+        return new UnicodeString(trim(preg_replace(pattern: '/[^\p{L}]+/u', replacement: self::EMPTY_STRING, subject: $string)))
             ->slice(0, 1)
             ->ascii()
             ->lower()

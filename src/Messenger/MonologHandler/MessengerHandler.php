@@ -31,7 +31,7 @@ final class MessengerHandler extends AbstractHandler
 
     public function handle(LogRecord|array $record): bool
     {
-        /** @var AbstractLogMessage $class */
+        /** @var class-string<AbstractLogMessage> $class */
         $class = $this->messageClass;
         $this->messageBus->dispatch(
             new $class($record),

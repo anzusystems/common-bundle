@@ -22,9 +22,6 @@ final class AuditLogMessageHandler
         }
 
         foreach ($this->auditSyncLogger->getHandlers() as $handler) {
-            /**
-             * @psalm-suppress PossiblyInvalidArgument - It gives array for monolog 2, LogRecord for monolog 3.
-             */
             $handler->handle($logMessage->getRecord());
         }
     }

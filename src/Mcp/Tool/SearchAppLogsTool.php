@@ -4,25 +4,26 @@ declare(strict_types=1);
 
 namespace AnzuSystems\CommonBundle\Mcp\Tool;
 
+use AnzuSystems\CommonBundle\Mcp\Attribute\AsMcpTool;
 use AnzuSystems\CommonBundle\Mcp\Log\McpLogFinder;
-use AnzuSystems\CommonBundle\Mcp\McpToolExecutor;
 use AnzuSystems\CommonBundle\Mcp\Model\Request\SearchAppLogsRequest;
 use AnzuSystems\CommonBundle\Mcp\Model\Response\McpAppLogSearchResponse;
-use AnzuSystems\CommonBundle\Mcp\Resolver\McpDateWindowResolver;
-use Mcp\Capability\Attribute\McpTool;
-use Mcp\Capability\Attribute\Schema;
-use Mcp\Schema\Result\CallToolResult;
 
-#[McpTool(
+#[AsMcpTool(
     name: SearchAppLogsTool::NAME,
-    description: 'Searches the application log of this service: runtime records with a level, a message, and a '
-        . 'contextId linking each record to the request that produced it. Filter by level (e.g. "ERROR"), a '
-        . 'case-insensitive message substring, or a contextId taken from an audit log record. Diagnostic workflow: '
-        . 'find the failed request via search_audit_logs first, then look up the application errors behind it either '
-        . 'here by contextId or with get_logs_by_context; the same contextId correlates logs across the services of '
-        . 'this platform. The time window defaults to the last day and is capped at 31 days: the response echoes the '
-        . 'effective from and until, and a longer requested window is shortened and reported in warnings — '
-        . 'repeat the search on the remaining days. Results are newest first and long messages are truncated.',
+    description: <<<'TXT'
+        Searches the application log of this service: runtime records with a level, a message and the contextId of the request that produced them.
+        Find the failed request with {{ search_audit_logs }} first, then look up the application errors behind it here by contextId or with {{ get_logs_by_context }}.
+        Pass a record's contextId to {{ get_logs_by_context }} to see the request and MCP tool calls behind it; the same contextId correlates logs across the services of this platform.
+        TXT
+    ,
+    descriptionValues: [
+        'get_logs_by_context' => GetLogsByContextTool::NAME,
+        'search_audit_logs' => SearchAuditLogsTool::NAME,
+    ],
+    category: AsMcpTool::CATEGORY_DIAGNOSTICS,
+    permission: AsMcpTool::PERMISSION_LOG_TOOLS,
+    readOnly: true,
 )]
 final readonly class SearchAppLogsTool
 {
@@ -30,38 +31,11 @@ final readonly class SearchAppLogsTool
 
     public function __construct(
         private McpLogFinder $logFinder,
-        private McpToolExecutor $toolExecutor,
     ) {
     }
 
-    #[Schema(additionalProperties: false)]
-    public function __invoke(
-        #[Schema(description: 'Log level name, e.g. "ERROR", "WARNING", "INFO". Case-insensitive, exact match. Omit for all levels.')]
-        ?string $level = null,
-        #[Schema(description: 'Case-insensitive substring match on the log message.')]
-        ?string $messageContains = null,
-        #[Schema(description: 'Exact contextId (UUID) of one request, as found in other log records.')]
-        ?string $contextId = null,
-        #[Schema(description: 'Only records at or after this ISO 8601 date-time, e.g. "2026-07-20T06:00:00+02:00". Defaults to 1 day before until. ' . McpDateWindowResolver::DATE_TIME_OFFSET_DESCRIPTION)]
-        ?string $from = null,
-        #[Schema(description: 'Only records at or before this ISO 8601 date-time. Defaults to now; the from..until window is capped at 31 days. ' . McpDateWindowResolver::DATE_TIME_OFFSET_DESCRIPTION)]
-        ?string $until = null,
-        #[Schema(description: 'Maximum number of records, capped at 50.')]
-        int $limit = McpLogFinder::LIMIT_DEFAULT,
-    ): CallToolResult {
-        $request = new SearchAppLogsRequest(
-            level: $level,
-            messageContains: $messageContains,
-            contextId: $contextId,
-            from: $from,
-            until: $until,
-            limit: $limit,
-        );
-
-        return $this->toolExecutor->execute(
-            self::NAME,
-            $request,
-            fn (): McpAppLogSearchResponse => new McpAppLogSearchResponse($this->logFinder->findAppLogs($request)),
-        );
+    public function __invoke(SearchAppLogsRequest $request): McpAppLogSearchResponse
+    {
+        return new McpAppLogSearchResponse($this->logFinder->findAppLogs($request));
     }
 }
