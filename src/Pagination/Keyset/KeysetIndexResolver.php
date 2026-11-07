@@ -94,23 +94,23 @@ final readonly class KeysetIndexResolver
      */
     private function resolveFieldMetadata(EntityManagerInterface $entityManager, ClassMetadata $metadata, array $fields): ClassMetadata
     {
-        $fieldMetadata = [];
+        $metadataByTable = [];
         foreach ($fields as $field) {
             $declaringMetadata = $entityManager->getClassMetadata(
                 ($metadata->fieldMappings[$field] ?? $metadata->associationMappings[$field])->inherited ?? $metadata->getName(),
             );
-            $fieldMetadata[$declaringMetadata->getTableName()] = $declaringMetadata;
+            $metadataByTable[$declaringMetadata->getTableName()] = $declaringMetadata;
         }
-        if (1 < count($fieldMetadata)) {
+        if (1 < count($metadataByTable)) {
             throw new LogicException(sprintf(
                 self::FIELDS_ON_SEVERAL_TABLES_MESSAGE,
                 implode(self::LIST_SEPARATOR, $fields),
                 $metadata->getName(),
-                implode(self::LIST_SEPARATOR, array_keys($fieldMetadata)),
+                implode(self::LIST_SEPARATOR, array_keys($metadataByTable)),
             ));
         }
 
-        return array_first($fieldMetadata);
+        return array_first($metadataByTable);
     }
 
     /**

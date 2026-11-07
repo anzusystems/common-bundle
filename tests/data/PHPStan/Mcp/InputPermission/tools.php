@@ -112,3 +112,24 @@ final readonly class NotATool
     {
     }
 }
+
+#[AsMcpTool(name: 'nullable_missing', description: '', category: 'examples', readOnly: true)]
+final readonly class NullableRequestMissingCheckTool
+{
+    public function __invoke(?ScopedExampleRequest $request): void
+    {
+    }
+}
+
+#[AsMcpTool(name: 'nullable_checked', description: '', category: 'examples', readOnly: true)]
+final readonly class NullableRequestCheckedTool
+{
+    public function __invoke(?ScopedExampleRequest $request): void
+    {
+        $this->denyAccessUnlessGranted(ExamplePermission::SCOPED, $request);
+    }
+
+    private function denyAccessUnlessGranted(string $attributes, ?object $subject): void
+    {
+    }
+}

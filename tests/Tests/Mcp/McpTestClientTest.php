@@ -6,6 +6,7 @@ namespace AnzuSystems\CommonBundle\Tests\Tests\Mcp;
 
 use AnzuSystems\CommonBundle\Mcp\Handler\McpToolReferenceHandler;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Tool\ExampleSearchTool;
+use AnzuSystems\CommonBundle\Tests\Data\Mcp\Tool\ExampleWriteTool;
 use AnzuSystems\CommonBundle\Tests\Data\Model\Enum\DummyEnum;
 use AnzuSystems\CommonBundle\Tests\Mcp\McpTestClient;
 use Mcp\Schema\JsonRpc\Error;
@@ -26,6 +27,9 @@ final class McpTestClientTest extends TestCase
     private const string STRUCTURED_CONTENT_KEY = 'structuredContent';
     private const string IS_ERROR_KEY = 'isError';
     private const string SERVER_SESSION = 'HTTP_MCP_SESSION_ID';
+    private const string NEXT_CURSOR = 'next-page';
+    private const string TOOLS_KEY = 'tools';
+    private const string NAME_KEY = 'name';
 
     /**
      * @var list<array{server: array<string, string>, body: array<string, mixed>}>
@@ -98,6 +102,18 @@ final class McpTestClientTest extends TestCase
         self::assertTrue($result->isError);
         self::assertSame(self::ERROR_MESSAGE, $result->error);
         self::assertSame([], $result->data);
+    }
+
+    public function testToolNamesOfEveryPageAreListed(): void
+    {
+        $client = $this->createClient([
+            $this->createInitializeResponse(),
+            $this->createResultResponse([self::TOOLS_KEY => [[self::NAME_KEY => ExampleSearchTool::NAME]], 'nextCursor' => self::NEXT_CURSOR]),
+            $this->createResultResponse([self::TOOLS_KEY => [[self::NAME_KEY => ExampleWriteTool::NAME]]]),
+        ]);
+
+        self::assertSame([ExampleSearchTool::NAME, ExampleWriteTool::NAME], $client->listToolNames());
+        self::assertSame(self::NEXT_CURSOR, $this->requests[2]['body']['params']['cursor']);
     }
 
     public function testAnsweredStatusOtherThanOkFailsTheTest(): void

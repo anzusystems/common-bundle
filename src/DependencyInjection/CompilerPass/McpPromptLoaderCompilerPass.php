@@ -8,6 +8,7 @@ use AnzuSystems\CommonBundle\Mcp\Attribute\AsMcpPrompt;
 use AnzuSystems\CommonBundle\Mcp\Attribute\McpField;
 use AnzuSystems\CommonBundle\Mcp\Exception\McpConfigurationException;
 use AnzuSystems\CommonBundle\Mcp\Loader\McpPromptLoader;
+use AnzuSystems\CommonBundle\Mcp\Model\McpPromptDefinition;
 use Mcp\Capability\Attribute\McpPrompt;
 use Mcp\Capability\Discovery\ElementMetadataResolver;
 use Mcp\Schema\Prompt;
@@ -68,8 +69,8 @@ final class McpPromptLoaderCompilerPass implements CompilerPassInterface
                     $class,
                 );
             }
-            $prompts[] = [
-                'prompt' => new Definition(Prompt::class, [
+            $prompts[] = new Definition(McpPromptDefinition::class, [
+                '$prompt' => new Definition(Prompt::class, [
                     '$name' => $arguments[self::NAME_ARGUMENT],
                     '$title' => $arguments[self::TITLE_ARGUMENT],
                     '$description' => $arguments[self::DESCRIPTION_ARGUMENT],
@@ -77,8 +78,8 @@ final class McpPromptLoaderCompilerPass implements CompilerPassInterface
                     '$icons' => $arguments[self::ICONS_ARGUMENT],
                     '$meta' => $arguments[self::META_ARGUMENT],
                 ]),
-                'handler' => [$class, $handlerMethod],
-            ];
+                '$handler' => [$class, $handlerMethod],
+            ]);
             unset($methodCalls[$index]);
         }
         if (empty($prompts)) {

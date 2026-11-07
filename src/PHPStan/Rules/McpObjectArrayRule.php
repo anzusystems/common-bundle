@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace AnzuSystems\CommonBundle\PHPStan\Rules;
 
 use AnzuSystems\CommonBundle\PHPStan\ClassNamespaceMatcher;
+use AnzuSystems\CommonBundle\PHPStan\DeclaredType;
 use Generator;
 use PhpParser\Node;
 use PhpParser\Node\Expr\Variable;
@@ -66,14 +67,14 @@ final readonly class McpObjectArrayRule implements Rule
         }
 
         $errors = [];
-        foreach ($this->getDeclaredTypes($classLike, $classReflection) as [$subject, $type, $line]) {
-            $objectClassName = $this->findArrayObjectClassName($type);
+        foreach ($this->getDeclaredTypes($classLike, $classReflection) as $declaredType) {
+            $objectClassName = $this->findArrayObjectClassName($declaredType->type);
             if (null === $objectClassName) {
                 continue;
             }
-            $errors[] = RuleErrorBuilder::message(sprintf(self::MESSAGE, $subject, $type->describe(VerbosityLevel::typeOnly()), $objectClassName))
+            $errors[] = RuleErrorBuilder::message(sprintf(self::MESSAGE, $declaredType->subject, $declaredType->type->describe(VerbosityLevel::typeOnly()), $objectClassName))
                 ->identifier('anzu.mcp.objectArray')
-                ->line($line)
+                ->line($declaredType->line)
                 ->build();
         }
 
@@ -81,7 +82,7 @@ final readonly class McpObjectArrayRule implements Rule
     }
 
     /**
-     * @return Generator<int, array{string, Type, int}>
+     * @return Generator<int, DeclaredType>
      */
     private function getDeclaredTypes(ClassLike $classLike, ClassReflection $classReflection): Generator
     {
@@ -90,12 +91,12 @@ final readonly class McpObjectArrayRule implements Rule
             foreach ($property->props as $propertyItem) {
                 $propertyName = $propertyItem->name->toString();
 
-                yield [
-                    sprintf(self::PROPERTY_SUBJECT_FORMAT, $className, $propertyName),
-                    $classReflection->getNativeProperty($propertyName)
+                yield new DeclaredType(
+                    subject: sprintf(self::PROPERTY_SUBJECT_FORMAT, $className, $propertyName),
+                    type: $classReflection->getNativeProperty($propertyName)
                         ->getReadableType(),
-                    $property->getStartLine(),
-                ];
+                    line: $property->getStartLine(),
+                );
             }
         }
         foreach ($classLike->getMethods() as $method) {
@@ -107,28 +108,28 @@ final readonly class McpObjectArrayRule implements Rule
                 }
                 $paramName = $param->var->name;
                 if ($param->isPromoted()) {
-                    yield [
-                        sprintf(self::PROPERTY_SUBJECT_FORMAT, $className, $paramName),
-                        $classReflection->getNativeProperty($paramName)
+                    yield new DeclaredType(
+                        subject: sprintf(self::PROPERTY_SUBJECT_FORMAT, $className, $paramName),
+                        type: $classReflection->getNativeProperty($paramName)
                             ->getReadableType(),
-                        $param->getStartLine(),
-                    ];
+                        line: $param->getStartLine(),
+                    );
 
                     continue;
                 }
 
-                yield [
-                    sprintf('Parameter $%s of method %s::%s()', $paramName, $className, $methodName),
-                    $variant->getParameters()[$position]->getType(),
-                    $param->getStartLine(),
-                ];
+                yield new DeclaredType(
+                    subject: sprintf('Parameter $%s of method %s::%s()', $paramName, $className, $methodName),
+                    type: $variant->getParameters()[$position]->getType(),
+                    line: $param->getStartLine(),
+                );
             }
 
-            yield [
-                sprintf('Return type of method %s::%s()', $className, $methodName),
-                $variant->getReturnType(),
-                $method->getStartLine(),
-            ];
+            yield new DeclaredType(
+                subject: sprintf('Return type of method %s::%s()', $className, $methodName),
+                type: $variant->getReturnType(),
+                line: $method->getStartLine(),
+            );
         }
     }
 

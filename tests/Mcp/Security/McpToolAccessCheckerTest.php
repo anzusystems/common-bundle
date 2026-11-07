@@ -71,7 +71,7 @@ final class McpToolAccessCheckerTest extends TestCase
      *
      * @param list<string> $expectedGrantedTools
      */
-    public function testToolScopeNarrowsGrantedTools(?McpToolScopeProviderInterface $toolScopeProvider, array $expectedGrantedTools): void
+    public function testToolScopeNarrowsGrantedTools(McpToolScopeProviderInterface $toolScopeProvider, array $expectedGrantedTools): void
     {
         $checker = $this->createChecker(
             readOnlyToolNames: [self::GRANTED_TOOL, self::SECOND_GRANTED_TOOL, self::DENIED_TOOL],
@@ -88,12 +88,11 @@ final class McpToolAccessCheckerTest extends TestCase
     }
 
     /**
-     * @return array<string, array{McpToolScopeProviderInterface|null, list<string>}>
+     * @return array<string, array{McpToolScopeProviderInterface, list<string>}>
      */
     public static function toolScopeProvider(): array
     {
         return [
-            'no scope provider keeps every permitted tool' => [null, [self::GRANTED_TOOL, self::SECOND_GRANTED_TOOL]],
             'null scope keeps every permitted tool' => [
                 self::createToolScopeProvider(null),
                 [self::GRANTED_TOOL, self::SECOND_GRANTED_TOOL],

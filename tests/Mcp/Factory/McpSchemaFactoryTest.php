@@ -26,6 +26,7 @@ use AnzuSystems\CommonBundle\Tests\Data\Mcp\Model\Request\PageExampleRequest;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Model\Request\PreviewHashExampleRequest;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Model\Request\PromotedExampleRequest;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Model\Request\TreeExampleRequest;
+use AnzuSystems\CommonBundle\Tests\Data\Mcp\Model\Request\UnionTypeExampleRequest;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Model\Request\UntypedCollectionExampleRequest;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Model\Request\UuidExampleRequest;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Model\Response\BareArrayExampleResponse;
@@ -248,6 +249,15 @@ final class McpSchemaFactoryTest extends TestCase
             'nullable property' => [NullableBareArrayExampleRequest::class, 'items'],
             'getter' => [BareArrayExampleResponse::class, 'getItems'],
         ];
+    }
+
+    public function testTypeTheSchemaCannotDescribeFailsWithTheType(): void
+    {
+        $this->expectException(LogicException::class);
+        $this->expectExceptionMessage(sprintf(McpSchemaFactory::UNDESCRIBABLE_TYPE_MESSAGE, 'int|string'));
+
+        new McpSchemaFactory()
+            ->createForClass(UnionTypeExampleRequest::class);
     }
 
     /**

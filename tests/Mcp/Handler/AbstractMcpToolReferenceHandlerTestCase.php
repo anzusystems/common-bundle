@@ -32,6 +32,7 @@ use AnzuSystems\CommonBundle\Tests\Data\Mcp\Tool\ExampleSearchTool;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Tool\ExampleWithoutInputTool;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Tool\ExampleWritePreviewTool;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Tool\ExampleWriteTool;
+use AnzuSystems\CommonBundle\Tests\Data\Mcp\Tool\UnserializableResponseWriteTool;
 use AnzuSystems\CommonBundle\Tests\Mcp\McpSerializerFactory;
 use AnzuSystems\Contracts\AnzuApp;
 use AnzuSystems\Contracts\Entity\AnzuUser;
@@ -105,6 +106,7 @@ abstract class AbstractMcpToolReferenceHandlerTestCase extends TestCase
         ExampleErrorResultWithoutKeyTool::NAME,
         ExampleResultWriteTool::NAME,
         ExampleWriteTool::NAME,
+        UnserializableResponseWriteTool::NAME,
     ];
 
     protected array $insertedDocuments = [];

@@ -10,7 +10,6 @@ use AnzuSystems\CommonBundle\Mcp\McpWriteRateLimiter;
 use AnzuSystems\CommonBundle\Mcp\Model\McpPreviewHashAwareInterface;
 use AnzuSystems\CommonBundle\Mcp\Model\McpWritePreviewInterface;
 use AnzuSystems\Contracts\AnzuApp;
-use Closure;
 use Mcp\Schema\Result\InputRequiredResult;
 use Mcp\Server\RequestContext;
 use Symfony\Component\HttpFoundation\RequestStack;
@@ -48,29 +47,27 @@ final readonly class McpWriteToolGuard
         }
     }
 
-    /**
-     * @param Closure(): McpWritePreviewInterface $runPreview
-     */
+    public function assertAnswerConfirmed(string $toolName, McpPreviewHashAwareInterface $input, RequestContext $context): void
+    {
+        if ($this->writeConfirmation->isSupportedBy($context) && $this->writeConfirmation->isAnswered($context, $input)) {
+            $this->writeConfirmation->assertConfirmed(toolName: $toolName, context: $context, input: $input);
+        }
+    }
+
     public function guardPreview(
         string $toolName,
         string $previewToolName,
         McpPreviewHashAwareInterface $input,
         RequestContext $context,
-        Closure $runPreview,
+        McpWritePreviewInterface $preview,
     ): ?InputRequiredResult {
-        $isConfirmable = $this->writeConfirmation->isSupportedBy($context);
-        $isAnswered = $isConfirmable && $this->writeConfirmation->isAnswered($context, $input);
-        if ($isAnswered) {
-            $this->writeConfirmation->assertConfirmed(toolName: $toolName, context: $context, input: $input);
-        }
-        $preview = $runPreview();
         if (null === $preview->previewHash) {
             return null;
         }
         if (StringHelper::isNotSame($preview->previewHash, $input->previewHash)) {
             throw McpWriteRejectedException::createPreviewStale($previewToolName);
         }
-        if ($isConfirmable && false === $isAnswered) {
+        if ($this->writeConfirmation->isSupportedBy($context) && false === $this->writeConfirmation->isAnswered($context, $input)) {
             return $this->writeConfirmation->createInputRequiredResult(input: $input, preview: $preview);
         }
         if (null === $preview->currentState) {

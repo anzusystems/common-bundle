@@ -42,14 +42,15 @@ final readonly class McpOutputDescriptionFactory
         $plainNames = [];
         $lines = [];
         foreach ($this->getFields($schema) as $name => $field) {
-            [$name, $nested] = $this->resolveNested(name: (string) $name, field: $field);
+            $fieldName = $this->createFieldName(name: (string) $name, field: $field);
+            $nested = $this->resolveNestedSchema($field);
             $description = $field[McpSchemaFactory::DESCRIPTION] ?? null;
             if (null === $description && empty($this->getFields($nested))) {
-                $plainNames[] = $name;
+                $plainNames[] = $fieldName;
 
                 continue;
             }
-            $lines = [...$lines, ...$this->createFieldLines(name: $name, description: $description, nested: $nested, indent: $indent)];
+            $lines = [...$lines, ...$this->createFieldLines(name: $fieldName, description: $description, nested: $nested, indent: $indent)];
         }
         if (empty($plainNames)) {
             return $lines;
@@ -78,22 +79,34 @@ final readonly class McpOutputDescriptionFactory
 
     /**
      * @param array<array-key, mixed> $field
-     *
-     * @return array{string, array<array-key, mixed>}
      */
-    private function resolveNested(string $name, array $field): array
+    private function createFieldName(string $name, array $field): string
     {
-        $nested = $field;
         if (McpSchemaFactory::isOfType($field, McpSchemaFactory::TYPE_ARRAY)) {
             $name .= self::LIST_SUFFIX;
-            $nested = (array) ($field[McpSchemaFactory::ITEMS] ?? []);
         }
         if (is_array($field[McpSchemaFactory::ADDITIONAL_PROPERTIES] ?? null)) {
             $name .= self::MAP_SUFFIX;
-            $nested = $field[McpSchemaFactory::ADDITIONAL_PROPERTIES];
         }
 
-        return [$name, $nested];
+        return $name;
+    }
+
+    /**
+     * @param array<array-key, mixed> $field
+     *
+     * @return array<array-key, mixed>
+     */
+    private function resolveNestedSchema(array $field): array
+    {
+        if (is_array($field[McpSchemaFactory::ADDITIONAL_PROPERTIES] ?? null)) {
+            return $field[McpSchemaFactory::ADDITIONAL_PROPERTIES];
+        }
+        if (McpSchemaFactory::isOfType($field, McpSchemaFactory::TYPE_ARRAY)) {
+            return (array) ($field[McpSchemaFactory::ITEMS] ?? []);
+        }
+
+        return $field;
     }
 
     /**
@@ -105,11 +118,10 @@ final readonly class McpOutputDescriptionFactory
     {
         $names = [];
         foreach ($this->getFields($schema) as $name => $field) {
-            [$name, $nested] = $this->resolveNested(name: (string) $name, field: $field);
-            if (isset($field[McpSchemaFactory::DESCRIPTION]) || false === empty($this->getFields($nested))) {
+            if (isset($field[McpSchemaFactory::DESCRIPTION]) || false === empty($this->getFields($this->resolveNestedSchema($field)))) {
                 return null;
             }
-            $names[] = $name;
+            $names[] = $this->createFieldName(name: (string) $name, field: $field);
         }
 
         return empty($names) ? null : $names;

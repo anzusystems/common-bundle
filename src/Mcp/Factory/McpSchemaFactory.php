@@ -45,6 +45,7 @@ final class McpSchemaFactory
     public const string UNTYPED_COLLECTION_MESSAGE = 'The MCP schema cannot describe %s::%s, a Collection without its key and item types: declare Collection<int, X> (Collection<string, X> for a keyed map) in its @var, or in its @return for a getter.';
     public const string UNTYPED_ARRAY_MESSAGE = 'The MCP schema cannot describe %s::%s, an array without its item type: declare list<X> (array<string, X> for a keyed map) in its @var, or in its @return for a getter.';
     public const string SELF_CONTAINING_CLASS_MESSAGE = 'The MCP schema cannot describe the class %s, it contains itself through its #[Serialize] members, so its schema would never end: describe the nested level with another class.';
+    public const string UNDESCRIBABLE_TYPE_MESSAGE = 'The type "%s" cannot be described in an MCP tool schema, use a scalar, a backed enum, a list or a class.';
     public const string UNDESCRIBED_CLASS_MESSAGE = 'The MCP schema cannot describe the class %s, it has no #[Serialize] member: use a scalar, a Uuid, a backed enum, a DateTimeImmutable with #[Serialize(handler: McpDateTimeHandler::class)] or a class with #[Serialize] members.';
 
     private const string REQUIRED = 'required';
@@ -346,7 +347,7 @@ final class McpSchemaFactory
             return [];
         }
 
-        throw new LogicException(sprintf('The type "%s" cannot be described in an MCP tool schema, use a scalar, a backed enum, a list or a class.', $type));
+        throw new LogicException(sprintf(self::UNDESCRIBABLE_TYPE_MESSAGE, $type));
     }
 
     /**

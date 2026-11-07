@@ -13,9 +13,7 @@ use Symfony\Component\DependencyInjection\Definition;
 use Symfony\Component\DependencyInjection\Reference;
 
 /**
- * Runs after the mcp-bundle McpPass, which builds the handler locator of the server. MCP App tool templates are refused:
- * a template needs a tool that returns an array, while McpToolReferenceHandler returns a CallToolResult for an
- * #[AsMcpTool] and denies a plain #[McpTool], which has no permission.
+ * Runs after the mcp-bundle McpPass, which builds the handler locator of the server.
  */
 final class McpToolReferenceHandlerCompilerPass implements CompilerPassInterface
 {

@@ -28,7 +28,7 @@ final class SearchAppLogsToolTest extends AnzuKernelTestCase
 
     public function testUntilAsADateIncludesTheRecordsOfThatDay(): void
     {
-        $message = sprintf('until-date-%s', bin2hex(random_bytes(8)));
+        $message = sprintf('until-date-%s', random_bytes(8) |> bin2hex(...));
         $collection = $this->getJournalLogCollection();
         $id = $this->insertJournalLog(collection: $collection, datetime: new DateTimeImmutable(self::LATE_IN_LAST_DAY), message: $message);
 
@@ -51,7 +51,7 @@ final class SearchAppLogsToolTest extends AnzuKernelTestCase
 
     private function insertJournalLog(Collection $collection, DateTimeImmutable $datetime, string $message): ObjectId
     {
-        $id = new ObjectId(sprintf('%08x%s', $datetime->getTimestamp(), bin2hex(random_bytes(8))));
+        $id = new ObjectId(sprintf('%08x%s', $datetime->getTimestamp(), random_bytes(8) |> bin2hex(...)));
         $collection->insertOne([
             '_id' => $id,
             'datetime' => new UTCDateTime($datetime),

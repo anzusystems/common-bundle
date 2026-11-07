@@ -167,12 +167,15 @@ final readonly class McpToolReferenceHandler implements ReferenceHandlerInterfac
             throw new UnexpectedValueException(sprintf('The input of the MCP write tool "%s" does not implement %s.', $toolName, McpPreviewHashAwareInterface::class));
         }
 
+        $context = new RequestContext($arguments[self::SESSION_ARGUMENT], $arguments[self::REQUEST_ARGUMENT]);
+        $this->writeToolGuard->assertAnswerConfirmed(toolName: $toolName, input: $input, context: $context);
+
         return $this->writeToolGuard->guardPreview(
             toolName: $toolName,
             previewToolName: $previewToolName,
             input: $input,
-            context: new RequestContext($arguments[self::SESSION_ARGUMENT], $arguments[self::REQUEST_ARGUMENT]),
-            runPreview: fn (): McpWritePreviewInterface => $this->runPreview(
+            context: $context,
+            preview: $this->runPreview(
                 writeToolName: $toolName,
                 previewToolName: $previewToolName,
                 input: $input,
@@ -278,23 +281,22 @@ final readonly class McpToolReferenceHandler implements ReferenceHandlerInterfac
         $this->includeInAuditLogs();
         try {
             $result = $this->inner->handle($reference, $toolArguments);
-            if ($result instanceof CallToolResult && $result->isError) {
-                $this->revertFailedWrite($input);
-
-                return $result;
-            }
-            $this->writeToolGuard->markWritten();
-
-            return $this->createResult($toolName, $result);
-        } catch (OptimisticLockException) {
-            $this->revertFailedWrite($input);
-
-            throw McpWriteRejectedException::createPreviewStale((string) $this->toolDefinitions->getPreviewToolName($toolName));
         } catch (Throwable $exception) {
             $this->revertFailedWrite($input);
+            if ($exception instanceof OptimisticLockException) {
+                throw McpWriteRejectedException::createPreviewStale((string) $this->toolDefinitions->getPreviewToolName($toolName));
+            }
 
             throw $exception;
         }
+        if ($result instanceof CallToolResult && $result->isError) {
+            $this->revertFailedWrite($input);
+
+            return $result;
+        }
+        $this->writeToolGuard->markWritten();
+
+        return $this->createResult($toolName, $result);
     }
 
     /**

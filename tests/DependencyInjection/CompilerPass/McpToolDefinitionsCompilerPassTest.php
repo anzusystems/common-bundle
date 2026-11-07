@@ -12,6 +12,8 @@ use AnzuSystems\CommonBundle\Mcp\Exception\McpConfigurationException;
 use AnzuSystems\CommonBundle\Mcp\McpToolDefinitions;
 use AnzuSystems\CommonBundle\Mcp\McpWriteRateLimiter;
 use AnzuSystems\CommonBundle\Mcp\Model\McpToolSignature;
+use AnzuSystems\CommonBundle\Mcp\Model\Request\SearchAppLogsRequest;
+use AnzuSystems\CommonBundle\Mcp\Model\Response\McpAppLogSearchResponse;
 use AnzuSystems\CommonBundle\Mcp\Tool\SearchAppLogsTool;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Tool\ConflictingExampleTool;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Tool\ExamplePermissionTool;
@@ -27,19 +29,25 @@ use AnzuSystems\CommonBundle\Tests\Data\Mcp\Tool\InvalidCategoryExampleTool;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Tool\InvalidNameExampleTool;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Tool\NoHashInputExamplePreviewTool;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Tool\NoHashInputExampleTool;
+use AnzuSystems\CommonBundle\Tests\Data\Mcp\Tool\NoInputExamplePreviewTool;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Tool\OtherCategoryExamplePreviewTool;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Tool\OtherInputExamplePreviewTool;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Tool\PermissionExamplePreviewTool;
+use AnzuSystems\CommonBundle\Tests\Data\Mcp\Tool\PlainWriteExamplePreviewTool;
+use AnzuSystems\CommonBundle\Tests\Data\Mcp\Tool\PlainWriteExampleTool;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Tool\RateLimitedExamplePreviewTool;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Tool\RateLimitedExampleTool;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Tool\RateLimitedReadExampleTool;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Tool\ReadToolPreviewExampleTool;
+use AnzuSystems\CommonBundle\Tests\Data\Mcp\Tool\ResultExamplePreviewTool;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Tool\SecondExamplePreviewTool;
+use AnzuSystems\CommonBundle\Tests\Data\Mcp\Tool\WithoutInputWriteExamplePreviewTool;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Tool\WritablePreviewExampleTool;
 use LogicException;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\DependencyInjection\Definition;
+use Symfony\Component\DependencyInjection\Reference;
 
 final class McpToolDefinitionsCompilerPassTest extends TestCase
 {
@@ -161,6 +169,14 @@ final class McpToolDefinitionsCompilerPassTest extends TestCase
         $signature = $this->getDefinitionField($container, self::SIGNATURE_ARGUMENT)[SearchAppLogsTool::NAME];
         self::assertInstanceOf(Definition::class, $signature);
         self::assertSame(McpToolSignature::class, $signature->getClass());
+        self::assertSame(
+            [
+                '$inputParameterName' => 'request',
+                '$inputClass' => SearchAppLogsRequest::class,
+                '$outputClass' => McpAppLogSearchResponse::class,
+            ],
+            $signature->getArguments(),
+        );
     }
 
     public function testPlainMcpToolHasNoSignature(): void
@@ -187,6 +203,14 @@ final class McpToolDefinitionsCompilerPassTest extends TestCase
         self::assertSame(
             RateLimitedExampleTool::RATE_LIMITER,
             $this->getDefinitionField($container, self::RATE_LIMITER_ARGUMENT)[RateLimitedExampleTool::NAME],
+        );
+        $locator = $container->getDefinition(McpWriteRateLimiter::class)
+            ->getArgument('$rateLimiters');
+        self::assertInstanceOf(Reference::class, $locator);
+        self::assertSame(
+            [RateLimitedExampleTool::RATE_LIMITER],
+            $container->getDefinition((string) $locator)
+                ->getArgument(0) |> array_keys(...),
         );
     }
 
@@ -226,6 +250,10 @@ final class McpToolDefinitionsCompilerPassTest extends TestCase
             'preview of a read tool' => [
                 [ExampleSearchTool::class, ReadToolPreviewExampleTool::class],
                 McpConfigurationException::createPreviewOfReadTool(ReadToolPreviewExampleTool::NAME, ExampleSearchTool::NAME)->getMessage(),
+            ],
+            'preview of a plain McpTool without readOnlyHint' => [
+                [PlainWriteExampleTool::class, PlainWriteExamplePreviewTool::class],
+                McpConfigurationException::createPreviewOfReadTool(PlainWriteExamplePreviewTool::NAME, PlainWriteExampleTool::NAME)->getMessage(),
             ],
             'preview that is not read only' => [
                 [ExampleWithoutInputTool::class, WritablePreviewExampleTool::class],
@@ -271,6 +299,27 @@ final class McpToolDefinitionsCompilerPassTest extends TestCase
                 McpConfigurationException::createPreviewResponseWithoutConfirmation(
                     ExamplePreviewTool::NAME,
                     ExampleWithoutInputTool::NAME
+                )->getMessage(),
+            ],
+            'preview response that is a CallToolResult' => [
+                [ExampleWriteTool::class, ResultExamplePreviewTool::class],
+                McpConfigurationException::createPreviewResponseWithoutConfirmation(
+                    ResultExamplePreviewTool::NAME,
+                    ExampleWriteTool::NAME
+                )->getMessage(),
+            ],
+            'preview without an input' => [
+                [ExampleWriteTool::class, NoInputExamplePreviewTool::class],
+                McpConfigurationException::createWriteInputNotPreviewInput(
+                    ExampleWriteTool::NAME,
+                    NoInputExamplePreviewTool::NAME
+                )->getMessage(),
+            ],
+            'write tool without an input' => [
+                [ExampleWithoutInputTool::class, WithoutInputWriteExamplePreviewTool::class],
+                McpConfigurationException::createWriteInputNotPreviewInput(
+                    ExampleWithoutInputTool::NAME,
+                    WithoutInputWriteExamplePreviewTool::NAME
                 )->getMessage(),
             ],
             'write input without the preview hash' => [

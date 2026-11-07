@@ -30,7 +30,7 @@ final class McpAuditLogDecorator extends AbstractMcpLogDecorator
      */
     #[Serialize(handler: RawArrayHandler::class)]
     public array $resourceIds {
-        get => array_values($this->readArray($this->context, 'resourceIds'));
+        get => $this->readArray($this->context, 'resourceIds') |> array_values(...);
     }
 
     #[Serialize]

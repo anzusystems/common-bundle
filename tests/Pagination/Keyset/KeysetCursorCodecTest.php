@@ -24,6 +24,8 @@ final class KeysetCursorCodecTest extends TestCase
     private const string SLUG = 'a/b+c?';
     private const string MICROSECOND_TIMESTAMP = 'U.u';
     private const string QUERY = 'query-fingerprint';
+    private const string BASE64_CHARACTERS = '+/';
+    private const string BASE64URL_CHARACTERS = '-_';
     private const string VALUES = '{"shownSince":"' . self::SHOWN_SINCE_UTC . '","id":1,"slug":"a"}';
 
     public function testCursorHoldsTheValuesWithTheDateInUtcAsUrlSafeBase64(): void
@@ -41,7 +43,7 @@ final class KeysetCursorCodecTest extends TestCase
                     'slug' => self::SLUG,
                 ],
             ],
-            json_decode((string) base64_decode(strtr(string: $cursor, from: '-_', to: '+/'), strict: true), associative: true),
+            json_decode((string) base64_decode(strtr(string: $cursor, from: self::BASE64URL_CHARACTERS, to: self::BASE64_CHARACTERS), strict: true), associative: true),
         );
     }
 
@@ -132,6 +134,6 @@ final class KeysetCursorCodecTest extends TestCase
 
     private static function toCursor(string $json): string
     {
-        return rtrim(strtr(string: base64_encode($json), from: '+/', to: '-_'), '=');
+        return rtrim(strtr(string: base64_encode($json), from: self::BASE64_CHARACTERS, to: self::BASE64URL_CHARACTERS), '=');
     }
 }

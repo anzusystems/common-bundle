@@ -14,9 +14,11 @@ use AnzuSystems\CommonBundle\Pagination\Keyset\KeysetPage;
 use AnzuSystems\CommonBundle\Pagination\Keyset\KeysetPaginator;
 use AnzuSystems\CommonBundle\Tests\AnzuKernelTestCase;
 use AnzuSystems\CommonBundle\Tests\Data\Entity\Example;
+use AnzuSystems\CommonBundle\Tests\Data\Entity\ExampleCompositeIdEntity;
 use AnzuSystems\CommonBundle\Tests\Data\Entity\ExampleInheritanceChild;
 use AnzuSystems\CommonBundle\Tests\Data\Entity\ExampleInheritanceParent;
 use AnzuSystems\CommonBundle\Tests\Data\Entity\ExampleJoinedEntity;
+use AnzuSystems\CommonBundle\Tests\Data\Entity\ExampleUniqueFieldEntity;
 use AnzuSystems\CommonBundle\Tests\Data\Model\Enum\DummyEnum;
 use DateTimeImmutable;
 use Doctrine\Common\Collections\Order;
@@ -242,6 +244,56 @@ final class KeysetPaginatorTest extends AnzuKernelTestCase
             'nullable field' => [ExampleJoinedEntity::class, ['archivedAt', 'id'], 'archivedAt'],
             'association' => [ExampleJoinedEntity::class, ['joinedEntity', 'id'], 'joinedEntity'],
         ];
+    }
+
+    /**
+     * @dataProvider notUniqueLastOrderFieldProvider
+     *
+     * @param class-string $entityClass
+     * @param non-empty-list<string> $orderFields
+     */
+    public function testLastOrderFieldThatIsNotUniqueIsALogicException(string $entityClass, array $orderFields, string $expectedField): void
+    {
+        $this->expectExceptionObject(new LogicException(sprintf(KeysetPaginator::NOT_UNIQUE_LAST_ORDER_FIELD_MESSAGE, $entityClass, $expectedField)));
+
+        $this->paginator->paginate(
+            queryBuilder: $this->entityManager->createQueryBuilder()
+                ->select('entity')
+                ->from($entityClass, 'entity'),
+            entityClass: $entityClass,
+            order: new KeysetOrder(fields: $orderFields, direction: Order::Descending),
+            equalities: [],
+            cursor: null,
+            limit: 1,
+        );
+    }
+
+    /**
+     * @return array<string, array{class-string, non-empty-list<string>, string}>
+     */
+    public static function notUniqueLastOrderFieldProvider(): array
+    {
+        return [
+            'field without a unique column' => [Example::class, ['createdAt'], 'createdAt'],
+            'part of a composite identifier' => [ExampleCompositeIdEntity::class, ['firstId', 'secondId'], 'secondId'],
+            'field unique only through a unique constraint with another field' => [ExampleJoinedEntity::class, ['name'], 'name'],
+        ];
+    }
+
+    public function testUniqueFieldCanBeTheLastOrderField(): void
+    {
+        $page = $this->paginator->paginate(
+            queryBuilder: $this->entityManager->createQueryBuilder()
+                ->select('entity')
+                ->from(ExampleUniqueFieldEntity::class, 'entity'),
+            entityClass: ExampleUniqueFieldEntity::class,
+            order: new KeysetOrder(fields: ['code'], direction: Order::Descending),
+            equalities: [],
+            cursor: null,
+            limit: 1,
+        );
+
+        self::assertTrue($page->items->isEmpty());
     }
 
     public function testKeysetOfAClassTableInheritanceChildForcesTheIndexOfTheParentTable(): void

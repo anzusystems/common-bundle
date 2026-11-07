@@ -13,7 +13,7 @@ use Symfony\Component\DependencyInjection\ContainerBuilder;
 trait McpTaggedElementTrait
 {
     private const string ELEMENT_TAG_METHOD = 'method';
-    private const string ELEMENT_METHOD_FORMAT = '%s::%s';
+    private const string ELEMENT_METHOD_SEPARATOR = '::';
 
     /**
      * @return array<string, ReflectionMethod> keyed by "class::method"
@@ -29,7 +29,7 @@ trait McpTaggedElementTrait
             foreach ($tags as $tagAttributes) {
                 $method = $tagAttributes[self::ELEMENT_TAG_METHOD] ?? McpToolSignatureResolver::INVOKE_METHOD;
                 if (method_exists($class, $method)) {
-                    $methods[sprintf(self::ELEMENT_METHOD_FORMAT, $class, $method)] = new ReflectionMethod($class, $method);
+                    $methods[$class . self::ELEMENT_METHOD_SEPARATOR . $method] = new ReflectionMethod($class, $method);
                 }
             }
         }

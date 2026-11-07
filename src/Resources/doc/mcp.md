@@ -447,7 +447,7 @@ The hash of a preview without a `$currentState` covers only the tool and the arg
 `McpPreviewHashReservation` therefore lets one user use such a hash once in `McpPreviewHashReservation::LIFETIME_SECONDS`
 (300), in the pool of `rate_limiter.cache_pool`. It reserves the hash after the confirmation and before the write limit
 takes its token, and releases it when the write limit refuses the call or the tool fails, so the same hash works again
-after an error. A repeated call answers `McpWriteRejectedException::createPreviewHashUsed()` and takes no token of the
+after an error. A response that fails after the write keeps the hash, because the record exists. A repeated call answers `McpWriteRejectedException::createPreviewHashUsed()` and takes no token of the
 write limit. So the same user cannot create two identical records in that time, and two calls at the same moment can
 still both pass, because the pool has no atomic reservation.
 

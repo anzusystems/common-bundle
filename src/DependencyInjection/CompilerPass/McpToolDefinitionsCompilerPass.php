@@ -32,7 +32,6 @@ final class McpToolDefinitionsCompilerPass implements CompilerPassInterface
     public const string CATEGORY_PATTERN = '/^[a-z][a-zA-Z0-9]*$/';
     public const string DEFINITIONS_ARGUMENT = '$definitions';
 
-    private const string TOOL_METHOD_SEPARATOR = '::';
     private const string RATE_LIMITER_ID_FORMAT = 'limiter.%s';
 
     public function process(ContainerBuilder $container): void
@@ -399,7 +398,7 @@ final class McpToolDefinitionsCompilerPass implements CompilerPassInterface
     private function resolveToolSignature(array $tools): McpToolSignature
     {
         $toolMethod = (string) array_key_first($tools);
-        $class = explode(self::TOOL_METHOD_SEPARATOR, $toolMethod)[0];
+        $class = explode(self::ELEMENT_METHOD_SEPARATOR, $toolMethod)[0];
 
         return new McpToolSignatureResolver()
             ->resolve($class)

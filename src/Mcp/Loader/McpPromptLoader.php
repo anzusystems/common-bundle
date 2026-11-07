@@ -4,12 +4,12 @@ declare(strict_types=1);
 
 namespace AnzuSystems\CommonBundle\Mcp\Loader;
 
+use AnzuSystems\CommonBundle\Mcp\Model\McpPromptDefinition;
 use Mcp\Capability\Attribute\CompletionProvider;
 use Mcp\Capability\Completion\EnumCompletionProvider;
 use Mcp\Capability\Completion\ListCompletionProvider;
 use Mcp\Capability\Registry\Loader\LoaderInterface;
 use Mcp\Capability\RegistryInterface;
-use Mcp\Schema\Prompt;
 use ReflectionAttribute;
 use ReflectionMethod;
 
@@ -20,7 +20,7 @@ use ReflectionMethod;
 final readonly class McpPromptLoader implements LoaderInterface
 {
     /**
-     * @param list<array{prompt: Prompt, handler: array{class-string, string}}> $prompts
+     * @param list<McpPromptDefinition> $prompts
      */
     public function __construct(
         private array $prompts,
@@ -29,11 +29,11 @@ final readonly class McpPromptLoader implements LoaderInterface
 
     public function load(RegistryInterface $registry): void
     {
-        foreach ($this->prompts as ['prompt' => $prompt, 'handler' => $handler]) {
+        foreach ($this->prompts as $prompt) {
             $registry->registerPrompt(
-                prompt: $prompt,
-                handler: $handler,
-                completionProviders: $this->resolveCompletionProviders(new ReflectionMethod(...$handler)),
+                prompt: $prompt->prompt,
+                handler: $prompt->handler,
+                completionProviders: $this->resolveCompletionProviders(new ReflectionMethod(...$prompt->handler)),
             );
         }
     }

@@ -83,6 +83,10 @@ Every order field must be a mapped field, not nullable, of a type the cursor can
 `smallint`, `string`; `KeysetCursorCodec::FIELD_TYPES`). Otherwise `paginate()` throws a `LogicException` before the
 query runs: a descending order puts the rows with `null` last, where `x < :cursor0` never reaches them.
 
+The last order field must also be the single-column identifier or a field with `#[ORM\Column(unique: true)]`, or
+`paginate()` throws a `LogicException`: the cursor continues after its value, so rows with the same value on the boundary
+of a page would be left out. A field unique only through `#[ORM\UniqueConstraint]` does not count.
+
 ## The index rule
 
 `KeysetIndexResolver` reads the indexes of the entity mapping (`#[ORM\Index]`, `#[ORM\UniqueConstraint]` and the

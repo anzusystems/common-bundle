@@ -18,6 +18,7 @@ use LogicException;
 final class IndexHintWalkerQueryTest extends AbstractDoctrineQueryTestCase
 {
     private const string UNKNOWN_INDEX = 'IDX_unknown';
+    private const string UNKNOWN_FIELD = 'unknownField';
 
     /**
      * @dataProvider dqlProvider
@@ -173,6 +174,13 @@ final class IndexHintWalkerQueryTest extends AbstractDoctrineQueryTestCase
             'from' => [$joinDql, 'e', Example::class],
             'join' => [$joinDql, 'j', ExampleJoinedEntity::class],
         ];
+    }
+
+    public function testUnknownFieldFails(): void
+    {
+        $this->expectExceptionObject(new LogicException(sprintf(IndexHintWalker::UNKNOWN_FIELD_MESSAGE, self::UNKNOWN_FIELD, Example::class)));
+
+        IndexHintWalker::resolveIndexColumn($this->entityManager->getClassMetadata(Example::class), self::UNKNOWN_FIELD);
     }
 
     public function testUnknownAliasFails(): void

@@ -11,6 +11,7 @@ use PhpParser\Node\Expr\MethodCall;
 use PhpParser\Node\Expr\Variable;
 use PhpParser\Node\Identifier;
 use PhpParser\Node\Name;
+use PhpParser\Node\NullableType;
 use PhpParser\Node\Stmt\ClassMethod;
 use PhpParser\Node\Stmt\Expression;
 use PHPStan\Analyser\Scope;
@@ -52,10 +53,14 @@ final readonly class McpToolInputPermissionRule implements Rule
         $method = $node->getOriginalNode()
             ->getMethod(McpToolSignatureResolver::INVOKE_METHOD);
         $parameter = array_first($method?->getParams() ?? []);
-        if (null === $method || null === $parameter || false === $parameter->type instanceof Name || false === $parameter->var instanceof Variable) {
+        if (null === $method || null === $parameter || false === $parameter->var instanceof Variable) {
             return [];
         }
-        $requestClass = $parameter->type->toString();
+        $requestType = $parameter->type instanceof NullableType ? $parameter->type->type : $parameter->type;
+        if (false === $requestType instanceof Name) {
+            return [];
+        }
+        $requestClass = $requestType->toString();
         if (false === $this->reflectionProvider->hasClass($requestClass)) {
             return [];
         }
@@ -64,7 +69,7 @@ final readonly class McpToolInputPermissionRule implements Rule
 
         $errors = [];
         foreach ($this->inputPermissions as $interface => $permission) {
-            if (false === $request->implementsInterface($interface) || $this->checksRequest(method: $method, permission: $permission, parameterName: $parameterName, scope: $scope)) {
+            if (false === $request->implementsInterface($interface) || $this->isRequestChecked(method: $method, permission: $permission, parameterName: $parameterName, scope: $scope)) {
                 continue;
             }
             $errors[] = RuleErrorBuilder::message(sprintf(self::MESSAGE, $classReflection->getName(), $interface, $permission, $parameterName))
@@ -76,13 +81,13 @@ final readonly class McpToolInputPermissionRule implements Rule
         return $errors;
     }
 
-    private function checksRequest(ClassMethod $method, string $permission, string $parameterName, Scope $scope): bool
+    private function isRequestChecked(ClassMethod $method, string $permission, string $parameterName, Scope $scope): bool
     {
         foreach ($method->getStmts() ?? [] as $statement) {
             if (false === $statement instanceof Expression || false === $this->isCheckCall($statement->expr)) {
                 return false;
             }
-            if ($this->checksPermission(call: $statement->expr, permission: $permission, parameterName: $parameterName, scope: $scope)) {
+            if ($this->isPermissionChecked(call: $statement->expr, permission: $permission, parameterName: $parameterName, scope: $scope)) {
                 return true;
             }
         }
@@ -98,7 +103,7 @@ final readonly class McpToolInputPermissionRule implements Rule
         return $expression instanceof MethodCall && $expression->name instanceof Identifier && self::CHECK_METHOD === $expression->name->toString();
     }
 
-    private function checksPermission(MethodCall $call, string $permission, string $parameterName, Scope $scope): bool
+    private function isPermissionChecked(MethodCall $call, string $permission, string $parameterName, Scope $scope): bool
     {
         [$attribute, $subject] = array_pad(array: $call->getArgs(), length: 2, value: null);
 

@@ -9,11 +9,13 @@ use AnzuSystems\CommonBundle\DependencyInjection\CompilerPass\McpPromptLoaderCom
 use AnzuSystems\CommonBundle\Mcp\Exception\McpConfigurationException;
 use AnzuSystems\CommonBundle\Mcp\Loader\McpPromptLoader;
 use AnzuSystems\CommonBundle\Mcp\Resolver\McpToolSignatureResolver;
+use AnzuSystems\CommonBundle\Tests\Data\Mcp\Model\Enum\ExampleItemStatus;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Prompt\ArgumentsExamplePrompt;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Prompt\FieldlessArgumentExamplePrompt;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Prompt\PlainExamplePrompt;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Prompt\UnnamedPlainExamplePrompt;
 use Mcp\Capability\Attribute\McpPrompt;
+use Mcp\Capability\Completion\EnumCompletionProvider;
 use Mcp\Capability\Completion\ListCompletionProvider;
 use Mcp\Capability\Registry;
 use Mcp\Schema\Icon;
@@ -101,7 +103,11 @@ final class McpPromptLoaderCompilerPassTest extends TestCase
         self::assertSame(self::META, $reference->prompt->meta);
         self::assertSame([ArgumentsExamplePrompt::class, McpToolSignatureResolver::INVOKE_METHOD], $reference->handler);
         self::assertEquals(
-            ['limit' => new ListCompletionProvider(ArgumentsExamplePrompt::LIMIT_COMPLETIONS)],
+            [
+                'topic' => ListCompletionProvider::class,
+                'limit' => new ListCompletionProvider(ArgumentsExamplePrompt::LIMIT_COMPLETIONS),
+                'status' => new EnumCompletionProvider(ExampleItemStatus::class),
+            ],
             $reference->completionProviders,
         );
     }

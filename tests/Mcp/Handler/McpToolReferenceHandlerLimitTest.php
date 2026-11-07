@@ -13,10 +13,12 @@ use AnzuSystems\CommonBundle\Mcp\Resolver\McpToolSignatureResolver;
 use AnzuSystems\CommonBundle\Mcp\Security\McpPreviewHashReservation;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Model\Request\ExampleWritePreviewRequest;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Model\Response\ExampleWritePreviewResponse;
+use AnzuSystems\CommonBundle\Tests\Data\Mcp\Model\Response\UnserializableExampleResponse;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Tool\ExampleResultWriteTool;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Tool\ExampleWithoutInputTool;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Tool\ExampleWritePreviewTool;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Tool\ExampleWriteTool;
+use AnzuSystems\CommonBundle\Tests\Data\Mcp\Tool\UnserializableResponseWriteTool;
 use AnzuSystems\CommonBundle\Tests\Mcp\McpSerializerFactory;
 use Closure;
 use Doctrine\ORM\OptimisticLockException;
@@ -173,6 +175,39 @@ final class McpToolReferenceHandlerLimitTest extends AbstractMcpToolReferenceHan
             'handled exception' => [static fn (): CallToolResult => throw new RuntimeException(self::HANDLED_EXCEPTION_MESSAGE)],
             'optimistic lock' => [static fn (): CallToolResult => throw new OptimisticLockException(self::OPTIMISTIC_LOCK_MESSAGE, null)],
         ];
+    }
+
+    public function testResponseFailureAfterTheWriteKeepsThePreviewHash(): void
+    {
+        $runs = 0;
+        $handler = $this->createHandler(
+            tool: new UnserializableResponseWriteTool(static function () use (&$runs): UnserializableExampleResponse {
+                ++$runs;
+
+                return new UnserializableExampleResponse();
+            }),
+            toolErrorExceptions: [RuntimeException::class => self::BACKEND_ERROR_MESSAGE],
+            readOnlyTool: false,
+            previewTool: new ExampleWritePreviewTool(
+                static fn (ExampleWritePreviewRequest $request): ExampleWritePreviewResponse => new ExampleWritePreviewResponse($request->title),
+            ),
+        );
+        $arguments = $this->createModernArguments(
+            toolName: UnserializableResponseWriteTool::NAME,
+            toolArguments: [self::TITLE_FIELD => self::TITLE, self::HASH_FIELD => $this->createPreviewHash(UnserializableResponseWriteTool::NAME, null)],
+            capabilities: new ClientCapabilities(),
+        );
+        $reference = new ToolReference($this->createSdkTool(UnserializableResponseWriteTool::NAME), [UnserializableResponseWriteTool::class, McpToolSignatureResolver::INVOKE_METHOD]);
+
+        $firstResult = $handler->handle($reference, $arguments);
+        $secondResult = $handler->handle($reference, $arguments);
+
+        self::assertSame(self::BACKEND_ERROR_MESSAGE, $firstResult->structuredContent[McpToolReferenceHandler::ERROR_KEY]);
+        self::assertSame(
+            McpWriteRejectedException::createPreviewHashUsed(UnserializableResponseWriteTool::NAME, McpPreviewHashReservation::LIFETIME_SECONDS)->getMessage(),
+            $secondResult->structuredContent[McpToolReferenceHandler::ERROR_KEY],
+        );
+        self::assertSame(1, $runs);
     }
 
     private function createPreviewHash(string $writeToolName, ?object $currentState): string

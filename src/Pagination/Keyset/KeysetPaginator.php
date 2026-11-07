@@ -20,6 +20,8 @@ final readonly class KeysetPaginator
 {
     public const string UNSUPPORTED_ORDER_FIELD_MESSAGE = 'The keyset order field %s::%s must be a non-nullable field of the type %s, so that the cursor can hold its value and no row with null is left out.';
 
+    public const string NOT_UNIQUE_LAST_ORDER_FIELD_MESSAGE = 'The last keyset order field %s::%s must be the single-column identifier or a field with #[ORM\\Column(unique: true)], because the cursor continues after its value, so rows with the same value on the boundary of a page would be left out.';
+
     private const string COLUMN_FORMAT = '%s.%s';
     private const string TYPE_SEPARATOR = ', ';
     private const string FINGERPRINT_ALGORITHM = 'xxh128';
@@ -124,8 +126,22 @@ final readonly class KeysetPaginator
             }
             $fieldTypes[$field] = $type;
         }
+        $this->assertLastOrderFieldIsUnique($metadata, $order);
 
         return $fieldTypes;
+    }
+
+    /**
+     * @param ClassMetadata<object> $metadata
+     */
+    private function assertLastOrderFieldIsUnique(ClassMetadata $metadata, KeysetOrder $order): void
+    {
+        $field = (string) array_last($order->fields);
+        if ($metadata->isUniqueField($field) || ($metadata->isIdentifier($field) && 1 === count($metadata->getIdentifierColumnNames()))) {
+            return;
+        }
+
+        throw new LogicException(sprintf(self::NOT_UNIQUE_LAST_ORDER_FIELD_MESSAGE, $metadata->getName(), $field));
     }
 
     /**

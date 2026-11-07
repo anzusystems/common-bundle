@@ -36,6 +36,9 @@ final class McpTestClient
     private const string RESULT_KEY = 'result';
     private const string ERROR_KEY = 'error';
     private const string NAME_KEY = 'name';
+    private const string TOOLS_KEY = 'tools';
+    private const string CURSOR_KEY = 'cursor';
+    private const string NEXT_CURSOR_KEY = 'nextCursor';
 
     private ?string $sessionId = null;
     private int $lastRequestId = 0;
@@ -91,7 +94,14 @@ final class McpTestClient
      */
     public function listToolNames(): array
     {
-        return array_column($this->send(self::METHOD_TOOLS_LIST)[self::RESULT_KEY]['tools'] ?? [], self::NAME_KEY);
+        $result = $this->send(self::METHOD_TOOLS_LIST)[self::RESULT_KEY] ?? [];
+        $toolNames = array_column($result[self::TOOLS_KEY] ?? [], self::NAME_KEY);
+        while (is_string($result[self::NEXT_CURSOR_KEY] ?? null)) {
+            $result = $this->send(self::METHOD_TOOLS_LIST, [self::CURSOR_KEY => $result[self::NEXT_CURSOR_KEY]])[self::RESULT_KEY] ?? [];
+            $toolNames = [...$toolNames, ...array_column($result[self::TOOLS_KEY] ?? [], self::NAME_KEY)];
+        }
+
+        return $toolNames;
     }
 
     /**

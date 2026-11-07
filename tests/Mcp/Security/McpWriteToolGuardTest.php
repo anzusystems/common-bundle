@@ -162,7 +162,7 @@ final class McpWriteToolGuardTest extends TestCase
                 new Session(new InMemorySessionStore()),
                 new CallToolRequest(self::WRITE_TOOL_NAME, [])->withId(1),
             ),
-            runPreview: static fn (): ExampleWritePreviewResponse => $preview,
+            preview: $preview,
         );
     }
 

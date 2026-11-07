@@ -9,6 +9,7 @@ use AnzuSystems\CommonBundle\Tests\Data\PHPStan\Mcp\InputPermission\CheckAfterEa
 use AnzuSystems\CommonBundle\Tests\Data\PHPStan\Mcp\InputPermission\CheckInBranchTool;
 use AnzuSystems\CommonBundle\Tests\Data\PHPStan\Mcp\InputPermission\ExamplePermission;
 use AnzuSystems\CommonBundle\Tests\Data\PHPStan\Mcp\InputPermission\MissingCheckTool;
+use AnzuSystems\CommonBundle\Tests\Data\PHPStan\Mcp\InputPermission\NullableRequestMissingCheckTool;
 use AnzuSystems\CommonBundle\Tests\Data\PHPStan\Mcp\InputPermission\ScopedExampleInterface;
 use AnzuSystems\CommonBundle\Tests\Data\PHPStan\Mcp\InputPermission\WrongPermissionTool;
 use AnzuSystems\CommonBundle\Tests\Data\PHPStan\Mcp\InputPermission\WrongSubjectTool;
@@ -32,6 +33,7 @@ final class McpToolInputPermissionRuleTest extends RuleTestCase
                 [$this->createMessage(WrongSubjectTool::class), 46],
                 [$this->createMessage(CheckInBranchTool::class), 59],
                 [$this->createMessage(CheckAfterEarlyReturnTool::class), 74],
+                [$this->createMessage(NullableRequestMissingCheckTool::class), 119],
             ],
         );
     }
