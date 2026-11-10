@@ -82,7 +82,7 @@ abstract class AbstractControllerTest extends AnzuWebTestCase
         );
 
         return $apiResponseList->setData(
-            $this->serializer->fromArray($apiResponseList->getData(), $deserializationClass, [])
+            $this->serializer->fromArray(data: $apiResponseList->getData(), className: $deserializationClass, iterable: [])
         );
     }
 
@@ -152,7 +152,7 @@ abstract class AbstractControllerTest extends AnzuWebTestCase
     private function sendUserIdHeader(int $userId): void
     {
         self::$client->setServerParameter(
-            'HTTP_' . str_replace('-', '_', strtoupper(TestHeaderAuthenticator::USER_ID_HEADER)),
+            'HTTP_' . str_replace(search: '-', replace: '_', subject: strtoupper(TestHeaderAuthenticator::USER_ID_HEADER)),
             (string) $userId
         );
     }

@@ -28,6 +28,18 @@ class CollectionHelper
         );
     }
 
+    /**
+     * @template T
+     *
+     * @param null|Closure(T): mixed $getIdAction
+     */
+    public static function traversableToUniqueIds(Traversable $traversable, ?Closure $getIdAction = null): array
+    {
+        return self::traversableToIds($traversable, $getIdAction)
+            |> array_unique(...)
+            |> array_values(...);
+    }
+
     public static function arrayStringToArray(string $array, string $type = TypeIdentifier::INT->value): array
     {
         return array_map(

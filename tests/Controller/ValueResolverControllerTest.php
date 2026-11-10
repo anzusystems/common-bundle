@@ -43,8 +43,8 @@ final class ValueResolverControllerTest extends AbstractControllerTest
     public function testSerializerFail(): void
     {
         self::$client->request(
-            Request::METHOD_POST,
-            '/dummy/serializer/test',
+            method: Request::METHOD_POST,
+            uri: '/dummy/serializer/test',
             content: '{"dummyEnum":"state_invalid"}',
         );
         self::assertResponseStatusCodeSame(Response::HTTP_UNPROCESSABLE_ENTITY);
@@ -87,8 +87,8 @@ final class ValueResolverControllerTest extends AbstractControllerTest
         );
         self::assertResponseIsSuccessful();
         self::assertSame(
-            expected: array_map('intval', explode(',', $arrayString)),
-            actual: $response,
+            array_map('intval', explode(',', $arrayString)),
+            $response,
         );
     }
 }

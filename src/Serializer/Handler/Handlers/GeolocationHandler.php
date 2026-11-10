@@ -36,7 +36,7 @@ final class GeolocationHandler extends AbstractHandler
 
     public static function supportsDeserialize(mixed $value, string $type): bool
     {
-        return is_a($type, Geolocation::class, true) && is_array($value);
+        return is_a(object_or_class: $type, class: Geolocation::class, allow_string: true) && is_array($value);
     }
 
     /**
@@ -68,7 +68,7 @@ final class GeolocationHandler extends AbstractHandler
 
     public static function supportsDescribe(string $property, Metadata $metadata): bool
     {
-        return is_a($metadata->type, Geolocation::class, true);
+        return is_a(object_or_class: $metadata->type, class: Geolocation::class, allow_string: true);
     }
 
     public function describe(string $property, Metadata $metadata): array

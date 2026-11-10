@@ -18,11 +18,15 @@ use AnzuSystems\CommonBundle\Event\Listener\ConsoleExceptionListener;
 use AnzuSystems\CommonBundle\Event\Listener\ExceptionListener;
 use AnzuSystems\CommonBundle\Event\Listener\LockReleaseListener;
 use AnzuSystems\CommonBundle\Event\Subscriber\CommandLockSubscriber;
+use AnzuSystems\CommonBundle\Pagination\Keyset\KeysetCursorCodec;
+use AnzuSystems\CommonBundle\Pagination\Keyset\KeysetIndexResolver;
+use AnzuSystems\CommonBundle\Pagination\Keyset\KeysetPaginator;
 use AnzuSystems\CommonBundle\Repository\JobRepository;
 use AnzuSystems\CommonBundle\Repository\JobUserDataDeleteRepository;
 use AnzuSystems\CommonBundle\Router\AnzuDomainRouteLoader;
 use AnzuSystems\CommonBundle\Util\ResourceLocker;
 use AnzuSystems\CommonBundle\Validator\Constraints\EntityExistsValidator;
+use AnzuSystems\CommonBundle\Validator\Constraints\McpExistingIdValidator;
 use AnzuSystems\CommonBundle\Validator\Constraints\NotEmptyIdValidator;
 use AnzuSystems\CommonBundle\Validator\Constraints\UniqueEntityDtoValidator;
 use AnzuSystems\CommonBundle\Validator\Constraints\UniqueEntityValidator;
@@ -155,6 +159,12 @@ return static function (ContainerConfigurator $configurator): void {
         ->tag('validator.constraint_validator')
     ;
 
+    $services->set(McpExistingIdValidator::class)
+        ->arg('$managerRegistry', service(ManagerRegistry::class))
+        ->arg('$userEntityClass', null)
+        ->tag('validator.constraint_validator')
+    ;
+
     $services->set(UniqueEntityValidator::class)
         ->arg('$propertyAccessor', service(PropertyAccessorInterface::class))
         ->arg('$entityManager', service(EntityManagerInterface::class))
@@ -171,5 +181,14 @@ return static function (ContainerConfigurator $configurator): void {
 
     $services->set(NotEmptyIdValidator::class)
         ->tag('validator.constraint_validator')
+    ;
+
+    $services->set(KeysetCursorCodec::class);
+
+    $services->set(KeysetIndexResolver::class);
+
+    $services->set(KeysetPaginator::class)
+        ->arg('$cursorCodec', service(KeysetCursorCodec::class))
+        ->arg('$indexResolver', service(KeysetIndexResolver::class))
     ;
 };

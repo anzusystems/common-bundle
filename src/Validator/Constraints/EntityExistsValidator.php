@@ -7,6 +7,7 @@ namespace AnzuSystems\CommonBundle\Validator\Constraints;
 use AnzuSystems\CommonBundle\Repository\AnzuRepositoryInterface;
 use AnzuSystems\CommonBundle\Validator\Traits\EntityClassResolverTrait;
 use Doctrine\ORM\EntityManagerInterface;
+use Doctrine\ORM\EntityRepository;
 use Symfony\Component\Validator\Constraint;
 use Symfony\Component\Validator\ConstraintValidator;
 use Symfony\Component\Validator\Exception\UnexpectedTypeException;
@@ -40,7 +41,7 @@ final class EntityExistsValidator extends ConstraintValidator
 
         $entityClass = $this->resolveEntityClass($constraint->entity);
 
-        /** @var AnzuRepositoryInterface $repo */
+        /** @var EntityRepository<object>&AnzuRepositoryInterface $repo */
         $repo = $this->entityManager->getRepository($entityClass);
         if ($repo->exists(is_numeric($value) ? (int) $value : $value)) {
             return;

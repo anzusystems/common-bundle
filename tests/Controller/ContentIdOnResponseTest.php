@@ -19,8 +19,8 @@ final class ContentIdOnResponseTest extends AbstractControllerTest
 
         $this->assertTrue(self::$client->getResponse()->headers->has(AnzuKernel::CONTEXT_IDENTITY_HEADER));
         $this->assertSame(
-            expected: AnzuApp::getContextId(),
-            actual: self::$client->getResponse()->headers->get(AnzuKernel::CONTEXT_IDENTITY_HEADER),
+            AnzuApp::getContextId(),
+            self::$client->getResponse()->headers->get(AnzuKernel::CONTEXT_IDENTITY_HEADER),
         );
     }
 }

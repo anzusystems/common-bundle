@@ -20,7 +20,7 @@ final class ApiQueryMongo
     private ReflectionClass $classReflection;
 
     /**
-     * @psalm-param class-string $className
+     * @param class-string $className
      */
     public function __construct(
         private readonly ApiParams $params,
@@ -37,7 +37,7 @@ final class ApiQueryMongo
         foreach ($this->params->getFilter() as $filterVariant => $filterFieldValue) {
             foreach ($filterFieldValue as $field => $value) {
                 $persistedName = $this->getPersistedName($field);
-                $value = $this->getFilterValue($filterVariant, $field, $value);
+                $value = $this->getFilterValue(filterVariant: $filterVariant, field: $field, value: $value);
                 switch ($filterVariant) {
                     case ApiParams::FILTER_GT:
                         $filter[$persistedName]['$gt'] = $value;
@@ -113,21 +113,15 @@ final class ApiQueryMongo
     {
         $fieldAttributes = $this->getPropertyByField($field)
             ->getAttributes(PersistedName::class);
-        if (array_key_exists(0, $fieldAttributes)) {
-            $persistedNameAttribute = $fieldAttributes[0]->newInstance();
-            /** @psalm-suppress RedundantConditionGivenDocblockType */
-            if ($persistedNameAttribute instanceof PersistedName) {
-                return $persistedNameAttribute->name;
-            }
-        }
 
-        return $field;
+        return array_first($fieldAttributes)?->newInstance()
+            ->name ?? $field;
     }
 
     private function getFilterValue(string $filterVariant, string $field, mixed $value): mixed
     {
         $type = $this->getPropertyType($field);
-        if (in_array($filterVariant, ApiParams::ARRAY_FILTERS, true)) {
+        if (in_array(needle: $filterVariant, haystack: ApiParams::ARRAY_FILTERS, strict: true)) {
             return array_map(
                 static fn (mixed $val): mixed => self::castValue($type, $val),
                 explode(',', $value)
@@ -157,7 +151,7 @@ final class ApiQueryMongo
         $propertyName = array_pop($propertyPath);
         $class = $this->classReflection;
         foreach ($propertyPath as $curPropName) {
-            /** @psalm-var class-string $curClassType */
+            /** @var class-string $curClassType */
             $curClassType = (string) $class->getProperty($curPropName)
                 ->getType();
             $class = new ReflectionClass($curClassType);

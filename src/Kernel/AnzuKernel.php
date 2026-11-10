@@ -72,7 +72,6 @@ class AnzuKernel extends Kernel
         $trustedProxies = Request::getTrustedProxies();
         if ($this->loadBalancerIp && $trustedProxies) {
             $trustedProxies[] = $this->loadBalancerIp;
-            /** @psalm-suppress ArgumentTypeCoercion */
             Request::setTrustedProxies($trustedProxies, Request::getTrustedHeaderSet());
         }
     }
@@ -85,7 +84,7 @@ class AnzuKernel extends Kernel
         $this->loadBalancerIp = (string) $request->headers->get(self::LOAD_BALANCER_IP_HEADER);
         $this->contextId = (string) $request->headers->get(self::CONTEXT_IDENTITY_HEADER);
 
-        return parent::handle($request, $type, $catch);
+        return parent::handle(request: $request, type: $type, catch: $catch);
     }
 
     protected function build(ContainerBuilder $container): void
@@ -107,7 +106,7 @@ class AnzuKernel extends Kernel
         $directories = [];
 
         foreach ($finder as $dir) {
-            $namespace = str_replace('/', '\\', sprintf('App\%s', $dir->getRelativePathname()));
+            $namespace = str_replace(search: '/', replace: '\\', subject: sprintf('App\%s', $dir->getRelativePathname()));
             $namespaces[] = $namespace;
             $directories[] = $dir->getPathname();
         }

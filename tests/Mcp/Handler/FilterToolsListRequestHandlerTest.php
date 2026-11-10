@@ -6,6 +6,9 @@ namespace AnzuSystems\CommonBundle\Tests\Mcp\Handler;
 
 use AnzuSystems\CommonBundle\Mcp\Handler\FilterToolsListRequestHandler;
 use AnzuSystems\CommonBundle\Mcp\Security\McpToolAccessChecker;
+use AnzuSystems\CommonBundle\Mcp\Security\McpToolScope;
+use AnzuSystems\CommonBundle\Tests\Data\Mcp\McpToolDefinitionsFactory;
+use AnzuSystems\CommonBundle\Tests\Data\Mcp\Security\StaticMcpToolScopeProvider;
 use Mcp\Capability\RegistryInterface;
 use Mcp\Schema\JsonRpc\Response;
 use Mcp\Schema\Page;
@@ -19,10 +22,14 @@ use Symfony\Bundle\SecurityBundle\Security;
 
 final class FilterToolsListRequestHandlerTest extends TestCase
 {
-    private const string GRANTED_TOOL_NAME = 'list_sites';
+    private const string GRANTED_TOOL_NAME = 'example_read';
     private const string DENIED_TOOL_NAME = 'search_app_logs';
-    private const string GRANTED_PERMISSION = 'cms_site_read';
-    private const string DENIED_PERMISSION = 'cms_log_read';
+    private const string GRANTED_WRITE_TOOL_NAME = 'example_write';
+    private const string NOT_GRANTED_WRITE_TOOL_NAME = 'example_other_write';
+    private const string GRANTED_PREVIEW_TOOL_NAME = 'example_preview';
+    private const string NOT_GRANTED_PREVIEW_TOOL_NAME = 'example_other_preview';
+    private const string GRANTED_PERMISSION = 'example_read';
+    private const string DENIED_PERMISSION = 'app_log_read';
     private const int PAGE_SIZE = 20;
     private const int REQUEST_ID = 1;
 
@@ -34,22 +41,32 @@ final class FilterToolsListRequestHandlerTest extends TestCase
         self::assertFalse($handler->supports(new CallToolRequest(self::GRANTED_TOOL_NAME, [])->withId(self::REQUEST_ID)));
     }
 
-    public function testHandleReturnsOnlyGrantedTools(): void
+    public function testHandleReturnsOnlyToolsWithGrantedPermissionAndGrantedWriteTools(): void
     {
         $response = $this->createHandler()
             ->handle(new ListToolsRequest()->withId(self::REQUEST_ID), $this->createStub(SessionInterface::class));
 
         self::assertInstanceOf(Response::class, $response);
         self::assertInstanceOf(ListToolsResult::class, $response->result);
-        self::assertCount(1, $response->result->tools);
-        self::assertSame(self::GRANTED_TOOL_NAME, $response->result->tools[0]->name);
+        self::assertSame(
+            [self::GRANTED_TOOL_NAME, self::GRANTED_WRITE_TOOL_NAME, self::GRANTED_PREVIEW_TOOL_NAME],
+            array_map(static fn (Tool $tool): string => $tool->name, $response->result->tools),
+        );
     }
 
     private function createHandler(): FilterToolsListRequestHandler
     {
         $tools = [];
-        foreach ([self::GRANTED_TOOL_NAME, self::DENIED_TOOL_NAME] as $toolName) {
-            $tools[$toolName] = new Tool($toolName, null, ['type' => 'object'], null, null);
+        $toolNames = [
+            self::GRANTED_TOOL_NAME,
+            self::DENIED_TOOL_NAME,
+            self::GRANTED_WRITE_TOOL_NAME,
+            self::NOT_GRANTED_WRITE_TOOL_NAME,
+            self::GRANTED_PREVIEW_TOOL_NAME,
+            self::NOT_GRANTED_PREVIEW_TOOL_NAME,
+        ];
+        foreach ($toolNames as $toolName) {
+            $tools[$toolName] = new Tool(name: $toolName, title: null, inputSchema: ['type' => 'object', 'properties' => [], 'required' => null], description: null, annotations: null);
         }
         $registry = $this->createMock(RegistryInterface::class);
         $registry->method('getTools')
@@ -60,10 +77,30 @@ final class FilterToolsListRequestHandlerTest extends TestCase
         $security->method('isGranted')
             ->willReturnCallback(static fn (mixed $attribute): bool => self::GRANTED_PERMISSION === $attribute);
         $toolAccessChecker = new McpToolAccessChecker(
-            [self::GRANTED_TOOL_NAME => self::GRANTED_PERMISSION, self::DENIED_TOOL_NAME => self::DENIED_PERMISSION],
-            $security,
+            toolDefinitions: McpToolDefinitionsFactory::create(
+                toolPermissions: [
+                    self::GRANTED_TOOL_NAME => self::GRANTED_PERMISSION,
+                    self::DENIED_TOOL_NAME => self::DENIED_PERMISSION,
+                    self::GRANTED_WRITE_TOOL_NAME => self::GRANTED_PERMISSION,
+                    self::NOT_GRANTED_WRITE_TOOL_NAME => self::GRANTED_PERMISSION,
+                ],
+                readOnlyToolNames: [
+                    self::GRANTED_TOOL_NAME,
+                    self::DENIED_TOOL_NAME,
+                    self::GRANTED_PREVIEW_TOOL_NAME,
+                    self::NOT_GRANTED_PREVIEW_TOOL_NAME,
+                ],
+                writeToolNamesByPreview: [
+                    self::GRANTED_PREVIEW_TOOL_NAME => self::GRANTED_WRITE_TOOL_NAME,
+                    self::NOT_GRANTED_PREVIEW_TOOL_NAME => self::NOT_GRANTED_WRITE_TOOL_NAME,
+                ],
+            ),
+            security: $security,
+            toolScopeProvider: new StaticMcpToolScopeProvider(
+                new McpToolScope(writeToolNames: [self::GRANTED_WRITE_TOOL_NAME]),
+            ),
         );
 
-        return new FilterToolsListRequestHandler($registry, $toolAccessChecker, self::PAGE_SIZE);
+        return new FilterToolsListRequestHandler(registry: $registry, toolAccessChecker: $toolAccessChecker, pageSize: self::PAGE_SIZE);
     }
 }

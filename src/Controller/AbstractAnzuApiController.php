@@ -63,10 +63,10 @@ abstract class AbstractAnzuApiController extends AbstractController
         int $statusCode = JsonResponse::HTTP_OK,
     ): JsonResponse {
         return new JsonResponse(
-            $this->serializer->serialize($data),
-            $statusCode,
-            [],
-            true
+            data: $this->serializer->serialize($data),
+            status: $statusCode,
+            headers: [],
+            json: true
         );
     }
 

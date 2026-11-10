@@ -60,7 +60,7 @@ final class SyncBaseUsersCommand extends Command
         }
 
         /** @var UserDto[] $users */
-        $users = $this->serializer->deserializeIterable($contents, UserDto::class, []);
+        $users = $this->serializer->deserializeIterable(data: $contents, className: UserDto::class, iterable: []);
 
         foreach ($users as $userDto) {
             $output->writeln((int) $userDto->getId() . ' ' . $userDto->getEmail());

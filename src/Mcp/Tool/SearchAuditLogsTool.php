@@ -4,28 +4,22 @@ declare(strict_types=1);
 
 namespace AnzuSystems\CommonBundle\Mcp\Tool;
 
+use AnzuSystems\CommonBundle\Mcp\Attribute\AsMcpTool;
 use AnzuSystems\CommonBundle\Mcp\Log\McpLogFinder;
-use AnzuSystems\CommonBundle\Mcp\McpToolExecutor;
 use AnzuSystems\CommonBundle\Mcp\Model\Request\SearchAuditLogsRequest;
 use AnzuSystems\CommonBundle\Mcp\Model\Response\McpAuditLogSearchResponse;
-use AnzuSystems\CommonBundle\Mcp\Resolver\McpDateWindowResolver;
-use Mcp\Capability\Attribute\McpTool;
-use Mcp\Capability\Attribute\Schema;
-use Mcp\Schema\Result\CallToolResult;
 
-#[McpTool(
+#[AsMcpTool(
     name: SearchAuditLogsTool::NAME,
-    description: 'Searches the audit log of API requests handled by this service. Each record describes one request: '
-        . 'method, path, acting userId, resource name and ids, http status, request body (content), response, error '
-        . 'and exception details, and a contextId. By default only failed requests are returned (http status 400 or '
-        . 'higher, or a non-empty error/exception) — set onlyErrors to false to include successful requests. '
-        . 'Diagnostic workflow: when a user reports a failed action (e.g. could not save a record), search with '
-        . 'their userId, onlyErrors, and a time window around the incident, then pass the failing record\'s contextId '
-        . 'to get_logs_by_context to see the application errors behind it; the same contextId correlates logs across '
-        . 'the services of this platform. The time window defaults to the last day and is capped at 31 days: the '
-        . 'response echoes the effective from and until, and a longer requested window is shortened and reported in '
-        . 'warnings — repeat the search on the remaining days. Results are newest first and long fields are '
-        . 'truncated.',
+    description: <<<'TXT'
+        Searches the audit log of the API requests handled by this service; by default only failed requests.
+        When a user reports a failed action (e.g. a record that could not be saved), search with their userId and a time window around the incident, then pass the contextId of the failing record to {{ get_logs_by_context }} to see the application errors and MCP tool calls behind it. The same contextId correlates logs across the services of this platform.
+        TXT
+    ,
+    descriptionValues: ['get_logs_by_context' => GetLogsByContextTool::NAME],
+    category: AsMcpTool::CATEGORY_DIAGNOSTICS,
+    permission: AsMcpTool::PERMISSION_LOG_TOOLS,
+    readOnly: true,
 )]
 final readonly class SearchAuditLogsTool
 {
@@ -33,44 +27,11 @@ final readonly class SearchAuditLogsTool
 
     public function __construct(
         private McpLogFinder $logFinder,
-        private McpToolExecutor $toolExecutor,
     ) {
     }
 
-    #[Schema(additionalProperties: false)]
-    public function __invoke(
-        #[Schema(description: 'Filter by the id of the user who made the request. Omit to search requests of all users.')]
-        ?int $userId = null,
-        #[Schema(description: 'When true (default), only failed requests are returned: http status 400 or higher, or a non-empty error/exception. Set to false to include successful requests.')]
-        bool $onlyErrors = true,
-        #[Schema(description: 'Case-insensitive substring match on the request path, e.g. "article".')]
-        ?string $pathContains = null,
-        #[Schema(description: 'Exact resource name of the affected entity as stored in the audit record, e.g. "articleKindStandard".')]
-        ?string $resourceName = null,
-        #[Schema(description: 'Exact contextId (UUID) of one request, as found in other log records.')]
-        ?string $contextId = null,
-        #[Schema(description: 'Only records at or after this ISO 8601 date-time, e.g. "2026-07-20T06:00:00+02:00". Defaults to 1 day before until. ' . McpDateWindowResolver::DATE_TIME_OFFSET_DESCRIPTION)]
-        ?string $from = null,
-        #[Schema(description: 'Only records at or before this ISO 8601 date-time. Defaults to now; the from..until window is capped at 31 days. ' . McpDateWindowResolver::DATE_TIME_OFFSET_DESCRIPTION)]
-        ?string $until = null,
-        #[Schema(description: 'Maximum number of records, capped at 50.')]
-        int $limit = McpLogFinder::LIMIT_DEFAULT,
-    ): CallToolResult {
-        $request = new SearchAuditLogsRequest(
-            userId: $userId,
-            onlyErrors: $onlyErrors,
-            pathContains: $pathContains,
-            resourceName: $resourceName,
-            contextId: $contextId,
-            from: $from,
-            until: $until,
-            limit: $limit,
-        );
-
-        return $this->toolExecutor->execute(
-            self::NAME,
-            $request,
-            fn (): McpAuditLogSearchResponse => new McpAuditLogSearchResponse($this->logFinder->findAuditLogs($request)),
-        );
+    public function __invoke(SearchAuditLogsRequest $request): McpAuditLogSearchResponse
+    {
+        return new McpAuditLogSearchResponse($this->logFinder->findAuditLogs($request));
     }
 }

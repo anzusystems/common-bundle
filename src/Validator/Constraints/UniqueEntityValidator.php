@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace AnzuSystems\CommonBundle\Validator\Constraints;
 
+use AnzuSystems\CommonBundle\Helper\EntityClassHelper;
 use AnzuSystems\CommonBundle\Validator\Traits\EntityClassResolverTrait;
 use AnzuSystems\Contracts\Entity\Interfaces\BaseIdentifiableInterface;
-use Doctrine\Common\Util\ClassUtils;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\PropertyAccess\PropertyAccessorInterface;
 use Symfony\Component\Validator\Constraint;
@@ -43,7 +43,7 @@ final class UniqueEntityValidator extends ConstraintValidator
             $fields[$fieldName] = $this->propertyAccessor->getValue($value, $fieldName);
         }
 
-        $entityClass = $this->resolveEntityClass(ClassUtils::getRealClass($value::class));
+        $entityClass = $this->resolveEntityClass(EntityClassHelper::getRealClass($value));
 
         /** @var BaseIdentifiableInterface|null $existingEntity */
         $existingEntity = $this->entityManager->getRepository($entityClass)

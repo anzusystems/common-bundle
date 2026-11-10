@@ -11,7 +11,6 @@ use Mcp\Schema\JsonRpc\Request;
 use Mcp\Schema\JsonRpc\Response;
 use Mcp\Schema\Request\ListToolsRequest;
 use Mcp\Schema\Result\ListToolsResult;
-use Mcp\Schema\Tool;
 use Mcp\Server\Handler\Request\RequestHandlerInterface;
 use Mcp\Server\Session\SessionInterface;
 
@@ -41,7 +40,7 @@ final readonly class FilterToolsListRequestHandler implements RequestHandlerInte
         $page = $this->registry->getTools($this->pageSize, $request->cursor);
         $grantedTools = [];
         foreach ($page->references as $reference) {
-            if ($reference instanceof Tool && $this->toolAccessChecker->isToolGranted($reference->name)) {
+            if ($this->toolAccessChecker->isToolGranted($reference->name)) {
                 $grantedTools[] = $reference;
             }
         }

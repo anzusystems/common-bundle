@@ -21,6 +21,8 @@ class PermissionGroup extends AnzuPermissionGroup
      * List of users who belongs to permission group.
      *
      * Override in your project to get relations:
+     *
+     * @var Collection<int, User>
      */
     #[ORM\ManyToMany(targetEntity: User::class, mappedBy: 'permissionGroups', indexBy: 'id')]
     #[Serialize(handler: EntityIdHandler::class, type: User::class)]

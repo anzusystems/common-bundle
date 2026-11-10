@@ -61,12 +61,12 @@ final class Validator
 
         $this->violationList->add(
             new ConstraintViolation(
-                ValidationException::ERROR_ID_MISMATCH,
-                ValidationException::ERROR_ID_MISMATCH,
-                [],
-                $object::class,
-                'id',
-                $object->getId(),
+                message: ValidationException::ERROR_ID_MISMATCH,
+                messageTemplate: ValidationException::ERROR_ID_MISMATCH,
+                parameters: [],
+                root: $object::class,
+                propertyPath: 'id',
+                invalidValue: $object->getId(),
             )
         );
     }

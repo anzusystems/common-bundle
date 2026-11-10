@@ -17,10 +17,10 @@ final class UuidHelper
      */
     public static function getAnzuId(string $resourceName, string $system, int $id, int $groupId = 0): string
     {
-        $resourcePart = substr(str_pad($resourceName, 8, '0', STR_PAD_RIGHT), 0, 8);
-        $systemPart = substr(str_pad($system, 4, '0', STR_PAD_RIGHT), 0, 4);
-        $groupPart = substr(str_pad((string) $groupId, 4, '0', STR_PAD_LEFT), 0, 4);
-        $idPart = str_pad((string) $id, 12, '0', STR_PAD_LEFT);
+        $resourcePart = substr(string: str_pad(string: $resourceName, length: 8, pad_string: '0', pad_type: STR_PAD_RIGHT), offset: 0, length: 8);
+        $systemPart = substr(string: str_pad(string: $system, length: 4, pad_string: '0', pad_type: STR_PAD_RIGHT), offset: 0, length: 4);
+        $groupPart = substr(string: str_pad(string: (string) $groupId, length: 4, pad_string: '0', pad_type: STR_PAD_LEFT), offset: 0, length: 4);
+        $idPart = str_pad(string: (string) $id, length: 12, pad_string: '0', pad_type: STR_PAD_LEFT);
 
         return sprintf('%s-%s-0000-%s-%s', $resourcePart, $systemPart, $groupPart, $idPart);
     }
@@ -28,9 +28,9 @@ final class UuidHelper
     public static function getAnzuIdByIdentifiable(IdentifiableInterface $identifiable): string
     {
         return self::getAnzuId(
-            $identifiable::getResourceName(),
-            $identifiable::getSystem(),
-            (int) $identifiable->getId(),
+            resourceName: $identifiable::getResourceName(),
+            system: $identifiable::getSystem(),
+            id: (int) $identifiable->getId(),
         );
     }
 }

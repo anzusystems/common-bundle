@@ -56,7 +56,6 @@ $app->run($input, $output);
 $input = new ArrayInput([
     'command' => 'doctrine:schema:update',
     '--force' => true,
-    '--complete' => true,
 ]);
 $input->setInteractive(false);
 $app->run($input, $output);

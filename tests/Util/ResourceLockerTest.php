@@ -38,7 +38,7 @@ final class ResourceLockerTest extends AnzuKernelTestCase
 
     public function testLockExpiresAfterGivenTtl(): void
     {
-        $this->resourceLocker->lock(self::RESOURCE, blocking: false, ttl: self::GIVEN_TTL);
+        $this->resourceLocker->lock(resource: self::RESOURCE, blocking: false, ttl: self::GIVEN_TTL);
 
         $this->assertRemainingTtl(self::GIVEN_TTL);
     }

@@ -20,6 +20,8 @@ class User extends AnzuUser implements CopyableInterface
      * Assigned permission groups.
      *
      * Override in your project to get relations:
+     *
+     * @var Collection<int, PermissionGroup>
      */
     #[ORM\ManyToMany(targetEntity: PermissionGroup::class, inversedBy: 'users', fetch: 'EXTRA_LAZY', indexBy: 'id')]
     #[ORM\JoinTable]

@@ -28,7 +28,7 @@ final class ValueObjectHandler extends AbstractHandler
 
     public static function supportsDeserialize(mixed $value, string $type): bool
     {
-        return is_a($type, ValueObjectInterface::class, true);
+        return is_a(object_or_class: $type, class: ValueObjectInterface::class, allow_string: true);
     }
 
     public function deserialize(mixed $value, Metadata $metadata): object
@@ -38,14 +38,14 @@ final class ValueObjectHandler extends AbstractHandler
 
     public static function supportsDescribe(string $property, Metadata $metadata): bool
     {
-        return is_a($metadata->type, AbstractValueObject::class, true);
+        return is_a(object_or_class: $metadata->type, class: AbstractValueObject::class, allow_string: true);
     }
 
     public function describe(string $property, Metadata $metadata): array
     {
         $description = parent::describe($property, $metadata);
 
-        /** @var AbstractValueObject $valueObjectClass */
+        /** @var class-string<AbstractValueObject> $valueObjectClass */
         $valueObjectClass = $metadata->type;
         $description['enum'] = $valueObjectClass::AVAILABLE_VALUES;
         $description['type'] = TypeIdentifier::STRING->value;

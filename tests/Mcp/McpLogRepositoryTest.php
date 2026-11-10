@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace AnzuSystems\CommonBundle\Tests\Mcp;
 
 use AnzuSystems\CommonBundle\Helper\MongoHelper;
+use AnzuSystems\CommonBundle\Mcp\Log\McpLogger;
 use AnzuSystems\CommonBundle\Mcp\Log\McpLogRepository;
 use DateTimeImmutable;
 use MongoDB\BSON\UTCDateTime;
@@ -21,11 +22,11 @@ final class McpLogRepositoryTest extends TestCase
     {
         $from = new DateTimeImmutable('2026-08-14 20:26:40+00:00');
         $older = [
-            'datetime' => new UTCDateTime(1_000),
+            McpLogger::FIELD_DATETIME => new UTCDateTime(1_000),
             'id' => 'older',
         ];
         $newer = [
-            'datetime' => new UTCDateTime(2_000),
+            McpLogger::FIELD_DATETIME => new UTCDateTime(2_000),
             'id' => 'newer',
         ];
 
@@ -38,15 +39,16 @@ final class McpLogRepositoryTest extends TestCase
             ->expects(self::once())
             ->method('find')
             ->with(
-                self::callback(static fn (array $filter): bool => self::CONTEXT_ID === $filter['contextId']
-                    && (string) new UTCDateTime($from) === (string) $filter['datetime']['$gte']
+                self::callback(static fn (array $filter): bool => self::CONTEXT_ID === $filter[McpLogger::FIELD_CONTEXT_ID]
+                    && (string) new UTCDateTime($from) === (string) $filter[McpLogger::FIELD_DATETIME]['$gte']
                     && (string) MongoHelper::minObjectIdFor($from->modify('-1 minute')) === (string) $filter[MongoHelper::FIELD_ID]['$gte']),
                 self::callback(static fn (array $options): bool => [MongoHelper::FIELD_ID => MongoHelper::SORT_DESC] === $options['sort']
                     && self::LIMIT === $options['limit']),
             )
             ->willReturn($cursor);
 
-        $documents = (new McpLogRepository($collection))->findLatestByContextId(self::CONTEXT_ID, $from, self::LIMIT);
+        $documents = new McpLogRepository($collection)
+            ->findLatestByContextId(contextId: self::CONTEXT_ID, from: $from, limit: self::LIMIT);
 
         self::assertSame(['newer', 'older'], array_column($documents, 'id'));
     }

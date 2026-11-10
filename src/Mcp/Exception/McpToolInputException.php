@@ -6,6 +6,10 @@ namespace AnzuSystems\CommonBundle\Mcp\Exception;
 
 use RuntimeException;
 
-final class McpToolInputException extends RuntimeException
+abstract class McpToolInputException extends RuntimeException
 {
+    final protected function __construct(string $message)
+    {
+        parent::__construct($message);
+    }
 }

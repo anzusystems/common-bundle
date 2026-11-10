@@ -12,6 +12,7 @@ use AnzuSystems\CommonBundle\Tests\Data\Controller\JobController;
 use AnzuSystems\CommonBundle\Tests\Data\Domain\Job\Processor\JobUserDataDeleteProcessor;
 use AnzuSystems\CommonBundle\Tests\Data\Fixtures\ExampleFixtures;
 use AnzuSystems\CommonBundle\Tests\Data\Fixtures\UserFixtures;
+use AnzuSystems\CommonBundle\Tests\Data\Repository\ExampleRepository;
 use AnzuSystems\CommonBundle\Tests\Data\Repository\UserRepository;
 use AnzuSystems\CommonBundle\Tests\Data\Security\TestHeaderAuthenticator;
 use AnzuSystems\CommonBundle\Util\ResourceLocker;
@@ -65,6 +66,11 @@ return static function (ContainerConfigurator $configurator): void {
     ;
 
     $services->set(UserRepository::class)
+        ->arg('$registry', service(ManagerRegistry::class))
+        ->tag('doctrine.repository_service')
+    ;
+
+    $services->set(ExampleRepository::class)
         ->arg('$registry', service(ManagerRegistry::class))
         ->tag('doctrine.repository_service')
     ;

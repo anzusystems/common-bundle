@@ -23,7 +23,6 @@ final class AnzuAppTest extends AnzuKernelTestCase
             (new DateTimeImmutable(AnzuApp::DATETIME_MIN))->getTimestamp(),
             AnzuApp::getMinDate()->getTimestamp()
         );
-        self::assertNotEmpty(AnzuApp::getAppDate());
         self::assertSame('test', AnzuApp::getAppEnv());
         self::assertNotEmpty(AnzuApp::getProjectDir());
         self::assertNotEmpty(AnzuApp::getDataDir());

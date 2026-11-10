@@ -33,7 +33,7 @@ final readonly class AuditLogSubscriber implements EventSubscriberInterface
      */
     public function onTerminate(TerminateEvent $event): void
     {
-        if (false === in_array($event->getRequest()->getMethod(), $this->loggedMethods, true)) {
+        if (false === in_array(needle: $event->getRequest()->getMethod(), haystack: $this->loggedMethods, strict: true)) {
             return;
         }
         if ($event->getRequest()->attributes->get(AuditLogResourceHelper::RESOURCE_EXCLUDE_ATTR_NAME)) {

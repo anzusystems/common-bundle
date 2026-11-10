@@ -13,12 +13,11 @@ final class ValueObjectValueResolver implements ValueResolverInterface
 {
     public function resolve(Request $request, ArgumentMetadata $argument): iterable
     {
-        if (is_a($argument->getType(), AbstractValueObject::class, true)) {
+        if (is_a(object_or_class: $argument->getType(), class: AbstractValueObject::class, allow_string: true)) {
             $name = $argument->getName();
             /** @var class-string<AbstractValueObject> $class */
             $class = $argument->getType();
 
-            /** @psalm-suppress UnsafeInstantiation */
             return [new $class($this->getValueFromRequest($request, $name) ?: $class::DEFAULT_VALUE)];
         }
 

@@ -26,7 +26,7 @@ abstract class AbstractVoter extends Voter
 
     protected function supports(string $attribute, mixed $subject): bool
     {
-        return in_array($attribute, $this->getSupportedPermissions(), true);
+        return in_array(needle: $attribute, haystack: $this->getSupportedPermissions(), strict: true);
     }
 
     protected function voteOnAttribute(string $attribute, mixed $subject, TokenInterface $token, ?Vote $vote = null): bool
@@ -40,12 +40,12 @@ abstract class AbstractVoter extends Voter
         }
 
         // Allow to define custom business logic vote
-        $vote = $this->businessLogicVote($attribute, $subject, $user);
+        $vote = $this->businessLogicVote(attribute: $attribute, subject: $subject, user: $user);
         if (false === (null === $vote)) {
             return $vote;
         }
 
-        return $this->permissionVote($attribute, $subject, $user);
+        return $this->permissionVote(attribute: $attribute, subject: $subject, user: $user);
     }
 
     protected function businessLogicVote(string $attribute, mixed $subject, AnzuUser $user): ?bool

@@ -27,9 +27,7 @@ interface FixturesInterface
     public function getEnvironments(): array;
 
     /**
-     * @template F of FixturesInterface
-     *
-     * @return array<class-string<F>>
+     * @return array<class-string<FixturesInterface>>
      */
     public static function getDependencies(): array;
 
