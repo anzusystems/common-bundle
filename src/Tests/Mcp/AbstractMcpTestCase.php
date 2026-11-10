@@ -16,10 +16,10 @@ abstract class AbstractMcpTestCase extends AnzuWebTestCase
      * ends the number, so a maximum of 5 does not match the error of a maximum of 50.
      */
     private const string ABOVE_MAXIMUM_FORMAT = "Property '/%s': Number must be less than or equal to %d.";
-    private const string TOO_MANY_ITEMS_FORMAT = "Property '/%s': Array should have at most %d items, %d found";
+    private const string TOO_MANY_ITEMS_FORMAT = "Property '/%s': Array must contain no more than %d items.";
     private const string BELOW_MINIMUM_FORMAT = "Property '/%s': Number must be greater than or equal to %d.";
-    private const string TOO_FEW_ITEMS_FORMAT = "Property '/%s': Array should have at least %d items, %d found";
-    private const string TOO_LONG_FORMAT = "Property '/%s': Maximum string length is %d, found %d";
+    private const string TOO_FEW_ITEMS_FORMAT = "Property '/%s': Array must contain at least %d items.";
+    private const string TOO_LONG_FORMAT = "Property '/%s': String must not be longer than %d characters.";
 
     /**
      * @var array<string, McpTestClient>
@@ -144,17 +144,17 @@ abstract class AbstractMcpTestCase extends AnzuWebTestCase
 
     protected static function createTooManyItemsError(string $field, int $maximum): string
     {
-        return sprintf(self::TOO_MANY_ITEMS_FORMAT, $field, $maximum, $maximum + 1);
+        return sprintf(self::TOO_MANY_ITEMS_FORMAT, $field, $maximum);
     }
 
     protected static function createTooFewItemsError(string $field, int $minimum): string
     {
-        return sprintf(self::TOO_FEW_ITEMS_FORMAT, $field, $minimum, $minimum - 1);
+        return sprintf(self::TOO_FEW_ITEMS_FORMAT, $field, $minimum);
     }
 
     protected static function createTooLongError(string $field, int $maxLength): string
     {
-        return sprintf(self::TOO_LONG_FORMAT, $field, $maxLength, $maxLength + 1);
+        return sprintf(self::TOO_LONG_FORMAT, $field, $maxLength);
     }
 
     protected static function createUnknownIdError(string $field, int $id, string $resolverTool): string

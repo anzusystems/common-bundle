@@ -59,6 +59,7 @@
 ### Changes
 * BC change: the bundle requires PHP 8.5.
 * BC change: the bundle requires `anzusystems/serializer-bundle` `^7.1`, which refuses input that does not fit the type and no longer requires `doctrine/common`. See `UPGRADE-7.0.md` and `UPGRADE-7.1.md` of that bundle: an application that uses `Doctrine\Common\Util\ClassUtils` and got `doctrine/common` only through these bundles must replace it.
+* BC change: the `mcp` config section requires `symfony/mcp-bundle` `^0.15` with `mcp/sdk` `^0.9`, which fixes the advisory `PKSA-s52d-n7sx-trsg` of `mcp/sdk` 0.8; the `conflict` moves to `<0.15`. `#[CompletionProvider]` no longer has `providerClass` (use `provider:`), and the schema errors the SDK answers are worded differently, so `AbstractMcpTestCase` builds the new texts. See the `mcp/sdk` 0.9 changelog for the other BC changes.
 * `EntityClassHelper::getRealClass()` gives the class of an entity, also of a Doctrine proxy; `UniqueEntityValidator` uses it instead of `ClassUtils`, so the bundle no longer needs `doctrine/common`.
 * BC change: the deprecated `ApiFilterParamConverter`, `EnumParamConverter` and `ValueObjectParamConverter` and the support of `sensio/framework-extra-bundle` are gone. Use `ApiFilterParamValueResolver`, `ValueObjectValueResolver` and the `BackedEnumValueResolver` of Symfony.
 * BC change: `AnzuRepositoryInterface` declares `findExistingIds()`. A repository that extends `AbstractAnzuRepository` has it, any other implementation of the interface adds it.

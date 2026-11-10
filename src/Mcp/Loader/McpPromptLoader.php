@@ -54,7 +54,6 @@ final readonly class McpPromptLoader implements LoaderInterface
             }
             $completionProviders[$parameter->getName()] = match (true) {
                 null !== $attribute->provider => $attribute->provider,
-                null !== $attribute->providerClass => $attribute->providerClass,
                 null !== $attribute->values => new ListCompletionProvider($attribute->values),
                 default => new EnumCompletionProvider($attribute->enum),
             };

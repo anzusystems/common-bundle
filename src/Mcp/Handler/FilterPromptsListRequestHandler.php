@@ -9,7 +9,6 @@ use Mcp\Capability\RegistryInterface;
 use Mcp\Schema\JsonRpc\Error;
 use Mcp\Schema\JsonRpc\Request;
 use Mcp\Schema\JsonRpc\Response;
-use Mcp\Schema\Prompt;
 use Mcp\Schema\Request\ListPromptsRequest;
 use Mcp\Schema\Result\ListPromptsResult;
 use Mcp\Server\Handler\Request\RequestHandlerInterface;
@@ -41,7 +40,7 @@ final readonly class FilterPromptsListRequestHandler implements RequestHandlerIn
         $page = $this->registry->getPrompts($this->pageSize, $request->cursor);
         $grantedPrompts = [];
         foreach ($page->references as $reference) {
-            if ($reference instanceof Prompt && $this->promptAccessChecker->isPromptGranted($reference->name)) {
+            if ($this->promptAccessChecker->isPromptGranted($reference->name)) {
                 $grantedPrompts[] = $reference;
             }
         }
