@@ -30,6 +30,8 @@ use Symfony\Component\Validator\Constraint;
 use Symfony\Component\Validator\Constraints as Assert;
 
 /**
+ * The serialized names follow MetadataFactory of serializer-bundle, which needs the parameter bag a compiler pass
+ * does not have: the getter prefix pattern and the rule for a private property of a parent are copies of its rules.
  * Assert\Regex is left out on purpose: PCRE is not the ECMA-262 dialect of "pattern", and the validator words it better.
  * A Collection<string, X> is an object here; the serializer writes it as one only with strategy: Serialize::KEYS_VALUES.
  */
@@ -67,7 +69,7 @@ final class McpSchemaFactory
     private const string VALUE_FORMAT = '"%s"%s = %s';
     private const string VALUE_SEPARATOR = ', ';
     private const string DEFAULT_MARK = ' (default)';
-    private const string GETTER_PREFIX_PATTERN = '~^(get|is)(?=\p{Lu})~';
+    private const string GETTER_PREFIX_PATTERN = '~^(?:get|is)(?=[A-Z])~';
     private const array JSON_TYPES = [
         TypeIdentifier::INT->value => self::TYPE_INTEGER,
         TypeIdentifier::FLOAT->value => 'number',
@@ -114,6 +116,9 @@ final class McpSchemaFactory
                 continue;
             }
             $name = $serialize->serializedName ?? $this->resolveSerializedName($member);
+            if ($member instanceof ReflectionProperty && isset($properties[$name]) && $this->isPrivatePropertyOfParent($member, $reflection)) {
+                continue;
+            }
             $constraints = $this->resolveConstraints($member);
             $schema = $this->applyConstraints($this->createForMember($member), $constraints);
             $default = $member instanceof ReflectionProperty && $this->hasDefaultValue($member) ? $this->getDefaultValue($member) : null;
@@ -159,6 +164,16 @@ final class McpSchemaFactory
     }
 
     /**
+     * @param array<array-key, mixed> $schema
+     */
+    public static function isOfType(array $schema, string $type): bool
+    {
+        $schemaType = $schema[self::TYPE] ?? null;
+
+        return $type === $schemaType || (is_array($schemaType) && in_array(needle: $type, haystack: $schemaType, strict: true));
+    }
+
+    /**
      * ReflectionClass::getProperties() leaves out the private properties of parent classes, which the serializer reads.
      *
      * @param ReflectionClass<object> $reflection
@@ -175,6 +190,17 @@ final class McpSchemaFactory
         }
 
         return $properties;
+    }
+
+    /**
+     * The serializer keeps the property of the child when a private property of a parent has the same serialized name.
+     *
+     * @param ReflectionClass<object> $reflection
+     */
+    private function isPrivatePropertyOfParent(ReflectionProperty $property, ReflectionClass $reflection): bool
+    {
+        return $property->isPrivate() && $property->getDeclaringClass()
+            ->getName() !== $reflection->getName();
     }
 
     private function createDescription(ReflectionProperty|ReflectionMethod $member, mixed $default): ?string
@@ -292,16 +318,6 @@ final class McpSchemaFactory
         $innerType = $type instanceof NullableType ? $type->getWrappedType() : $type;
 
         return $innerType instanceof CollectionType && $innerType->getWrappedType() instanceof BuiltinType;
-    }
-
-    /**
-     * @param array<array-key, mixed> $schema
-     */
-    public static function isOfType(array $schema, string $type): bool
-    {
-        $schemaType = $schema[self::TYPE] ?? null;
-
-        return $type === $schemaType || (is_array($schemaType) && in_array(needle: $type, haystack: $schemaType, strict: true));
     }
 
     /**

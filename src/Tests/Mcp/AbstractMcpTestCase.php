@@ -12,11 +12,12 @@ use AnzuSystems\CommonBundle\Validator\Constraints\McpExistingId;
 abstract class AbstractMcpTestCase extends AnzuWebTestCase
 {
     /**
-     * The mcp/sdk schema validator words these errors and has no constants for them.
+     * The mcp/sdk schema validator words these errors and has no constants for them. The full stop of a number error
+     * ends the number, so a maximum of 5 does not match the error of a maximum of 50.
      */
-    private const string ABOVE_MAXIMUM_FORMAT = "Property '/%s': Number must be less than or equal to %d";
+    private const string ABOVE_MAXIMUM_FORMAT = "Property '/%s': Number must be less than or equal to %d.";
     private const string TOO_MANY_ITEMS_FORMAT = "Property '/%s': Array should have at most %d items, %d found";
-    private const string BELOW_MINIMUM_FORMAT = "Property '/%s': Number must be greater than or equal to %d";
+    private const string BELOW_MINIMUM_FORMAT = "Property '/%s': Number must be greater than or equal to %d.";
     private const string TOO_FEW_ITEMS_FORMAT = "Property '/%s': Array should have at least %d items, %d found";
     private const string TOO_LONG_FORMAT = "Property '/%s': Maximum string length is %d, found %d";
 

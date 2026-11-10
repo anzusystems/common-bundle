@@ -135,10 +135,7 @@ return static function (ContainerConfigurator $configurator): void {
 
     $services->set(McpDeleteGuard::class)
         ->arg('$currentUserProvider', service(CurrentAnzuUserProvider::class))
-        ->arg('$dependencyProviders', tagged_locator(
-            tag: AnzuSystemsCommonBundle::TAG_MCP_DELETE_DEPENDENCY_PROVIDER,
-            defaultIndexMethod: 'getSupportedEntity',
-        ))
+        ->arg('$dependencyProviders', tagged_locator(AnzuSystemsCommonBundle::TAG_MCP_DELETE_DEPENDENCY_PROVIDER))
     ;
 
     $services->set(McpWriteConfirmation::class)

@@ -125,10 +125,14 @@ A new combination of equalities therefore fails in the first test that runs it, 
 
 ### What the rule does not check
 
-* Conditions the caller adds to the query builder itself (`andWhere()` with a range, `IN`, `LIKE`, a join) are allowed,
-  but the index check knows nothing about them. The forced index stays the one for the equalities and the order, so
+* Conditions the caller adds to the query builder itself (`andWhere()` with a range, `IN`, `LIKE`, a join on a to-one
+  association) are allowed, but the index check knows nothing about them. The forced index stays the one for the equalities and the order, so
   such a condition filters the rows the index reads. When it removes most of them, a page can read many rows. Check
   such a query with `EXPLAIN` on production-sized data, for the first page and for a later one.
+* A join on a to-many association. `paginate()` reads `limit + 1` SQL rows, and Doctrine merges the rows of one
+  entity, so a page comes back short and `nextCursor` is `null` while rows remain: with `limit: 2`, a note with two
+  matching tags takes two of the three rows, and the list ends after the second note. Filter by a collection with a
+  subquery instead: `note.id IN (SELECT n2.id FROM App\Entity\Note n2 JOIN n2.tags t2 WHERE t2.name IN (:names))`.
 * That the index exists in the database. The resolver reads the mapping; a migration must create the index. MySQL
   only warns about a hint naming a missing index and runs the query without it, with a filesort.
 

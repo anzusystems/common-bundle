@@ -5,11 +5,14 @@ declare(strict_types=1);
 namespace AnzuSystems\CommonBundle\Tests\DependencyInjection\CompilerPass;
 
 use AnzuSystems\CommonBundle\DependencyInjection\CompilerPass\McpCompilerPass;
+use AnzuSystems\CommonBundle\DependencyInjection\CompilerPass\McpToolDefinitionsCompilerPass;
 use AnzuSystems\CommonBundle\DependencyInjection\CompilerPass\McpToolSchemaCompilerPass;
 use AnzuSystems\CommonBundle\Mcp\Exception\McpConfigurationException;
 use AnzuSystems\CommonBundle\Mcp\Factory\McpOutputDescriptionFactory;
 use AnzuSystems\CommonBundle\Mcp\Factory\McpSchemaFactory;
+use AnzuSystems\CommonBundle\Mcp\McpToolDefinitions;
 use AnzuSystems\CommonBundle\Mcp\Model\Decorator\McpAuditLogDecorator;
+use AnzuSystems\CommonBundle\Mcp\Model\McpToolDefinition;
 use AnzuSystems\CommonBundle\Mcp\Model\Request\SearchAppLogsRequest;
 use AnzuSystems\CommonBundle\Mcp\Model\Response\McpLogsByContextResponse;
 use AnzuSystems\CommonBundle\Mcp\Resolver\McpToolSignatureResolver;
@@ -91,7 +94,8 @@ final class McpToolSchemaCompilerPassTest extends TestCase
 
     public function testWriteLimitIsAddedToTheDescription(): void
     {
-        $container = $this->createContainer(RateLimitedExampleTool::class);
+        $container = $this->createContainer(RateLimitedExampleTool::class, RateLimitedExampleTool::NAME);
+        $this->registerRateLimitedTools($container, [RateLimitedExampleTool::NAME]);
 
         new McpToolSchemaCompilerPass()
             ->process($container);
@@ -104,11 +108,12 @@ final class McpToolSchemaCompilerPassTest extends TestCase
 
     public function testToolsSharingALimiterNameEachOther(): void
     {
-        $container = $this->createContainer(RateLimitedExampleTool::class);
+        $container = $this->createContainer(RateLimitedExampleTool::class, RateLimitedExampleTool::NAME);
+        $this->registerRateLimitedTools($container, [RateLimitedExampleTool::NAME, SharedRateLimitedExampleTool::NAME]);
         $container->getDefinition(sprintf(McpCompilerPass::BUILDER_ID_FORMAT, self::SERVER_NAME))
             ->addMethodCall(self::ADD_TOOL_METHOD, [
                 [SharedRateLimitedExampleTool::class, McpToolSignatureResolver::INVOKE_METHOD],
-                null,
+                SharedRateLimitedExampleTool::NAME,
                 null,
                 self::DESCRIPTION,
                 null,
@@ -240,14 +245,14 @@ final class McpToolSchemaCompilerPassTest extends TestCase
     /**
      * @param class-string $toolClass
      */
-    private function createContainer(string $toolClass): ContainerBuilder
+    private function createContainer(string $toolClass, ?string $toolName = null): ContainerBuilder
     {
         $container = new ContainerBuilder();
         $container->setParameter(McpCompilerPass::SERVER_NAME_PARAM, self::SERVER_NAME);
         $container->setDefinition(sprintf(McpCompilerPass::BUILDER_ID_FORMAT, self::SERVER_NAME), new Definition())
             ->addMethodCall(self::ADD_TOOL_METHOD, [
                 [$toolClass, McpToolSignatureResolver::INVOKE_METHOD],
-                null,
+                $toolName,
                 null,
                 self::DESCRIPTION,
                 null,
@@ -258,6 +263,19 @@ final class McpToolSchemaCompilerPassTest extends TestCase
             ]);
 
         return $container;
+    }
+
+    /**
+     * @param list<string> $toolNames
+     */
+    private function registerRateLimitedTools(ContainerBuilder $container, array $toolNames): void
+    {
+        $container->setDefinition(McpToolDefinitions::class, new Definition(McpToolDefinitions::class, [
+            McpToolDefinitionsCompilerPass::DEFINITIONS_ARGUMENT => array_fill_keys(
+                $toolNames,
+                new Definition(McpToolDefinition::class, [McpToolDefinitionsCompilerPass::RATE_LIMITER_ARGUMENT => RateLimitedExampleTool::RATE_LIMITER]),
+            ),
+        ]));
     }
 
     /**

@@ -8,6 +8,7 @@ use AnzuSystems\CommonBundle\Tests\AnzuKernelTestCase;
 use AnzuSystems\CommonBundle\Tests\Data\Entity\Example;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Model\Request\ExistingIdExampleRequest;
 use AnzuSystems\CommonBundle\Validator\Constraints\McpExistingId;
+use AnzuSystems\Contracts\AnzuApp;
 use LogicException;
 use Symfony\Component\Validator\Validator\ValidatorInterface;
 
@@ -45,6 +46,18 @@ final class McpExistingIdValidatorTest extends AnzuKernelTestCase
             'existing ids with a duplicate' => [null, [Example::EXAMPLE_INSTANCE_ID, Example::EXAMPLE_INSTANCE_ID], null],
             'empty list of an entity without an anzu repository is not looked up' => [null, [], []],
         ];
+    }
+
+    public function testEntityDeclaredAsAnzuUserIsLookedUpInTheUserEntityOfTheHost(): void
+    {
+        $request = $this->createRequest();
+        $request->userId = AnzuApp::getUserIdAdmin();
+
+        self::assertCount(0, $this->getValidator()->validate($request));
+
+        $request->userId = self::UNKNOWN_ID;
+
+        self::assertCount(1, $this->getValidator()->validate($request));
     }
 
     public function testUnknownIdNamesTheResolverTool(): void

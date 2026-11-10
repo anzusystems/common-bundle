@@ -19,7 +19,9 @@ final readonly class McpToolCallLogger
     private const string CLIENT_NAME_KEY = 'name';
     private const string CONTEXT_TOOL = 'tool';
     private const string CONTEXT_USER_ID = 'userId';
+    private const string CONTEXT_CLIENT = 'client';
     private const string CONTEXT_PARAMS = 'params';
+    private const string CONTEXT_ERROR = 'error';
     private const string CONTEXT_DURATION_MS = 'durationMs';
     private const string CONTEXT_EXCEPTION = 'exception';
 
@@ -40,9 +42,9 @@ final readonly class McpToolCallLogger
         $this->logger->info(self::CALL_LOG_MESSAGE, [
             self::CONTEXT_TOOL => $toolName,
             self::CONTEXT_USER_ID => $userId,
-            'client' => $client,
+            self::CONTEXT_CLIENT => $client,
             self::CONTEXT_PARAMS => $params,
-            'error' => $error,
+            self::CONTEXT_ERROR => $error,
             self::CONTEXT_DURATION_MS => $durationMs,
         ]);
         try {

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace AnzuSystems\CommonBundle\Validator\Constraints;
 
 use AnzuSystems\CommonBundle\Repository\AnzuRepositoryInterface;
+use AnzuSystems\CommonBundle\Validator\Traits\EntityClassResolverTrait;
 use Doctrine\Persistence\ManagerRegistry;
 use LogicException;
 use Symfony\Component\Validator\Constraint;
@@ -14,9 +15,16 @@ use Symfony\Component\Validator\Exception\UnexpectedValueException;
 
 final class McpExistingIdValidator extends ConstraintValidator
 {
+    use EntityClassResolverTrait;
+
+    /**
+     * @param class-string $userEntityClass
+     */
     public function __construct(
         private readonly ManagerRegistry $managerRegistry,
+        string $userEntityClass,
     ) {
+        $this->userEntityClass = $userEntityClass;
     }
 
     public function validate(mixed $value, Constraint $constraint): void
@@ -98,7 +106,7 @@ final class McpExistingIdValidator extends ConstraintValidator
      */
     private function findExistingIds(string $entityClass, array $ids): array
     {
-        $repository = $this->managerRegistry->getRepository($entityClass);
+        $repository = $this->managerRegistry->getRepository($this->resolveEntityClass($entityClass));
         if (false === $repository instanceof AnzuRepositoryInterface) {
             throw new LogicException(sprintf('The repository of "%s" must implement %s.', $entityClass, AnzuRepositoryInterface::class));
         }

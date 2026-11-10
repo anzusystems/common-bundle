@@ -5,13 +5,13 @@ declare(strict_types=1);
 namespace AnzuSystems\CommonBundle\Mcp\Security;
 
 use AnzuSystems\CommonBundle\Domain\User\CurrentAnzuUserProvider;
+use AnzuSystems\CommonBundle\Helper\EntityClassHelper;
 use AnzuSystems\CommonBundle\Mcp\Exception\McpDeleteRejectedException;
 use AnzuSystems\Contracts\AnzuApp;
 use AnzuSystems\Contracts\Entity\Interfaces\BaseIdentifiableInterface;
 use AnzuSystems\Contracts\Entity\Interfaces\TimeTrackingInterface;
 use AnzuSystems\Contracts\Entity\Interfaces\UserTrackingInterface;
 use DateTimeInterface;
-use Doctrine\Persistence\Proxy;
 use LogicException;
 use Symfony\Contracts\Service\ServiceProviderInterface;
 
@@ -75,24 +75,11 @@ final readonly class McpDeleteGuard
 
     private function resolveDependencyProvider(object $entity): McpDeleteDependencyProviderInterface
     {
-        $entityClass = $this->resolveEntityClass($entity);
+        $entityClass = EntityClassHelper::getRealClass($entity);
         if (false === $this->dependencyProviders->has($entityClass)) {
             throw new LogicException(sprintf(self::MISSING_DEPENDENCY_PROVIDER_MESSAGE, $entityClass));
         }
 
         return $this->dependencyProviders->get($entityClass);
-    }
-
-    /**
-     * Without native lazy objects, getReference() and an entity already loaded as a reference give a proxy class of
-     * Doctrine that extends the class of the entity.
-     */
-    private function resolveEntityClass(object $entity): string
-    {
-        if ($entity instanceof Proxy) {
-            return (string) get_parent_class($entity);
-        }
-
-        return $entity::class;
     }
 }

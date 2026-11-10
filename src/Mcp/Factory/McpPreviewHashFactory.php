@@ -17,8 +17,9 @@ final readonly class McpPreviewHashFactory
     public const string PREVIEW_HASH_PATTERN = '/^[0-9a-f]{64}$/D';
     public const array VOLATILE_FIELDS = ['id', 'adminUrl', 'createdAt', 'modifiedAt'];
 
+    public const string FIELD_PREVIEW_HASH = 'previewHash';
+
     private const string ALGORITHM = 'sha256';
-    private const string FIELD_PREVIEW_HASH = 'previewHash';
     private const string KEY_TOOL = 'tool';
     private const string KEY_ARGUMENTS = 'arguments';
     private const string KEY_CURRENT_STATE_HASH = 'currentStateHash';

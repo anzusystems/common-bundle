@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace AnzuSystems\CommonBundle\Mcp\Model\Response;
 
 use AnzuSystems\CommonBundle\Mcp\Attribute\McpField;
+use AnzuSystems\CommonBundle\Pagination\Keyset\KeysetPage;
 use AnzuSystems\SerializerBundle\Attributes\Serialize;
 
 trait McpCursorResponseTrait
@@ -14,6 +15,12 @@ trait McpCursorResponseTrait
     #[McpField(description: self::NEXT_CURSOR_DESCRIPTION)]
     #[Serialize]
     public ?string $nextCursor {
-        get => $this->cursorPage->nextCursor;
+        get => $this->getCursorPage()
+            ->nextCursor;
     }
+
+    /**
+     * @return KeysetPage<covariant object>
+     */
+    abstract protected function getCursorPage(): KeysetPage;
 }

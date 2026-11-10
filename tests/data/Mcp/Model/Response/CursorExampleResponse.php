@@ -31,4 +31,12 @@ final class CursorExampleResponse
         private readonly KeysetPage $cursorPage,
     ) {
     }
+
+    /**
+     * @return KeysetPage<ExampleStateItem>
+     */
+    protected function getCursorPage(): KeysetPage
+    {
+        return $this->cursorPage;
+    }
 }

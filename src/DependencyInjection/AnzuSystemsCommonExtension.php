@@ -98,6 +98,7 @@ use AnzuSystems\CommonBundle\Serializer\Handler\Handlers\ValueObjectHandler;
 use AnzuSystems\CommonBundle\Serializer\Service\BsonConverter;
 use AnzuSystems\CommonBundle\Util\ResourceLocker;
 use AnzuSystems\CommonBundle\Validator\Constraints\EntityExistsValidator;
+use AnzuSystems\CommonBundle\Validator\Constraints\McpExistingIdValidator;
 use AnzuSystems\CommonBundle\Validator\Constraints\UniqueEntityDtoValidator;
 use AnzuSystems\CommonBundle\Validator\Constraints\UniqueEntityValidator;
 use AnzuSystems\CommonBundle\Validator\Validator;
@@ -316,6 +317,10 @@ final class AnzuSystemsCommonExtension extends Extension implements PrependExten
 
         $container
             ->getDefinition(EntityExistsValidator::class)
+            ->replaceArgument('$userEntityClass', $settings['user_entity_class']);
+
+        $container
+            ->getDefinition(McpExistingIdValidator::class)
             ->replaceArgument('$userEntityClass', $settings['user_entity_class']);
 
         if ($settings['send_context_id_with_response']) {

@@ -127,6 +127,19 @@ final class McpConfigurationException extends LogicException
         return new self(sprintf('The input class of the MCP write tool "%s" must implement %s and extend the input class of its preview "%s".', $toolName, McpPreviewHashAwareInterface::class, $previewToolName));
     }
 
+    /**
+     * @param list<string> $fields
+     */
+    public static function createWriteInputWithExtraFields(string $toolName, string $previewToolName, array $fields): self
+    {
+        return new self(sprintf(
+            'The input class of the MCP write tool "%s" adds the fields "%s" to the input class of its preview "%s". The previewHash covers every field, and a preview call cannot send them, so no hash would ever match: add only previewHash, or declare the fields in the input class of the preview.',
+            $toolName,
+            implode(self::PLACEHOLDER_NAME_SEPARATOR, $fields),
+            $previewToolName,
+        ));
+    }
+
     public static function createToolWithoutInvoke(string $class, string $invokeMethod): self
     {
         return new self(sprintf('The MCP tool "%s" declares #[AsMcpTool], so it declares %s().', $class, $invokeMethod));

@@ -10,6 +10,7 @@ use AnzuSystems\CommonBundle\Mcp\Handler\McpToolReferenceHandler;
 use AnzuSystems\CommonBundle\Mcp\Log\McpLogger;
 use AnzuSystems\CommonBundle\Mcp\Model\Response\McpLogsByContextResponse;
 use AnzuSystems\CommonBundle\Mcp\Resolver\McpToolErrorResolver;
+use AnzuSystems\CommonBundle\Mcp\Resolver\McpToolSignatureResolver;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Tool\ExampleSearchTool;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Tool\ExampleTool;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Tool\ExampleWithoutInputTool;
@@ -21,6 +22,7 @@ final class McpToolReferenceHandlerAccessTest extends AbstractMcpToolReferenceHa
 {
     private const string READ_TOOL_METHOD = 'listExamples';
     private const string PREVIEWED_WRITE_TOOL_NAME = 'create_example';
+    private const string UNREADABLE_DATE = 'yesterday';
 
     public function testToolWithoutAsMcpToolIsDeniedBecauseItHasNoPermission(): void
     {
@@ -123,6 +125,40 @@ final class McpToolReferenceHandlerAccessTest extends AbstractMcpToolReferenceHa
                 0,
                 McpToolAccessRejectedException::createNotGranted(ExampleWithoutInputTool::NAME)->getMessage(),
             ],
+        ];
+    }
+
+    /**
+     * @dataProvider unreadableInputProvider
+     */
+    public function testAccessIsCheckedBeforeTheInputIsRead(bool $toolGranted, string $expectedErrorPrefix): void
+    {
+        $handler = $this->createHandler(
+            tool: new ExampleSearchTool(static fn (): McpLogsByContextResponse => throw new RuntimeException(self::MUST_NOT_RUN_MESSAGE)),
+            toolGranted: $toolGranted,
+        );
+
+        $result = $handler->handle(
+            new ToolReference($this->createSdkTool(ExampleSearchTool::NAME), [ExampleSearchTool::class, McpToolSignatureResolver::INVOKE_METHOD]),
+            $this->createArguments(ExampleSearchTool::NAME, ['from' => self::UNREADABLE_DATE]),
+        );
+
+        self::assertInstanceOf(CallToolResult::class, $result);
+        self::assertTrue($result->isError);
+        self::assertStringStartsWith($expectedErrorPrefix, $result->structuredContent[McpToolReferenceHandler::ERROR_KEY]);
+    }
+
+    /**
+     * @return array<string, array{bool, string}>
+     */
+    public static function unreadableInputProvider(): array
+    {
+        return [
+            'caller without the tool is denied' => [
+                false,
+                McpToolAccessRejectedException::createNotGranted(ExampleSearchTool::NAME)->getMessage(),
+            ],
+            'caller with the tool learns the invalid argument' => [true, McpToolErrorResolver::INVALID_ARGUMENTS_PREFIX],
         ];
     }
 

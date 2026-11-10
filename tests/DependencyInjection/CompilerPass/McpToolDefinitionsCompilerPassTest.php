@@ -15,6 +15,7 @@ use AnzuSystems\CommonBundle\Mcp\Model\McpToolSignature;
 use AnzuSystems\CommonBundle\Mcp\Model\Request\SearchAppLogsRequest;
 use AnzuSystems\CommonBundle\Mcp\Model\Response\McpAppLogSearchResponse;
 use AnzuSystems\CommonBundle\Mcp\Tool\SearchAppLogsTool;
+use AnzuSystems\CommonBundle\Tests\Data\Mcp\Model\Request\ExtraFieldExampleWriteRequest;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Tool\ConflictingExampleTool;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Tool\ExamplePermissionTool;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Tool\ExamplePreviewTool;
@@ -25,6 +26,8 @@ use AnzuSystems\CommonBundle\Tests\Data\Mcp\Tool\ExampleWithoutInputTool;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Tool\ExampleWritePreviewTool;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Tool\ExampleWriteTool;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Tool\ExplicitGrantExampleTool;
+use AnzuSystems\CommonBundle\Tests\Data\Mcp\Tool\ExtraFieldExamplePreviewTool;
+use AnzuSystems\CommonBundle\Tests\Data\Mcp\Tool\ExtraFieldExampleTool;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Tool\InvalidCategoryExampleTool;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Tool\InvalidNameExampleTool;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Tool\NoHashInputExamplePreviewTool;
@@ -334,6 +337,14 @@ final class McpToolDefinitionsCompilerPassTest extends TestCase
                 McpConfigurationException::createWriteInputNotPreviewInput(
                     ExampleWriteTool::NAME,
                     OtherInputExamplePreviewTool::NAME
+                )->getMessage(),
+            ],
+            'write input with a field its preview input does not have' => [
+                [ExtraFieldExampleTool::class, ExtraFieldExamplePreviewTool::class],
+                McpConfigurationException::createWriteInputWithExtraFields(
+                    toolName: ExtraFieldExampleTool::NAME,
+                    previewToolName: ExtraFieldExamplePreviewTool::NAME,
+                    fields: [ExtraFieldExampleWriteRequest::EXTRA_FIELD],
                 )->getMessage(),
             ],
         ];

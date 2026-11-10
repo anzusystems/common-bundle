@@ -31,9 +31,11 @@ use AnzuSystems\CommonBundle\Tests\Data\Mcp\Model\Request\UntypedCollectionExamp
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Model\Request\UuidExampleRequest;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Model\Response\BareArrayExampleResponse;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Model\Response\CursorExampleResponse;
+use AnzuSystems\CommonBundle\Tests\Data\Mcp\Model\Response\SerializedNameChildExampleResponse;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Model\Response\UntypedCollectionExampleResponse;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Validator\Constraints\ExampleIdFilter;
 use AnzuSystems\CommonBundle\Tests\Data\Model\Enum\DummyEnum;
+use AnzuSystems\CommonBundle\Tests\Mcp\McpSerializerFactory;
 use DateTimeImmutable;
 use LogicException;
 use PHPUnit\Framework\TestCase;
@@ -323,6 +325,22 @@ final class McpSchemaFactoryTest extends TestCase
         self::assertSame(['own', 'shared', 'parentOnly'], array_keys($schema[McpSchemaFactory::PROPERTIES]));
         self::assertSame('child', $schema[McpSchemaFactory::PROPERTIES]['shared']['default']);
         self::assertSame('parent', $schema[McpSchemaFactory::PROPERTIES]['parentOnly']['default']);
+    }
+
+    public function testSchemaHasTheKeysTheSerializerWrites(): void
+    {
+        $schema = new McpSchemaFactory()
+            ->createForClass(SerializedNameChildExampleResponse::class);
+        $serialized = McpSerializerFactory::create()
+            ->toArray(new SerializedNameChildExampleResponse());
+
+        self::assertSame(array_keys($serialized), array_keys($schema[McpSchemaFactory::PROPERTIES]));
+        self::assertSame(
+            ['title', 'renamed', 'inherited', 'active', 'label', 'issue', 'getÉtat'],
+            array_keys($schema[McpSchemaFactory::PROPERTIES]),
+        );
+        self::assertSame('string', $schema[McpSchemaFactory::PROPERTIES]['title'][McpSchemaFactory::TYPE]);
+        self::assertSame('child', $serialized['title']);
     }
 
     /**

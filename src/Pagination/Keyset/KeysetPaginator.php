@@ -37,6 +37,8 @@ final readonly class KeysetPaginator
 
     /**
      * A condition the caller adds to the query builder itself is not covered by the index check: check it with EXPLAIN.
+     * The query builder must not join a to-many association: the limit counts SQL rows and Doctrine merges the rows of
+     * one entity, so the page would come back short and without a next cursor. Filter by a collection with a subquery.
      *
      * @template T of object
      *

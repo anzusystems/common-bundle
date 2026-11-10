@@ -11,6 +11,7 @@ use AnzuSystems\CommonBundle\Mcp\Handler\McpToolReferenceHandler;
 use AnzuSystems\CommonBundle\Mcp\Model\Response\McpLogsByContextResponse;
 use AnzuSystems\CommonBundle\Mcp\Resolver\McpToolSignatureResolver;
 use AnzuSystems\CommonBundle\Mcp\Security\McpPreviewHashReservation;
+use AnzuSystems\CommonBundle\Tests\Data\Entity\User;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Model\Request\ExampleWritePreviewRequest;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Model\Response\ExampleWritePreviewResponse;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Model\Response\UnserializableExampleResponse;
@@ -175,6 +176,45 @@ final class McpToolReferenceHandlerLimitTest extends AbstractMcpToolReferenceHan
             'handled exception' => [static fn (): CallToolResult => throw new RuntimeException(self::HANDLED_EXCEPTION_MESSAGE)],
             'optimistic lock' => [static fn (): CallToolResult => throw new OptimisticLockException(self::OPTIMISTIC_LOCK_MESSAGE, null)],
         ];
+    }
+
+    public function testFailedWriteThatRecordedItsResourceKeepsThePreviewHash(): void
+    {
+        $runs = 0;
+        $request = new Request();
+        $requestStack = new RequestStack();
+        $requestStack->push($request);
+        $handler = $this->createHandler(
+            tool: new ExampleResultWriteTool(static function () use (&$runs, $request): CallToolResult {
+                ++$runs;
+                AuditLogResourceHelper::setResourceByEntity($request, new User()->setId(self::USER_ID));
+
+                throw new RuntimeException(self::HANDLED_EXCEPTION_MESSAGE);
+            }),
+            toolErrorExceptions: [RuntimeException::class => self::BACKEND_ERROR_MESSAGE],
+            readOnlyTool: false,
+            requestStack: $requestStack,
+            previewTool: new ExampleWritePreviewTool(
+                static fn (ExampleWritePreviewRequest $request): ExampleWritePreviewResponse => new ExampleWritePreviewResponse($request->title),
+            ),
+        );
+        $arguments = $this->createModernArguments(
+            toolName: ExampleResultWriteTool::NAME,
+            toolArguments: [self::TITLE_FIELD => self::TITLE, self::HASH_FIELD => $this->createPreviewHash(ExampleResultWriteTool::NAME, null)],
+            capabilities: new ClientCapabilities(),
+        );
+        $reference = new ToolReference($this->createSdkTool(ExampleResultWriteTool::NAME), [ExampleResultWriteTool::class, McpToolSignatureResolver::INVOKE_METHOD]);
+
+        $firstResult = $handler->handle($reference, $arguments);
+        $secondResult = $handler->handle($reference, $arguments);
+
+        self::assertSame(self::BACKEND_ERROR_MESSAGE, $firstResult->structuredContent[McpToolReferenceHandler::ERROR_KEY]);
+        self::assertSame(
+            McpWriteRejectedException::createPreviewHashUsed(ExampleResultWriteTool::NAME, McpPreviewHashReservation::LIFETIME_SECONDS)->getMessage(),
+            $secondResult->structuredContent[McpToolReferenceHandler::ERROR_KEY],
+        );
+        self::assertSame(1, $runs);
+        self::assertFalse($request->attributes->has(AuditLogResourceHelper::RESOURCE_EXCLUDE_ATTR_NAME));
     }
 
     public function testResponseFailureAfterTheWriteKeepsThePreviewHash(): void

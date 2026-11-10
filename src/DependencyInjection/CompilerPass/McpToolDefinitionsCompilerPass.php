@@ -8,6 +8,8 @@ use AnzuSystems\CommonBundle\Helper\StringHelper;
 use AnzuSystems\CommonBundle\Mcp\Attribute\AsMcpTool;
 use AnzuSystems\CommonBundle\Mcp\Controller\McpController;
 use AnzuSystems\CommonBundle\Mcp\Exception\McpConfigurationException;
+use AnzuSystems\CommonBundle\Mcp\Factory\McpPreviewHashFactory;
+use AnzuSystems\CommonBundle\Mcp\Factory\McpSchemaFactory;
 use AnzuSystems\CommonBundle\Mcp\McpToolDefinitions;
 use AnzuSystems\CommonBundle\Mcp\McpWriteRateLimiter;
 use AnzuSystems\CommonBundle\Mcp\Model\McpPreviewHashAwareInterface;
@@ -31,6 +33,7 @@ final class McpToolDefinitionsCompilerPass implements CompilerPassInterface
     public const string TOOL_TAG = 'mcp.tool';
     public const string CATEGORY_PATTERN = '/^[a-z][a-zA-Z0-9]*$/';
     public const string DEFINITIONS_ARGUMENT = '$definitions';
+    public const string RATE_LIMITER_ARGUMENT = '$rateLimiter';
 
     private const string RATE_LIMITER_ID_FORMAT = 'limiter.%s';
 
@@ -44,14 +47,9 @@ final class McpToolDefinitionsCompilerPass implements CompilerPassInterface
         $this->assertToolNamesAreUnique($toolsByName);
         $this->assertToolNamesAreValid($toolsByName);
         $toolPermissions = $this->resolveToolPermissions($container, $toolsByName);
-        $toolCategories = $this->resolveToolCategories($toolsByName);
+        $this->assertToolCategoriesAreValid($toolsByName);
         $readOnlyToolNames = $this->resolveReadOnlyToolNames($toolsByName);
-        $writeToolNamesByPreview = $this->resolveWriteToolNamesByPreview(
-            toolsByName: $toolsByName,
-            toolPermissions: $toolPermissions,
-            toolCategories: $toolCategories,
-            readOnlyToolNames: $readOnlyToolNames,
-        );
+        $writeToolNamesByPreview = $this->resolveWriteToolNamesByPreview($toolsByName, $readOnlyToolNames);
         $this->assertWriteTools(
             toolsByName: $toolsByName,
             readOnlyToolNames: $readOnlyToolNames,
@@ -64,7 +62,6 @@ final class McpToolDefinitionsCompilerPass implements CompilerPassInterface
             ->replaceArgument(self::DEFINITIONS_ARGUMENT, $this->createToolDefinitions(
                 toolsByName: $toolsByName,
                 toolPermissions: $toolPermissions,
-                toolCategories: $toolCategories,
                 readOnlyToolNames: $readOnlyToolNames,
                 writeToolNamesByPreview: $writeToolNamesByPreview,
                 toolRateLimiters: $toolRateLimiters,
@@ -74,7 +71,6 @@ final class McpToolDefinitionsCompilerPass implements CompilerPassInterface
     /**
      * @param array<string, array<string, McpTool>> $toolsByName
      * @param array<string, string> $toolPermissions
-     * @param array<string, string> $toolCategories
      * @param list<string> $readOnlyToolNames
      * @param array<string, string> $writeToolNamesByPreview
      * @param array<string, string> $toolRateLimiters
@@ -84,7 +80,6 @@ final class McpToolDefinitionsCompilerPass implements CompilerPassInterface
     private function createToolDefinitions(
         array $toolsByName,
         array $toolPermissions,
-        array $toolCategories,
         array $readOnlyToolNames,
         array $writeToolNamesByPreview,
         array $toolRateLimiters,
@@ -96,10 +91,10 @@ final class McpToolDefinitionsCompilerPass implements CompilerPassInterface
             $definitions[$toolName] = new Definition(McpToolDefinition::class, [
                 '$permission' => $toolPermissions[$toolName] ?? null,
                 '$readOnly' => in_array(needle: $toolName, haystack: $readOnlyToolNames, strict: true),
-                '$category' => $toolCategories[$toolName] ?? null,
+                '$category' => $tool instanceof AsMcpTool ? $tool->category : null,
                 '$previewOf' => $writeToolNamesByPreview[$toolName] ?? null,
                 '$previewTool' => $previewToolNames[$toolName] ?? null,
-                '$rateLimiter' => $toolRateLimiters[$toolName] ?? null,
+                self::RATE_LIMITER_ARGUMENT => $toolRateLimiters[$toolName] ?? null,
                 '$signature' => $tool instanceof AsMcpTool ? $this->createSignatureDefinition($tools) : null,
                 '$explicitGrant' => $tool instanceof AsMcpTool && $tool->explicitGrant,
             ]);
@@ -252,40 +247,25 @@ final class McpToolDefinitionsCompilerPass implements CompilerPassInterface
 
     /**
      * @param array<string, array<string, McpTool>> $toolsByName
-     *
-     * @return array<string, string>
      */
-    private function resolveToolCategories(array $toolsByName): array
+    private function assertToolCategoriesAreValid(array $toolsByName): void
     {
-        $toolCategories = [];
         foreach ($toolsByName as $toolName => $tools) {
             $tool = array_first($tools);
-            if (false === $tool instanceof AsMcpTool) {
-                continue;
-            }
-            if (1 !== preg_match(self::CATEGORY_PATTERN, $tool->category)) {
+            if ($tool instanceof AsMcpTool && 1 !== preg_match(self::CATEGORY_PATTERN, $tool->category)) {
                 throw McpConfigurationException::createInvalidCategory(category: $tool->category, toolName: $toolName, pattern: self::CATEGORY_PATTERN);
             }
-            $toolCategories[$toolName] = $tool->category;
         }
-
-        return $toolCategories;
     }
 
     /**
      * @param array<string, array<string, McpTool>> $toolsByName
-     * @param array<string, string> $toolPermissions
-     * @param array<string, string> $toolCategories
      * @param list<string> $readOnlyToolNames
      *
      * @return array<string, string>
      */
-    private function resolveWriteToolNamesByPreview(
-        array $toolsByName,
-        array $toolPermissions,
-        array $toolCategories,
-        array $readOnlyToolNames,
-    ): array {
+    private function resolveWriteToolNamesByPreview(array $toolsByName, array $readOnlyToolNames): array
+    {
         $writeToolNamesByPreview = [];
         foreach ($toolsByName as $toolName => $tools) {
             $tool = array_first($tools);
@@ -297,8 +277,6 @@ final class McpToolDefinitionsCompilerPass implements CompilerPassInterface
                 preview: $tool,
                 writeToolName: $tool->previewOf,
                 toolsByName: $toolsByName,
-                toolPermissions: $toolPermissions,
-                toolCategories: $toolCategories,
                 readOnlyToolNames: $readOnlyToolNames,
             );
             $otherPreviewName = array_search(needle: $tool->previewOf, haystack: $writeToolNamesByPreview, strict: true);
@@ -313,8 +291,6 @@ final class McpToolDefinitionsCompilerPass implements CompilerPassInterface
 
     /**
      * @param array<string, array<string, McpTool>> $toolsByName
-     * @param array<string, string> $toolPermissions
-     * @param array<string, string> $toolCategories
      * @param list<string> $readOnlyToolNames
      */
     private function assertPreview(
@@ -322,27 +298,23 @@ final class McpToolDefinitionsCompilerPass implements CompilerPassInterface
         AsMcpTool $preview,
         string $writeToolName,
         array $toolsByName,
-        array $toolPermissions,
-        array $toolCategories,
         array $readOnlyToolNames,
     ): void {
         if (false === array_key_exists($writeToolName, $toolsByName)) {
             throw McpConfigurationException::createPreviewOfUnknownTool($previewName, $writeToolName);
         }
-        if (
-            in_array(needle: $writeToolName, haystack: $readOnlyToolNames, strict: true)
-            || false === array_key_exists($writeToolName, $toolCategories)
-        ) {
+        $writeTool = array_first($toolsByName[$writeToolName]);
+        if (false === $writeTool instanceof AsMcpTool || in_array(needle: $writeToolName, haystack: $readOnlyToolNames, strict: true)) {
             throw McpConfigurationException::createPreviewOfReadTool($previewName, $writeToolName);
         }
         if (false === in_array(needle: $previewName, haystack: $readOnlyToolNames, strict: true)) {
             throw McpConfigurationException::createWritablePreview($previewName, $writeToolName);
         }
-        if (array_key_exists($previewName, $toolPermissions)) {
+        if (is_string($preview->permission)) {
             throw McpConfigurationException::createPreviewWithPermission($previewName, $writeToolName);
         }
-        if (StringHelper::isNotSame($preview->category, $toolCategories[$writeToolName])) {
-            throw McpConfigurationException::createPreviewInOtherCategory(previewToolName: $previewName, writeToolName: $writeToolName, category: $toolCategories[$writeToolName]);
+        if (StringHelper::isNotSame($preview->category, $writeTool->category)) {
+            throw McpConfigurationException::createPreviewInOtherCategory(previewToolName: $previewName, writeToolName: $writeToolName, category: $writeTool->category);
         }
     }
 
@@ -390,6 +362,28 @@ final class McpToolDefinitionsCompilerPass implements CompilerPassInterface
         ) {
             throw McpConfigurationException::createWriteInputNotPreviewInput($toolName, $previewName);
         }
+        $extraFields = array_diff(
+            $this->resolveInputFields($inputClass),
+            $this->resolveInputFields($previewInputClass),
+            [McpPreviewHashFactory::FIELD_PREVIEW_HASH],
+        );
+        if (false === empty($extraFields)) {
+            throw McpConfigurationException::createWriteInputWithExtraFields(
+                toolName: $toolName,
+                previewToolName: $previewName,
+                fields: array_values($extraFields),
+            );
+        }
+    }
+
+    /**
+     * @param class-string $inputClass
+     *
+     * @return list<string>
+     */
+    private function resolveInputFields(string $inputClass): array
+    {
+        return array_keys(new McpSchemaFactory()->createForClass($inputClass)[McpSchemaFactory::PROPERTIES]);
     }
 
     /**

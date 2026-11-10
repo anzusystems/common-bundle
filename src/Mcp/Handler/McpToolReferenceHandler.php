@@ -113,6 +113,7 @@ final readonly class McpToolReferenceHandler implements ReferenceHandlerInterfac
         $confirmationRequest = null;
 
         try {
+            $this->assertGranted($toolName);
             $input = $this->resolveInput(toolName: $toolName, signature: $signature, arguments: $arguments);
             $params = is_object($input) ? $this->toArray($input) : [];
             $this->assertCallable($toolName, $input);
@@ -252,20 +253,26 @@ final readonly class McpToolReferenceHandler implements ReferenceHandlerInterfac
         return $input;
     }
 
-    private function assertCallable(string $toolName, ?object $input): void
+    /**
+     * Runs before the input is read, so a caller without the tool learns nothing about its arguments.
+     */
+    private function assertGranted(string $toolName): void
     {
-        if (false === $this->toolAccessChecker->isToolPermissionGranted($toolName)) {
+        if (false === $this->toolAccessChecker->isToolGrantedWithoutWriteScope($toolName)) {
             throw McpToolAccessRejectedException::createNotGranted($toolName);
         }
-        $isWriteTool = $this->toolAccessChecker->isWriteTool($toolName);
-        if ($isWriteTool) {
+        if ($this->toolAccessChecker->isWriteTool($toolName)) {
             $this->writeToolGuard->assertWriteGranted($toolName);
         }
+    }
+
+    private function assertCallable(string $toolName, ?object $input): void
+    {
         if (is_object($input)) {
             $this->assertValid($input);
             $this->inputEnricher?->enrich($input);
         }
-        if ($isWriteTool) {
+        if ($this->toolAccessChecker->isWriteTool($toolName)) {
             $this->writeToolGuard->assertWritable($toolName);
         }
     }
@@ -321,13 +328,20 @@ final readonly class McpToolReferenceHandler implements ReferenceHandlerInterfac
         }
     }
 
+    /**
+     * A tool that recorded its resource wrote the record before it failed, so the hash stays used and a retry of the
+     * same call cannot write the record a second time.
+     */
     private function revertFailedWrite(?object $input): void
     {
+        $request = $this->requestStack->getMainRequest();
+        if ($request instanceof Request && AuditLogResourceHelper::hasResourceId($request)) {
+            return;
+        }
         if ($input instanceof McpPreviewHashAwareInterface) {
             $this->writeToolGuard->releasePreviewHash($input);
         }
-        $request = $this->requestStack->getMainRequest();
-        if ($request instanceof Request && false === AuditLogResourceHelper::hasResourceId($request)) {
+        if ($request instanceof Request) {
             AuditLogResourceHelper::excludeFromAuditLogs($request);
         }
     }

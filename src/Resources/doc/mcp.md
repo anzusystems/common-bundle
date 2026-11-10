@@ -54,16 +54,20 @@ infrastructure after a bundle upgrade.
    `instructions_file` is a Markdown file that `McpCompilerPass` reads into the server instructions; it is a container
    resource, so an edit rebuilds the container in dev.
    `confirmation_fallback_locale` is the language of the write confirmation for a user without `AnzuUser::getLocale()`;
-   the default `null` uses the default locale of the translator.
+   the default `null` uses the default locale of the translator. Set it when `framework.default_locale` is not the
+   language of the users: a host that keeps `en` there for its API messages still asks its users in their language.
    The `logs.mongo` connection options (`uri`, `username`, `password`, `database`, `ssl`) default to the
    `logs.journal.mongo` connection, so they only need to be set when the mcp log collection lives elsewhere.
    `session.cache_pool` is a PSR-6 pool; the bundle wraps it in a `Psr16Cache` and prepends it as the McpBundle
    `session` store of the configured server, so the McpBundle `session` config needs no host-side value.
    `allowed_hosts` stays on this side rather than in the McpBundle `http.allowed_hosts`, because that option is
    validated as an array at compile time and an env-driven list is still an unresolved placeholder by then.
-4. Import the MCP route (`config/routes/mcp.php`):
+4. Import the MCP route (`config/routes/mcp.php`) and allow it on the MCP host, see [MCP host and pod](#mcp-host-and-pod):
    ```php
-   $routes->import('.', 'mcp');
+   $routes
+       ->import(resource: '.', type: 'mcp')
+       ->defaults([McpHostRouteListener::ALLOWED_ON_MCP_HOST => true])
+   ;
    ```
 5. Secure the MCP endpoint with a firewall. The endpoint has no authentication on its own — pair it with the
    personal access token authentication from [anzusystems/auth-bundle](https://github.com/anzusystems/auth-bundle)
@@ -450,7 +454,8 @@ The hash of a preview without a `$currentState` covers only the tool and the arg
 `McpPreviewHashReservation` therefore lets one user use such a hash once in `McpPreviewHashReservation::LIFETIME_SECONDS`
 (300), in the pool of `rate_limiter.cache_pool`. It reserves the hash after the confirmation and before the write limit
 takes its token, and releases it when the write limit refuses the call or the tool fails, so the same hash works again
-after an error. A response that fails after the write keeps the hash, because the record exists. A repeated call answers `McpWriteRejectedException::createPreviewHashUsed()` and takes no token of the
+after an error. A tool that fails after it recorded its audit resource (`setAuditResourceByEntity()`) keeps the hash, and
+so does a response that fails after the write, because the record exists. A repeated call answers `McpWriteRejectedException::createPreviewHashUsed()` and takes no token of the
 write limit. So the same user cannot create two identical records in that time, and two calls at the same moment can
 still both pass, because the pool has no atomic reservation.
 
@@ -474,7 +479,9 @@ audit log.
 
 The response class of a preview implements `McpWritePreviewInterface`. The input class of the write tool implements
 `McpPreviewHashAwareInterface` and extends the input class of the preview (the same class is allowed), because the
-validated input of the write goes straight into the preview.
+validated input of the write goes straight into the preview. It may add only `previewHash`: the hash covers every
+field, and a preview call cannot send a field its input does not have, so the container compilation fails for any other
+added `#[Serialize]` field.
 
 ### Write confirmation
 
@@ -539,13 +546,9 @@ the row is locked.
 A host reports what uses an entity with one `McpDeleteDependencyProviderInterface` per entity class:
 
 ```php
+#[AsTaggedItem(index: Note::class)]
 final readonly class NoteDeleteDependencyProvider implements McpDeleteDependencyProviderInterface
 {
-    public static function getSupportedEntity(): string
-    {
-        return Note::class;
-    }
-
     public function provideDependencies(object $entity): array
     {
         if (false === $entity instanceof Note) {
@@ -558,8 +561,8 @@ final readonly class NoteDeleteDependencyProvider implements McpDeleteDependency
 }
 ```
 
-With the `mcp` section the bundle tags an autoconfigured implementation itself. The class of the entity is the key of
-the provider; for a Doctrine proxy (`getReference()` without native lazy objects) it is the entity class the proxy
+With the `mcp` section the bundle tags an autoconfigured implementation itself. The class of the entity in
+`#[AsTaggedItem(index: …)]` is the key of the provider; for a Doctrine proxy (`getReference()` without native lazy objects) it is the entity class the proxy
 extends. An entity without a provider throws a `LogicException`, never "no dependencies".
 
 The guard does not check the delete permission: the host tool does, on the stored entity. The tool records the audit
@@ -723,7 +726,8 @@ final class McpExampleListResponse
 }
 ```
 
-`McpPageResponseTrait` returns `page` and `limit` of a list response. `McpAppLogSearchResponse` / `McpAuditLogSearchResponse`
+`McpPageResponseTrait` returns `page` and `limit` of a list response from the `McpPageWindow` of `getPageWindow()`,
+which the response class implements, as `McpCursorResponseTrait` reads `getCursorPage()`. `McpAppLogSearchResponse` / `McpAuditLogSearchResponse`
 build the log tool response from the `McpLogSearchResult` — rows, the effective `from`/`until`, the effective `limit`,
 and the `warnings` for a shortened window or for results that were actually cut off — so a client cannot mistake a
 partial result for a complete one. `McpLogFinder` fetches one row beyond the effective limit to tell the two apart, so
@@ -789,6 +793,14 @@ final class McpNoteListResponse
         private readonly KeysetPage $cursorPage,
     ) {
     }
+
+    /**
+     * @return KeysetPage<McpNoteDecorator>
+     */
+    protected function getCursorPage(): KeysetPage
+    {
+        return $this->cursorPage;
+    }
 }
 
 // in the decorator of the tool, with NoteRepository::findAllByLabel() of pagination.md
@@ -833,7 +845,8 @@ public ?int $labelId = null;
 `McpExistingIdValidator` reads the ids with one query through `AnzuRepositoryInterface::findExistingIds()` of the
 entity's repository; `null` and `[]` pass without a query. An unknown id
 fails with `Unknown id "5" — no such record exists. Resolve it via list_labels instead of guessing the id.`, unknown ids
-of a list with one violation naming each of them once. An entity whose repository does not implement
+of a list with one violation naming each of them once. `AnzuUser::class` as the entity is looked up in the user entity
+of the host (`settings.user_entity_class`). An entity whose repository does not implement
 `AnzuRepositoryInterface` is a `LogicException`.
 The validator is registered also without the `mcp` section.
 
@@ -844,8 +857,8 @@ deleted between the check and the first read throws `EntityNotFoundException`, s
 
 With the section enabled, `McpHostRouteListener` answers 404 to every main request that comes to a host of
 `allowed_hosts` or to a pod with `pod: true`, unless its route has the `McpHostRouteListener::ALLOWED_ON_MCP_HOST`
-default. It runs on `kernel.request` with priority 24, after the router. `McpHostChecker` trims the hosts and leaves out
-empty ones, and `McpController` reads them from it, so both see one list. A host can run the MCP endpoint on its own pods
+default. It runs on `kernel.request` with priority 24, after the router. `McpHostChecker` trims and lowercases the hosts and
+leaves out empty ones, and `McpController` reads them from it, so both see one list. A host can run the MCP endpoint on its own pods
 and hosts:
 
 ```php
@@ -858,6 +871,17 @@ and hosts:
 ```php
 $routes
     ->import(resource: '.', type: 'mcp')
+    ->defaults([McpHostRouteListener::ALLOWED_ON_MCP_HOST => true])
+;
+```
+
+The MCP route needs the default too, otherwise the endpoint itself answers 404 on its own host. So does the health
+check a probe calls on an MCP host or pod: without the default the probe gets 404 and restarts the pod.
+
+```php
+$routes
+    ->add('anzu_systems_common.health_check', '/api/sys/v1/health')
+    ->controller([HealthCheckController::class, 'healthCheck'])
     ->defaults([McpHostRouteListener::ALLOWED_ON_MCP_HOST => true])
 ;
 ```

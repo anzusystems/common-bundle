@@ -12,9 +12,13 @@ use AnzuSystems\CommonBundle\Mcp\Security\McpDeleteDependencyProviderInterface;
 use AnzuSystems\CommonBundle\Mcp\Security\McpDeleteGuard;
 use AnzuSystems\CommonBundle\Mcp\Security\McpPreviewHashReservation;
 use AnzuSystems\CommonBundle\Mcp\Security\McpWriteConfirmation;
+use AnzuSystems\CommonBundle\Tests\Data\Mcp\Model\DeletableExample;
+use AnzuSystems\CommonBundle\Tests\Data\Mcp\Security\DeletableExampleDependencyProvider;
 use LogicException;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\DependencyInjection\Argument\ServiceLocatorArgument;
+use Symfony\Component\DependencyInjection\Compiler\ResolveInstanceofConditionalsPass;
+use Symfony\Component\DependencyInjection\Compiler\ServiceLocatorTagPass;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\DependencyInjection\Extension\Extension;
 use Symfony\Component\DependencyInjection\Reference;
@@ -64,16 +68,28 @@ final class AnzuSystemsCommonExtensionTest extends TestCase
     public function testDeleteDependencyProvidersReachTheDeleteGuardByEntityClass(): void
     {
         $container = $this->buildContainer();
+        $container->register(DeletableExampleDependencyProvider::class, DeletableExampleDependencyProvider::class)
+            ->setAutoconfigured(true);
 
         $autoconfigured = $container->getAutoconfiguredInstanceof()[McpDeleteDependencyProviderInterface::class];
         self::assertTrue($autoconfigured->hasTag(AnzuSystemsCommonBundle::TAG_MCP_DELETE_DEPENDENCY_PROVIDER));
 
+        self::assertInstanceOf(
+            ServiceLocatorArgument::class,
+            $container->getDefinition(McpDeleteGuard::class)->getArgument('$dependencyProviders'),
+        );
+
+        new ResolveInstanceofConditionalsPass()
+            ->process($container);
+        new ServiceLocatorTagPass()
+            ->process($container);
         $dependencyProviders = $container->getDefinition(McpDeleteGuard::class)
             ->getArgument('$dependencyProviders');
-        self::assertInstanceOf(ServiceLocatorArgument::class, $dependencyProviders);
-        $taggedIterator = $dependencyProviders->getTaggedIteratorArgument();
-        self::assertSame(AnzuSystemsCommonBundle::TAG_MCP_DELETE_DEPENDENCY_PROVIDER, $taggedIterator->getTag());
-        self::assertSame('getSupportedEntity', $taggedIterator->getDefaultIndexMethod(false));
+        self::assertSame(
+            [DeletableExample::class],
+            $container->getDefinition((string) $dependencyProviders)
+                ->getArgument(0) |> array_keys(...),
+        );
     }
 
     /**

@@ -4,13 +4,15 @@ declare(strict_types=1);
 
 namespace AnzuSystems\CommonBundle\DependencyInjection\CompilerPass;
 
-use AnzuSystems\CommonBundle\Mcp\Attribute\AsMcpTool;
 use AnzuSystems\CommonBundle\Mcp\Factory\McpOutputDescriptionFactory;
 use AnzuSystems\CommonBundle\Mcp\Factory\McpSchemaFactory;
+use AnzuSystems\CommonBundle\Mcp\McpToolDefinitions;
 use AnzuSystems\CommonBundle\Mcp\Resolver\McpToolSignatureResolver;
-use ReflectionClass;
+use Mcp\Capability\Discovery\ElementMetadataResolver;
+use ReflectionMethod;
 use Symfony\Component\DependencyInjection\Compiler\CompilerPassInterface;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
+use Symfony\Component\DependencyInjection\Definition;
 
 /**
  * Runs after the mcp-bundle McpPass, which puts the schema of the handler parameters into each addTool call.
@@ -23,6 +25,7 @@ final class McpToolSchemaCompilerPass implements CompilerPassInterface
 
     private const string ADD_TOOL_METHOD = 'addTool';
     private const int HANDLER_ARGUMENT = 0;
+    private const int NAME_ARGUMENT = 1;
     private const int DESCRIPTION_ARGUMENT = 3;
     private const int INPUT_SCHEMA_ARGUMENT = 5;
     private const string DESCRIPTION_SEPARATOR = PHP_EOL . PHP_EOL;
@@ -45,7 +48,7 @@ final class McpToolSchemaCompilerPass implements CompilerPassInterface
         $signatureResolver = new McpToolSignatureResolver();
         $builder = $container->getDefinition($builderId);
         $methodCalls = $builder->getMethodCalls();
-        $toolNamesByRateLimiter = $this->resolveToolNamesByRateLimiter($methodCalls);
+        $rateLimiters = $this->resolveRateLimiters($container);
         foreach ($methodCalls as $index => [$method, $arguments]) {
             if (self::ADD_TOOL_METHOD !== $method) {
                 continue;
@@ -60,7 +63,10 @@ final class McpToolSchemaCompilerPass implements CompilerPassInterface
             }
             $methodCalls[$index][1][self::DESCRIPTION_ARGUMENT] = implode(self::DESCRIPTION_SEPARATOR, array_filter([
                 $arguments[self::DESCRIPTION_ARGUMENT],
-                $this->createWriteLimitSentence($this->resolveToolAttribute($class), $toolNamesByRateLimiter),
+                $this->createWriteLimitSentence(
+                    ElementMetadataResolver::resolveName(new ReflectionMethod($class, $handlerMethod), $arguments[self::NAME_ARGUMENT]),
+                    $rateLimiters,
+                ),
                 is_string($signature->outputClass) ? $outputDescriptionFactory->createForClass($signature->outputClass) : null,
             ]));
             if (is_string($signature->inputClass)) {
@@ -75,52 +81,40 @@ final class McpToolSchemaCompilerPass implements CompilerPassInterface
     }
 
     /**
-     * @param list<array{string, array<array-key, mixed>}> $methodCalls
+     * McpToolDefinitionsCompilerPass collected the limiters, and McpWriteRateLimiter names the tools of a limiter from
+     * the same definitions, so the description and the error of the limit list the same tools.
      *
-     * @return array<string, list<string>>
+     * @return array<string, string> tool name => rate limiter name
      */
-    private function resolveToolNamesByRateLimiter(array $methodCalls): array
+    private function resolveRateLimiters(ContainerBuilder $container): array
     {
-        $toolNames = [];
-        foreach ($methodCalls as [$method, $arguments]) {
-            if (self::ADD_TOOL_METHOD !== $method) {
-                continue;
-            }
-            $class = $arguments[self::HANDLER_ARGUMENT][0] ?? null;
-            if (false === is_string($class) || false === class_exists($class)) {
-                continue;
-            }
-            $tool = $this->resolveToolAttribute($class);
-            if (is_string($tool?->rateLimiter)) {
-                $toolNames[$tool->rateLimiter][] = (string) $tool->name;
-            }
+        if (false === $container->hasDefinition(McpToolDefinitions::class)) {
+            return [];
         }
+        /** @var array<string, Definition> $definitions */
+        $definitions = $container->getDefinition(McpToolDefinitions::class)
+            ->getArgument(McpToolDefinitionsCompilerPass::DEFINITIONS_ARGUMENT);
 
-        return $toolNames;
+        return array_map(
+            static fn (Definition $definition): ?string => $definition->getArgument(McpToolDefinitionsCompilerPass::RATE_LIMITER_ARGUMENT),
+            $definitions,
+        ) |> array_filter(...);
     }
 
     /**
-     * @param array<string, list<string>> $toolNamesByRateLimiter
+     * @param array<string, string> $rateLimiters
      */
-    private function createWriteLimitSentence(?AsMcpTool $tool, array $toolNamesByRateLimiter): ?string
+    private function createWriteLimitSentence(string $toolName, array $rateLimiters): ?string
     {
-        $rateLimiter = $tool?->rateLimiter;
+        $rateLimiter = $rateLimiters[$toolName] ?? null;
         if (null === $rateLimiter) {
             return null;
         }
-        $toolNames = $toolNamesByRateLimiter[$rateLimiter];
+        $toolNames = array_keys(array: $rateLimiters, filter_value: $rateLimiter, strict: true);
         if (1 === count($toolNames)) {
             return self::WRITE_LIMIT_SENTENCE;
         }
 
         return sprintf(self::SHARED_WRITE_LIMIT_SENTENCE, implode(self::TOOL_NAME_SEPARATOR, $toolNames));
-    }
-
-    /**
-     * @param class-string $class
-     */
-    private function resolveToolAttribute(string $class): ?AsMcpTool
-    {
-        return array_first(new ReflectionClass($class)->getAttributes(AsMcpTool::class))?->newInstance();
     }
 }

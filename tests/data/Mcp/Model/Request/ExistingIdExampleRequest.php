@@ -7,6 +7,7 @@ namespace AnzuSystems\CommonBundle\Tests\Data\Mcp\Model\Request;
 use AnzuSystems\CommonBundle\Tests\Data\Entity\Example;
 use AnzuSystems\CommonBundle\Tests\Data\Entity\ExampleCompositeIdEntity;
 use AnzuSystems\CommonBundle\Validator\Constraints\McpExistingId;
+use AnzuSystems\Contracts\Entity\AnzuUser;
 
 final class ExistingIdExampleRequest
 {
@@ -20,6 +21,9 @@ final class ExistingIdExampleRequest
      */
     #[McpExistingId(entity: Example::class, resolverTool: self::RESOLVER_TOOL)]
     public array $exampleIds = [];
+
+    #[McpExistingId(entity: AnzuUser::class, resolverTool: self::RESOLVER_TOOL)]
+    public ?int $userId = null;
 
     /**
      * @var int|list<int>|null

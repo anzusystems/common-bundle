@@ -221,7 +221,7 @@ final class McpToolAccessCheckerTest extends TestCase
 
         self::assertSame($expectedGranted, $checker->isToolGranted($writeToolName));
         self::assertSame($expectedGranted, $checker->isToolGranted(self::PREVIEW_TOOL));
-        self::assertSame($expectedGranted, $checker->isToolPermissionGranted(self::PREVIEW_TOOL));
+        self::assertSame($expectedGranted, $checker->isToolGrantedWithoutWriteScope(self::PREVIEW_TOOL));
         self::assertFalse($checker->isWriteTool(self::PREVIEW_TOOL));
         self::assertTrue($checker->isWriteGranted(self::PREVIEW_TOOL));
     }

@@ -18,10 +18,10 @@ final readonly class McpToolAccessChecker
 
     public function isToolGranted(string $toolName): bool
     {
-        return $this->isToolPermissionGranted($toolName) && $this->isWriteGranted($toolName);
+        return $this->isToolGrantedWithoutWriteScope($toolName) && $this->isWriteGranted($toolName);
     }
 
-    public function isToolPermissionGranted(string $toolName): bool
+    public function isToolGrantedWithoutWriteScope(string $toolName): bool
     {
         $writeToolName = $this->toolDefinitions->find($toolName)?->previewOf;
         if (is_string($writeToolName)) {

@@ -161,6 +161,7 @@ return static function (ContainerConfigurator $configurator): void {
 
     $services->set(McpExistingIdValidator::class)
         ->arg('$managerRegistry', service(ManagerRegistry::class))
+        ->arg('$userEntityClass', null)
         ->tag('validator.constraint_validator')
     ;
 
