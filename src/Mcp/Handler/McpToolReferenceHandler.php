@@ -18,12 +18,14 @@ use AnzuSystems\CommonBundle\Mcp\Resolver\McpToolErrorResolver;
 use AnzuSystems\CommonBundle\Mcp\Security\McpInputEnricherInterface;
 use AnzuSystems\CommonBundle\Mcp\Security\McpToolAccessChecker;
 use AnzuSystems\CommonBundle\Mcp\Security\McpWriteToolGuard;
+use AnzuSystems\Contracts\AnzuApp;
 use AnzuSystems\SerializerBundle\Serializer;
 use Doctrine\ORM\OptimisticLockException;
 use Mcp\Capability\Registry\ElementReference;
 use Mcp\Capability\Registry\ReferenceHandlerInterface;
 use Mcp\Capability\Registry\ToolReference;
 use Mcp\Capability\RegistryInterface;
+use Mcp\Exception\MissingRequiredClientCapabilityException;
 use Mcp\Schema\Content\TextContent;
 use Mcp\Schema\Result\CallToolResult;
 use Mcp\Schema\Result\InputRequiredResult;
@@ -42,6 +44,7 @@ final readonly class McpToolReferenceHandler implements ReferenceHandlerInterfac
     public const string ERROR_KEY = 'error';
     public const string ERROR_RESULT_MESSAGE = 'The tool returned an error result.';
     public const string UNHANDLED_ERROR_FORMAT = 'Unhandled %s';
+    public const string UNHANDLED_ERROR_MESSAGE_FORMAT = 'The tool failed with an internal error, logged under contextId %s. Before you repeat a write tool, check whether it saved the change.';
 
     private const int JSON_FLAGS = JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR | JSON_INVALID_UTF8_SUBSTITUTE;
     private const string SESSION_ARGUMENT = '_session';
@@ -136,13 +139,17 @@ final readonly class McpToolReferenceHandler implements ReferenceHandlerInterfac
             return $result;
         } catch (Throwable $exception) {
             $error = $this->resolveErrorMessage($toolName, $exception);
-            if (null === $error) {
-                $error = sprintf(self::UNHANDLED_ERROR_FORMAT, $exception::class);
-
+            if (is_string($error)) {
+                return self::createErrorResult($error);
+            }
+            $error = sprintf(self::UNHANDLED_ERROR_FORMAT, $exception::class);
+            // The SDK answers it with -32021, which asks the client to retry with the capability declared.
+            if ($exception instanceof MissingRequiredClientCapabilityException) {
                 throw $exception;
             }
+            $this->toolCallLogger->logBackendFailure($toolName, $exception);
 
-            return self::createErrorResult($error);
+            return self::createErrorResult(sprintf(self::UNHANDLED_ERROR_MESSAGE_FORMAT, AnzuApp::getContextId()));
         } finally {
             $this->logResult(
                 toolName: $toolName,

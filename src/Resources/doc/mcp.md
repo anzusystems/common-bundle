@@ -89,7 +89,8 @@ infrastructure after a bundle upgrade.
   Symfony kernel runs a controller: deserializes the arguments into the input class of the tool's `__invoke()`, checks
   the tool permission and the write grant, validates the input with the Symfony validator, serializes the returned
   object with the anzu serializer, converts `McpToolInputException`, `ValidationException`, `AccessDeniedException`
-  and configured `tool_error_exceptions` into `CallToolResult`s with `isError: true`, refuses write tools in read-only
+  and configured `tool_error_exceptions` into `CallToolResult`s with `isError: true` (any other exception into one that
+  names the `contextId` of the request, logged with the exception), refuses write tools in read-only
   mode, includes a successful write tool call in the audit log, logs every call (with the serialized input as
   `params`) to the monolog `mcp` channel and to the `mcpLogs` capped collection (see below). It asks the user to confirm
   a write when the client can answer, see "Write confirmation" below. The tool itself stays a plain invokable service
