@@ -16,7 +16,10 @@ use AnzuSystems\CommonBundle\Mcp\Resolver\McpToolSignatureResolver;
 use AnzuSystems\CommonBundle\Serializer\Handler\Handlers\McpDateTimeHandler;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Exception\ExampleToolInputException;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Tool\ExampleSearchTool;
+use AnzuSystems\Contracts\AnzuApp;
 use Mcp\Capability\Registry\ToolReference;
+use Mcp\Exception\MissingRequiredClientCapabilityException;
+use Mcp\Schema\ClientCapabilities;
 use Mcp\Schema\Result\CallToolResult;
 use RuntimeException;
 use Symfony\Component\Security\Core\Exception\AccessDeniedException;
@@ -227,25 +230,39 @@ final class McpToolReferenceHandlerErrorTest extends AbstractMcpToolReferenceHan
         );
     }
 
-    public function testUnknownExceptionIsRethrownAndLoggedAsError(): void
+    public function testUnknownExceptionIsReturnedAsToolErrorWithContextId(): void
     {
         $handler = $this->createHandlerWithoutInputTool(
             static fn (): McpLogsByContextResponse => throw new RuntimeException(self::UNHANDLED_EXCEPTION_MESSAGE),
         );
 
-        try {
-            $this->callToolWithoutInput($handler);
-            self::fail('Expected ' . RuntimeException::class);
-        } catch (RuntimeException $exception) {
-            self::assertSame(self::UNHANDLED_EXCEPTION_MESSAGE, $exception->getMessage());
-        }
+        $result = $this->callToolWithoutInput($handler);
 
+        self::assertTrue($result->isError);
+        self::assertSame(
+            sprintf(McpToolReferenceHandler::UNHANDLED_ERROR_MESSAGE_FORMAT, AnzuApp::getContextId()),
+            $result->structuredContent[McpToolReferenceHandler::ERROR_KEY],
+        );
+        self::assertStringNotContainsString(self::UNHANDLED_EXCEPTION_MESSAGE, $result->structuredContent[McpToolReferenceHandler::ERROR_KEY]);
         self::assertCount(1, $this->insertedDocuments);
         self::assertSame(McpLogger::LEVEL_NAME_ERROR, $this->insertedDocuments[0][McpLogger::FIELD_LEVEL_NAME]);
         self::assertSame(
             sprintf(McpToolReferenceHandler::UNHANDLED_ERROR_FORMAT, RuntimeException::class),
             $this->insertedDocuments[0][McpLogger::FIELD_ERROR],
         );
+    }
+
+    public function testMissingClientCapabilityIsRethrownForTheSdk(): void
+    {
+        $exception = new MissingRequiredClientCapabilityException(new ClientCapabilities());
+        $handler = $this->createHandlerWithoutInputTool(static fn (): McpLogsByContextResponse => throw $exception);
+
+        try {
+            $this->callToolWithoutInput($handler);
+            self::fail('Expected ' . MissingRequiredClientCapabilityException::class);
+        } catch (MissingRequiredClientCapabilityException $thrown) {
+            self::assertSame($exception, $thrown);
+        }
     }
 
     /**

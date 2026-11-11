@@ -20,6 +20,7 @@ use AnzuSystems\CommonBundle\Tests\Data\Mcp\Model\Request\ExampleWriteRequest;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Model\Response\ExampleWritePreviewResponse;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Tool\ExampleWritePreviewTool;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Tool\ExampleWriteTool;
+use AnzuSystems\Contracts\AnzuApp;
 use Closure;
 use Doctrine\ORM\OptimisticLockException;
 use Mcp\Capability\Registry\ToolReference;
@@ -170,17 +171,18 @@ final class McpToolReferenceHandlerWritePreviewTest extends AbstractMcpToolRefer
         ];
     }
 
-    public function testUnhandledPreviewExceptionIsRethrown(): void
+    public function testUnhandledPreviewExceptionIsReturnedAsToolErrorWithoutWriting(): void
     {
         $handler = $this->createWriteHandler(previewException: new RuntimeException(self::UNHANDLED_EXCEPTION_MESSAGE));
 
-        try {
-            $this->callWriteTool($handler, $this->createModernArguments());
-            self::fail('Expected ' . RuntimeException::class);
-        } catch (RuntimeException $exception) {
-            self::assertSame(self::UNHANDLED_EXCEPTION_MESSAGE, $exception->getMessage());
-        }
+        $result = $this->callWriteTool($handler, $this->createModernArguments());
 
+        self::assertInstanceOf(CallToolResult::class, $result);
+        self::assertTrue($result->isError);
+        self::assertSame(
+            sprintf(McpToolReferenceHandler::UNHANDLED_ERROR_MESSAGE_FORMAT, AnzuApp::getContextId()),
+            $result->structuredContent[McpToolReferenceHandler::ERROR_KEY],
+        );
         self::assertSame(0, $this->writeRuns);
         self::assertSame(McpLogger::LEVEL_NAME_ERROR, $this->insertedDocuments[0][McpLogger::FIELD_LEVEL_NAME]);
         self::assertSame(
