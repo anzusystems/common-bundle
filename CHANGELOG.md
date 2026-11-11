@@ -1,6 +1,20 @@
 ## Unreleased
 
 ### Features
+* `McpToolAccessChecker::getPermittedToolNamesForUser()` returns the tools whose permission a given user holds, whoever is logged in, also in a console command. It needs `symfony/security-bundle` 7.3.
+* `McpToolScope::$explicitToolNames` grants tools declared with `explicitGrant`, independent of `readToolNames`, so a scope can keep every read tool and add such a tool by name.
+
+### Changes
+* BC change: a tool declared with `explicitGrant` in `readToolNames` no longer enters the scope; name it in `explicitToolNames`.
+
+## [12.0.1](https://github.com/anzusystems/common-bundle/compare/12.0.0...12.0.1) (2026-11-11)
+
+### Changes
+* `McpToolReferenceHandler` answers an exception it does not know with a tool error that names the `contextId` of the request, instead of letting the SDK answer `-32603 Error while executing tool`. The exception is logged as `Mcp tool call failed on backend.` with the tool name, and the agent is asked to check whether a write tool saved the change before repeating it. `MissingRequiredClientCapabilityException` still reaches the SDK, which answers it with `-32021`.
+
+## [12.0.0](https://github.com/anzusystems/common-bundle/compare/11.8.0...12.0.0) (2026-11-10)
+
+### Features
 * `AnzuSystems\CommonBundle\Tests\Mcp\AbstractMcpTestCase` with `McpTestClient` and `McpToolResult`: tool tests go over HTTP like the admin API tests, through the token, the input schema of the SDK and `tools/list`, with assertions for the tool errors, warnings and next steps (`assertToolWarning()`, `assertToolNextStep()`, `assertToolArgumentAboveMaximum()` and `assertToolArgumentBelowMinimum()` for a `page` or `limit` the input schema refuses, `assertToolArgumentHasTooManyItems()` and `assertToolArgumentHasTooFewItems()` for a list, `assertToolArgumentIsTooLong()` for a text, with `createTooManyItemsError()`, `createTooFewItemsError()` and `createTooLongError()` for a data provider). See `tests.md`.
 * `#[AsMcpTool]` (extends `#[McpTool]`) declares a tool whose request DTO is the input class of its `__invoke()` and whose response is its return class, like a Symfony controller: `__invoke(ListLabelsRequest $request): McpLabelListResponse`. It takes the required `category`, the `permission` of the host the tool needs, `readOnly`, `destructive` (default `true`) and `idempotent`, which become the `ToolAnnotations` with `openWorldHint: false`, an optional `previewOf` and `rateLimiter`, and `descriptionValues`. `__invoke()` takes the input class and then an optional `RequestContext`, only the `RequestContext`, or nothing, and returns a response class or a `CallToolResult`, which is passed through unchanged (one with `isError: true` is logged as an error and does not count as a write).
 * `McpToolReferenceHandler` (an SDK `ReferenceHandlerInterface`) deserializes the call arguments into the input class of `__invoke()`, runs the checks, invokes the tool through the SDK handler, serializes the returned object and logs the call. `McpToolReferenceHandlerCompilerPass` puts it into the server around the SDK handler.
@@ -57,7 +71,6 @@
 * `McpPromptMessageTrait::createUserMessage()` renders the text of an `#[AsMcpPrompt]`: `{{ <tool name> }}` becomes the name of a tool from its `tools` and `{{ <argument> }}` the value of an argument, in one pass. A placeholder outside both throws a `McpConfigurationException`, and a tool or argument the text does not use a `LogicException`, so the tools in the text and in `tools` cannot drift apart. `McpField::PLACEHOLDER_PATTERN` is public and takes every character the SDK allows in a tool name (letters, digits, `_`, `.`, `/`, `-`).
 
 ### Changes
-* `McpToolReferenceHandler` answers an exception it does not know with a tool error that names the `contextId` of the request, instead of letting the SDK answer `-32603 Error while executing tool`. The exception is logged as `Mcp tool call failed on backend.` with the tool name, and the agent is asked to check whether a write tool saved the change before repeating it. `MissingRequiredClientCapabilityException` still reaches the SDK, which answers it with `-32021`.
 * BC change: the bundle requires PHP 8.5.
 * BC change: the bundle requires `anzusystems/serializer-bundle` `^7.1`, which refuses input that does not fit the type and no longer requires `doctrine/common`. See `UPGRADE-7.0.md` and `UPGRADE-7.1.md` of that bundle: an application that uses `Doctrine\Common\Util\ClassUtils` and got `doctrine/common` only through these bundles must replace it.
 * BC change: the `mcp` config section requires `symfony/mcp-bundle` `^0.15` with `mcp/sdk` `^0.9`, which fixes the advisory `PKSA-s52d-n7sx-trsg` of `mcp/sdk` 0.8; the `conflict` moves to `<0.15`. `#[CompletionProvider]` no longer has `providerClass` (use `provider:`), and the schema errors the SDK answers are worded differently, so `AbstractMcpTestCase` builds the new texts. See the `mcp/sdk` 0.9 changelog for the other BC changes.

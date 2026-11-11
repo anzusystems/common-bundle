@@ -6,6 +6,7 @@ namespace AnzuSystems\CommonBundle\Mcp\Security;
 
 use AnzuSystems\CommonBundle\Mcp\McpToolDefinitions;
 use Symfony\Bundle\SecurityBundle\Security;
+use Symfony\Component\Security\Core\User\UserInterface;
 
 final readonly class McpToolAccessChecker
 {
@@ -53,6 +54,17 @@ final readonly class McpToolAccessChecker
         return array_filter($this->toolDefinitions->getToolNames(), $this->isPermissionGranted(...)) |> array_values(...);
     }
 
+    /**
+     * @return list<string>
+     */
+    public function getPermittedToolNamesForUser(UserInterface $user): array
+    {
+        return array_filter(
+            $this->toolDefinitions->getToolNames(),
+            fn (string $toolName): bool => $this->isPermissionGrantedForUser($toolName, $user),
+        ) |> array_values(...);
+    }
+
     public function isWriteTool(string $toolName): bool
     {
         return true !== $this->toolDefinitions->find($toolName)?->readOnly;
@@ -68,13 +80,13 @@ final readonly class McpToolAccessChecker
         if ($this->isWriteTool($toolName)) {
             return true;
         }
-        $readToolNames = $this->resolveToolScope()
-            ->readToolNames;
-        if (null === $readToolNames) {
-            return false === $this->toolDefinitions->find($toolName)?->explicitGrant;
+        $toolScope = $this->resolveToolScope();
+        if (true === $this->toolDefinitions->find($toolName)?->explicitGrant) {
+            return in_array(needle: $toolName, haystack: $toolScope->explicitToolNames, strict: true);
         }
 
-        return in_array(needle: $toolName, haystack: $readToolNames, strict: true);
+        return null === $toolScope->readToolNames
+            || in_array(needle: $toolName, haystack: $toolScope->readToolNames, strict: true);
     }
 
     private function isPermissionGranted(string $toolName): bool
@@ -85,5 +97,15 @@ final readonly class McpToolAccessChecker
         }
 
         return $this->security->isGranted($permission);
+    }
+
+    private function isPermissionGrantedForUser(string $toolName, UserInterface $user): bool
+    {
+        $permission = $this->toolDefinitions->find($toolName)?->permission;
+        if (null === $permission) {
+            return false;
+        }
+
+        return $this->security->isGrantedForUser($user, $permission);
     }
 }

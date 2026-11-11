@@ -11,6 +11,8 @@ use AnzuSystems\CommonBundle\Tests\Data\Mcp\McpToolDefinitionsFactory;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Security\StaticMcpToolScopeProvider;
 use PHPUnit\Framework\TestCase;
 use Symfony\Bundle\SecurityBundle\Security;
+use Symfony\Component\Security\Core\User\InMemoryUser;
+use Symfony\Component\Security\Core\User\UserInterface;
 
 final class McpToolAccessCheckerTest extends TestCase
 {
@@ -19,6 +21,7 @@ final class McpToolAccessCheckerTest extends TestCase
     private const string UNMAPPED_TOOL = 'example_unmapped';
     private const string SECOND_GRANTED_TOOL = 'example_second_read';
     private const string PREVIEW_TOOL = 'example_preview';
+    private const string EXPLICIT_GRANT_TOOL = 'example_explicit_grant';
     private const string GRANTED_PERMISSION = 'example_read';
     private const string DENIED_PERMISSION = 'app_log_read';
 
@@ -157,36 +160,65 @@ final class McpToolAccessCheckerTest extends TestCase
 
     /**
      * @dataProvider explicitGrantProvider
+     *
+     * @param list<string> $expectedGrantedTools
      */
-    public function testExplicitGrantToolNeedsTheScopeToNameIt(?McpToolScopeProviderInterface $toolScopeProvider, bool $expectedGranted): void
-    {
+    public function testExplicitGrantToolNeedsTheExplicitToolNamesToNameIt(
+        ?McpToolScopeProviderInterface $toolScopeProvider,
+        array $expectedGrantedTools,
+    ): void {
+        $toolNames = [self::GRANTED_TOOL, self::SECOND_GRANTED_TOOL, self::EXPLICIT_GRANT_TOOL];
         $security = $this->createStub(Security::class);
         $security->method('isGranted')
             ->willReturn(true);
         $checker = new McpToolAccessChecker(
             toolDefinitions: McpToolDefinitionsFactory::create(
-                toolPermissions: [self::GRANTED_TOOL => self::GRANTED_PERMISSION, self::SECOND_GRANTED_TOOL => self::GRANTED_PERMISSION],
-                readOnlyToolNames: [self::GRANTED_TOOL, self::SECOND_GRANTED_TOOL],
-                explicitGrantToolNames: [self::GRANTED_TOOL],
+                toolPermissions: array_fill_keys($toolNames, self::GRANTED_PERMISSION),
+                readOnlyToolNames: $toolNames,
+                explicitGrantToolNames: [self::EXPLICIT_GRANT_TOOL],
             ),
             security: $security,
             toolScopeProvider: $toolScopeProvider,
         );
 
-        self::assertSame($expectedGranted, $checker->isToolGranted(self::GRANTED_TOOL));
-        self::assertContains(self::GRANTED_TOOL, $checker->getPermittedToolNames());
+        self::assertSame($expectedGrantedTools, array_filter($toolNames, $checker->isToolGranted(...)) |> array_values(...));
+        self::assertContains(self::EXPLICIT_GRANT_TOOL, $checker->getPermittedToolNames());
     }
 
     /**
-     * @return array<string, array{McpToolScopeProviderInterface|null, bool}>
+     * @return array<string, array{McpToolScopeProviderInterface|null, list<string>}>
      */
     public static function explicitGrantProvider(): array
     {
         return [
-            'no scope provider denies it' => [null, false],
-            'null scope denies it' => [self::createToolScopeProvider(null), false],
-            'scope naming it grants it' => [self::createToolScopeProvider([self::GRANTED_TOOL]), true],
-            'scope naming another tool denies it' => [self::createToolScopeProvider([self::SECOND_GRANTED_TOOL]), false],
+            'no scope provider keeps the read tools without the explicit one' => [
+                null,
+                [self::GRANTED_TOOL, self::SECOND_GRANTED_TOOL],
+            ],
+            'every read tool without explicit tools leaves the explicit one out' => [
+                self::createToolScopeProvider(null),
+                [self::GRANTED_TOOL, self::SECOND_GRANTED_TOOL],
+            ],
+            'every read tool with the explicit one named' => [
+                self::createToolScopeProvider(readToolNames: null, explicitToolNames: [self::EXPLICIT_GRANT_TOOL]),
+                [self::GRANTED_TOOL, self::SECOND_GRANTED_TOOL, self::EXPLICIT_GRANT_TOOL],
+            ],
+            'no read tool with the explicit one named' => [
+                self::createToolScopeProvider(readToolNames: [], explicitToolNames: [self::EXPLICIT_GRANT_TOOL]),
+                [self::EXPLICIT_GRANT_TOOL],
+            ],
+            'explicit tool named only in the read tools is denied' => [
+                self::createToolScopeProvider([self::EXPLICIT_GRANT_TOOL]),
+                [],
+            ],
+            'named read tools without explicit tools grant only the named ones' => [
+                self::createToolScopeProvider([self::SECOND_GRANTED_TOOL]),
+                [self::SECOND_GRANTED_TOOL],
+            ],
+            'read tool named only in the explicit tools is denied' => [
+                self::createToolScopeProvider(readToolNames: [], explicitToolNames: [self::SECOND_GRANTED_TOOL]),
+                [],
+            ],
         ];
     }
 
@@ -199,6 +231,48 @@ final class McpToolAccessCheckerTest extends TestCase
         );
 
         self::assertSame([self::GRANTED_TOOL, self::SECOND_GRANTED_TOOL], $checker->getPermittedToolNames());
+    }
+
+    /**
+     * @dataProvider permittedToolNamesForUserProvider
+     */
+    public function testPermittedToolNamesForUserAskForTheGivenUser(?McpToolScopeProviderInterface $toolScopeProvider): void
+    {
+        $owner = new InMemoryUser('owner', null);
+        $security = $this->createStub(Security::class);
+        $security->method('isGranted')
+            ->willReturn(false);
+        $security->method('isGrantedForUser')
+            ->willReturnCallback(
+                static fn (UserInterface $user, mixed $attribute): bool => $owner === $user && self::GRANTED_PERMISSION === $attribute
+            );
+        $checker = new McpToolAccessChecker(
+            toolDefinitions: McpToolDefinitionsFactory::create(
+                toolPermissions: [
+                    self::GRANTED_TOOL => self::GRANTED_PERMISSION,
+                    self::DENIED_TOOL => self::DENIED_PERMISSION,
+                    self::SECOND_GRANTED_TOOL => self::GRANTED_PERMISSION,
+                ],
+                readOnlyToolNames: [self::SECOND_GRANTED_TOOL],
+            ),
+            security: $security,
+            toolScopeProvider: $toolScopeProvider,
+        );
+
+        self::assertSame([self::GRANTED_TOOL, self::SECOND_GRANTED_TOOL], $checker->getPermittedToolNamesForUser($owner));
+        self::assertSame([], $checker->getPermittedToolNamesForUser(new InMemoryUser('other', null)));
+        self::assertSame([], $checker->getPermittedToolNames());
+    }
+
+    /**
+     * @return array<string, array{McpToolScopeProviderInterface|null}>
+     */
+    public static function permittedToolNamesForUserProvider(): array
+    {
+        return [
+            'no scope provider' => [null],
+            'scope naming another tool is ignored' => [self::createToolScopeProvider([self::DENIED_TOOL])],
+        ];
     }
 
     /**
@@ -265,12 +339,18 @@ final class McpToolAccessCheckerTest extends TestCase
     /**
      * @param list<string>|null $readToolNames
      * @param list<string> $writeToolNames
+     * @param list<string> $explicitToolNames
      */
     private static function createToolScopeProvider(
         ?array $readToolNames,
         array $writeToolNames = [],
+        array $explicitToolNames = [],
     ): McpToolScopeProviderInterface {
-        return new StaticMcpToolScopeProvider(new McpToolScope($readToolNames, $writeToolNames));
+        return new StaticMcpToolScopeProvider(new McpToolScope(
+            readToolNames: $readToolNames,
+            writeToolNames: $writeToolNames,
+            explicitToolNames: $explicitToolNames,
+        ));
     }
 
     /**
