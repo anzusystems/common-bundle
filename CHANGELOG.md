@@ -1,11 +1,12 @@
 ## Unreleased
 
 ### Features
-* `McpToolAccessChecker::getPermittedToolNamesForUser()` returns the tools whose permission a given user holds, whoever is logged in, also in a console command. It needs `symfony/security-bundle` 7.3.
+* `McpToolAccessChecker::getPermittedToolNamesForUser()` returns the tools whose permission a given user holds, whoever is logged in, also in a console command.
 * `McpToolScope::$explicitToolNames` grants tools declared with `explicitGrant`, independent of `readToolNames`, so a scope can keep every read tool and add such a tool by name.
 
 ### Changes
 * BC change: a tool declared with `explicitGrant` in `readToolNames` no longer enters the scope; name it in `explicitToolNames`.
+* BC change: the bundle requires `symfony/security-bundle` `^7.3`, because `McpToolAccessChecker::getPermittedToolNamesForUser()` calls `Security::isGrantedForUser()`.
 
 ## [12.0.1](https://github.com/anzusystems/common-bundle/compare/12.0.0...12.0.1) (2026-11-11)
 
