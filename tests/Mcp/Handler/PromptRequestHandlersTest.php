@@ -122,12 +122,20 @@ final class PromptRequestHandlersTest extends TestCase
                 [self::TOOLLESS_PROMPT, self::READ_PROMPT],
             ],
             'explicitly granted tool with the write tool' => [
-                new McpToolScope(readToolNames: [self::READ_TOOL, self::DRAFT_TOOL], writeToolNames: [self::WRITE_TOOL]),
+                new McpToolScope(readToolNames: [self::READ_TOOL], writeToolNames: [self::WRITE_TOOL], explicitToolNames: [self::DRAFT_TOOL]),
+                [self::TOOLLESS_PROMPT, self::READ_PROMPT, self::DRAFT_PROMPT],
+            ],
+            'explicitly granted tool with every read tool and the write tool' => [
+                new McpToolScope(writeToolNames: [self::WRITE_TOOL], explicitToolNames: [self::DRAFT_TOOL]),
                 [self::TOOLLESS_PROMPT, self::READ_PROMPT, self::DRAFT_PROMPT],
             ],
             'explicitly granted tool without the write tool' => [
-                new McpToolScope(readToolNames: [self::DRAFT_TOOL]),
+                new McpToolScope(readToolNames: [], explicitToolNames: [self::DRAFT_TOOL]),
                 [self::TOOLLESS_PROMPT],
+            ],
+            'explicitly granted tool named only in the read tools' => [
+                new McpToolScope(readToolNames: [self::READ_TOOL, self::DRAFT_TOOL], writeToolNames: [self::WRITE_TOOL]),
+                [self::TOOLLESS_PROMPT, self::READ_PROMPT],
             ],
         ];
     }

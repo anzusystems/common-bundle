@@ -576,17 +576,22 @@ A host says what a request may use by registering a service under the id `McpToo
 
 - `readToolNames`: the read tools the request may use, `null` keeps every read tool.
 - `writeToolNames`: the write tools the request may use.
+- `explicitToolNames`: the read tools declared with `explicitGrant` the request may use, none by default.
 
 Without such a service, or when it returns an empty `new McpToolScope()`, read tools are not narrowed and write tools are denied.
 
-A read tool declared with `#[AsMcpTool(explicitGrant: true)]` is not in "every read tool": `readToolNames: null` and a
-request without a scope leave it out, so it is granted only when `readToolNames` names it. Use it for a tool whose data
+A read tool declared with `#[AsMcpTool(explicitGrant: true)]` is not in "every read tool" and not in `readToolNames`
+at all: it is granted only when `explicitToolNames` names it, and its name in `readToolNames` is ignored. A request
+without a scope leaves it out. The two lists are independent, so a scope can keep every read tool, also those added
+later, with `readToolNames: null` and still add such a tool by name. Use it for a tool whose data
 someone should decide to send to the model provider when they create the token, e.g. private notes.
-`McpToolDefinitions::find($toolName)->explicitGrant` tells a host which tools to leave out of its "every read tool"
-choice. A write tool is granted only by name anyway, so the flag changes nothing there. The scope only
+`McpToolDefinitions::find($toolName)->explicitGrant` tells a host which tools belong to `explicitToolNames` and not to
+its "every read tool" choice. A write tool is granted only by name anyway, so the flag changes nothing there. The scope only
 narrows: a tool in the scope still needs its permission. A tool outside the scope is hidden from `tools/list` and
 denied on `tools/call`. `McpToolAccessChecker::getPermittedToolNames()` lists every tool whose
-permission the current user holds, in the order of the tools, without the scope, so a host can offer them for a new token. A preview
+permission the current user holds, in the order of the tools, without the scope, so a host can offer them for a new token.
+`McpToolAccessChecker::getPermittedToolNamesForUser($user)` does the same for a given user, whoever is logged in and
+also in a console command, so a host can check the tools of a token against its owner. A preview
 follows the scope of its write tool, so a token never names it.
 
 ## Prompts
