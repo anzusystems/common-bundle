@@ -29,6 +29,7 @@ final class McpToolSchemaCompilerPass implements CompilerPassInterface
     private const int DESCRIPTION_ARGUMENT = 3;
     private const int INPUT_SCHEMA_ARGUMENT = 5;
     private const string DESCRIPTION_SEPARATOR = PHP_EOL . PHP_EOL;
+    private const string DIRECT_WRITE_SENTENCE = 'It changes the state at once: it has no preview and asks for no confirmation.';
     private const string WRITE_LIMIT_SENTENCE = 'Writes through this tool have a limit per user.';
     private const string SHARED_WRITE_LIMIT_SENTENCE = 'Writes through %s share one limit per user.';
     private const string TOOL_NAME_SEPARATOR = ', ';
@@ -49,6 +50,7 @@ final class McpToolSchemaCompilerPass implements CompilerPassInterface
         $builder = $container->getDefinition($builderId);
         $methodCalls = $builder->getMethodCalls();
         $rateLimiters = $this->resolveRateLimiters($container);
+        $directWriteToolNames = $this->resolveDirectWriteToolNames($container);
         foreach ($methodCalls as $index => [$method, $arguments]) {
             if (self::ADD_TOOL_METHOD !== $method) {
                 continue;
@@ -61,12 +63,11 @@ final class McpToolSchemaCompilerPass implements CompilerPassInterface
             if (null === $signature) {
                 continue;
             }
+            $toolName = ElementMetadataResolver::resolveName(new ReflectionMethod($class, $handlerMethod), $arguments[self::NAME_ARGUMENT]);
             $methodCalls[$index][1][self::DESCRIPTION_ARGUMENT] = implode(self::DESCRIPTION_SEPARATOR, array_filter([
                 $arguments[self::DESCRIPTION_ARGUMENT],
-                $this->createWriteLimitSentence(
-                    ElementMetadataResolver::resolveName(new ReflectionMethod($class, $handlerMethod), $arguments[self::NAME_ARGUMENT]),
-                    $rateLimiters,
-                ),
+                in_array(needle: $toolName, haystack: $directWriteToolNames, strict: true) ? self::DIRECT_WRITE_SENTENCE : null,
+                $this->createWriteLimitSentence($toolName, $rateLimiters),
                 is_string($signature->outputClass) ? $outputDescriptionFactory->createForClass($signature->outputClass) : null,
             ]));
             if (is_string($signature->inputClass)) {
@@ -99,6 +100,24 @@ final class McpToolSchemaCompilerPass implements CompilerPassInterface
             static fn (Definition $definition): ?string => $definition->getArgument(McpToolDefinitionsCompilerPass::RATE_LIMITER_ARGUMENT),
             $definitions,
         ) |> array_filter(...);
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function resolveDirectWriteToolNames(ContainerBuilder $container): array
+    {
+        if (false === $container->hasDefinition(McpToolDefinitions::class)) {
+            return [];
+        }
+        /** @var array<string, Definition> $definitions */
+        $definitions = $container->getDefinition(McpToolDefinitions::class)
+            ->getArgument(McpToolDefinitionsCompilerPass::DEFINITIONS_ARGUMENT);
+
+        return array_filter(
+            $definitions,
+            static fn (Definition $definition): bool => true === $definition->getArgument(McpToolDefinitionsCompilerPass::DIRECT_WRITE_ARGUMENT),
+        ) |> array_keys(...);
     }
 
     /**

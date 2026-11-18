@@ -173,7 +173,7 @@ final readonly class ListLabelsTool
 * `readOnly`, `destructive` and `idempotent` become the `ToolAnnotations` (`openWorldHint` is always `false`): a tool
   is a write tool unless it says `readOnly: true`, so a forgotten flag hides it from tokens without the write grant;
   `destructive` (default `true`, as in the MCP specification) and `idempotent` (default `false`) describe a write tool
-  only.
+  only. `directWrite: true` makes a write tool a direct write, see "Direct write tools" below.
 * `category` (required) names the group the tool belongs to, e.g. in the tool list of a token form. It is camelCase
   (`^[a-z][a-zA-Z0-9]*$`), so a client can build a translation key from it; categories come in the order of their first
   tool in `McpToolDefinitions::getToolNames()`. The bundle log tools are in `AsMcpTool::CATEGORY_DIAGNOSTICS` (`diagnostics`).
@@ -381,7 +381,12 @@ and fails the container compilation with a `LogicException` when
 * a preview has its own permission;
 * a tool declared by `#[AsMcpTool]` that is not a preview has no permission (`McpConfigurationException::createToolWithoutPermission()`);
 * a preview is in another category than its write tool;
-* a write tool declared by `#[AsMcpTool]` has no preview (`McpConfigurationException::createWriteToolWithoutPreview()`);
+* a write tool declared by `#[AsMcpTool]` that is not a direct write has no preview (`McpConfigurationException::createWriteToolWithoutPreview()`);
+* a direct write tool is `readOnly` (`McpConfigurationException::createDirectWriteReadTool()`);
+* a direct write tool does not declare `destructive: false` and `idempotent: true` (`McpConfigurationException::createDirectWriteNotSafe()`);
+* a direct write tool names no `rateLimiter` (`McpConfigurationException::createDirectWriteWithoutRateLimiter()`);
+* the input class of a direct write tool implements `McpPreviewHashAwareInterface` (`McpConfigurationException::createDirectWriteWithPreviewHash()`);
+* a direct write tool has a preview (`McpConfigurationException::createPreviewOfDirectWrite()`);
 * the response class of a preview does not implement `McpWritePreviewInterface`
   (`McpConfigurationException::createPreviewResponseWithoutConfirmation()`);
 * the input class of a write tool does not implement `McpPreviewHashAwareInterface` or does not extend the input class
@@ -393,7 +398,8 @@ is unknown to these checks. It has no permission and neither has a plain `#[McpT
 
 ### Write tools
 
-A write tool declared by `#[AsMcpTool]` must have a preview, see "Preview tools" below.
+A write tool declared by `#[AsMcpTool]` must have a preview, unless it is a direct write tool, see "Preview tools" and
+"Direct write tools" below.
 
 A tool is a read tool only when its `#[McpTool]` declares `annotations: new ToolAnnotations(readOnlyHint: true)`
 (`#[AsMcpTool(readOnly: true)]`);
@@ -484,6 +490,44 @@ validated input of the write goes straight into the preview. It may add only `pr
 field, and a preview call cannot send a field its input does not have, so the container compilation fails for any other
 added `#[Serialize]` field.
 
+### Direct write tools
+
+A direct write tool makes a small change of state that a second call can undo and a repeated call does not add to: a
+short edit lock of a record, a flag that says someone works on it. One call does it, without a preview, a `previewHash`
+or a confirmation:
+
+```php
+#[AsMcpTool(
+    name: LockNoteTool::NAME,
+    description: '…',
+    category: McpToolCategory::NOTES,
+    permission: Permission::NOTE_UPDATE,
+    destructive: false,
+    idempotent: true,
+    rateLimiter: 'note_lock',
+    directWrite: true,
+)]
+```
+
+A change of the content of a record, and creating or deleting a record the user sees, is not a direct write: such a tool
+needs a preview, so the user sees what it saves. The bundle cannot check that a tool keeps to this; `directWrite: true`
+stays visible in the attribute for a review.
+
+It stays a write tool: a token gets it only by name, read-only mode refuses it, it counts as the one write of an HTTP
+request, a successful call reaches the audit log and every call has a row in `mcpLogs`. Its input is a plain request
+without `previewHash`.
+
+Nothing slows it down but its limit, so it must name a `rateLimiter`. The limit takes one token before the tool runs, also
+when the tool then refuses the call, because without a preview the handler cannot know whether the call changes
+anything. A tool that must pass after a series of refusals, such as the release of a lock, names a limiter of its own.
+
+No preview checks the rules for it, so the tool checks every rule itself and refuses with a tool error. An
+`OptimisticLockException` answers `McpWriteRejectedException::createRecordChanged()`.
+
+`McpToolSchemaCompilerPass` adds a sentence to the description of the tool that it has no preview and asks for no
+confirmation, and the client sees `readOnlyHint: false`, `destructiveHint: false` and `idempotentHint: true`.
+`McpToolDefinitions::find($toolName)->directWrite` tells a host which tools to mark where a token is created.
+
 ### Write confirmation
 
 A write tool asks the user to confirm when the client declares form elicitation on revision 2026-07-28
@@ -502,6 +546,7 @@ and the validation of the input, so a call without the right to write asks nothi
    again.
 
 A client on an older revision, or without form elicitation, is never asked. It stays on the preview and `previewHash`.
+A direct write tool is never asked.
 
 The text comes from `McpWritePreviewInterface::$confirmationMessage`, a translation key and its parameters, as a virtual
 property without `#[Serialize]`, like `$writable` and `$currentState`, so the output of the preview does not change. The translation domain is

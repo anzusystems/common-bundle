@@ -14,6 +14,7 @@ final class McpToolDefinitionsTest extends TestCase
     private const string READ_TOOL = 'example_read';
     private const string WRITE_TOOL = 'example_write';
     private const string OTHER_WRITE_TOOL = 'example_other_write';
+    private const string DIRECT_WRITE_TOOL = 'example_lock';
     private const string UNMAPPED_TOOL = 'example_unmapped';
     private const string PREVIEW_TOOL = 'example_preview';
     private const string TOOL_CATEGORY = 'examples';
@@ -27,6 +28,19 @@ final class McpToolDefinitionsTest extends TestCase
     public function testWriteToolNamesListOnlyToolsWithAPermissionThatAreNotReadOnly(): void
     {
         self::assertSame([self::WRITE_TOOL, self::OTHER_WRITE_TOOL], $this->createDefinitions()->getWriteToolNames());
+    }
+
+    public function testDirectWriteToolIsAWriteTool(): void
+    {
+        $definitions = McpToolDefinitionsFactory::create(
+            toolPermissions: [self::READ_TOOL => self::PERMISSION, self::DIRECT_WRITE_TOOL => self::PERMISSION],
+            readOnlyToolNames: [self::READ_TOOL],
+            directWriteToolNames: [self::DIRECT_WRITE_TOOL],
+        );
+
+        self::assertSame([self::DIRECT_WRITE_TOOL], $definitions->getWriteToolNames());
+        self::assertTrue($definitions->find(self::DIRECT_WRITE_TOOL)?->directWrite);
+        self::assertNull($definitions->getPreviewToolName(self::DIRECT_WRITE_TOOL));
     }
 
     public function testPreviewToolNameIsFoundByItsWriteTool(): void

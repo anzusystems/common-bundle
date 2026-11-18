@@ -117,6 +117,35 @@ final class McpConfigurationException extends LogicException
         return new self(sprintf('The MCP write tool "%1$s" has no preview: declare a read tool with #[AsMcpTool(previewOf: "%1$s")].', $toolName));
     }
 
+    public static function createDirectWriteReadTool(string $toolName): self
+    {
+        return new self(sprintf('The MCP tool "%s" is a read tool, so it cannot be a direct write: remove directWrite.', $toolName));
+    }
+
+    public static function createDirectWriteNotSafe(string $toolName): self
+    {
+        return new self(sprintf('The MCP direct write tool "%s" must declare destructive: false and idempotent: true. A tool that changes data needs a preview instead: remove directWrite.', $toolName));
+    }
+
+    public static function createDirectWriteWithoutRateLimiter(string $toolName): self
+    {
+        return new self(sprintf('The MCP direct write tool "%s" runs without a confirmation, so it must name a rate limiter: declare #[AsMcpTool(rateLimiter: …)].', $toolName));
+    }
+
+    public static function createDirectWriteWithPreviewHash(string $toolName): self
+    {
+        return new self(sprintf(
+            'The input class of the MCP direct write tool "%s" implements %s, but a direct write has no preview: remove the interface and the previewHash field.',
+            $toolName,
+            McpPreviewHashAwareInterface::class,
+        ));
+    }
+
+    public static function createPreviewOfDirectWrite(string $previewToolName, string $toolName): self
+    {
+        return new self(sprintf('The MCP tool "%s" previews the direct write tool "%s", which runs without a preview: remove the preview or directWrite.', $previewToolName, $toolName));
+    }
+
     public static function createPreviewResponseWithoutConfirmation(string $previewToolName, string $writeToolName): self
     {
         return new self(sprintf('The MCP tool "%s" previews "%s", so its response class must implement %s.', $previewToolName, $writeToolName, McpWritePreviewInterface::class));

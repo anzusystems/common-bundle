@@ -1,6 +1,17 @@
 ## Unreleased
 
 ### Features
+* `#[AsMcpTool(directWrite: true)]` declares a write tool for a small, idempotent and reversible change of state, e.g. taking or releasing a short-lived edit lock: it has no preview, no `previewHash` and asks for no confirmation, one call does it.
+* A direct write tool stays a write tool: a token gets it only by name, read-only mode refuses it, it counts as the one write of an HTTP request, and a successful call reaches the audit log.
+* A direct write tool takes one token of its `rateLimiter` before it runs, also when the tool then refuses the call.
+* `McpToolDefinitionsCompilerPass` fails the container compilation with a `McpConfigurationException` when a direct write tool is `readOnly`, does not declare `destructive: false` and `idempotent: true`, names no `rateLimiter`, has a preview, or takes an input that implements `McpPreviewHashAwareInterface`.
+* `McpToolDefinition::$directWrite` carries the flag, so a host can mark such tools where a token is created.
+* The description of a direct write tool says that it has no preview and asks for no confirmation.
+* An `OptimisticLockException` of a direct write tool answers `McpWriteRejectedException::createRecordChanged()`.
+
+## [12.1.0](https://github.com/anzusystems/common-bundle/compare/12.0.1...12.1.0) (2026-11-16)
+
+### Features
 * `McpToolAccessChecker::getPermittedToolNamesForUser()` returns the tools whose permission a given user holds, whoever is logged in, also in a console command.
 * `McpToolScope::$explicitToolNames` grants tools declared with `explicitGrant`, independent of `readToolNames`, so a scope can keep every read tool and add such a tool by name.
 
