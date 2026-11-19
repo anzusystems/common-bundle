@@ -64,6 +64,8 @@ final class IndexHintWalker extends SqlOutputWalker
             ],
         ];
         foreach (self::getTableMetadata($entityManager, $metadata) as $tableMetadata) {
+            // doctrine/orm 3.8 types them with a @phpstan-type alias of ClassMetadata, which PHPStan does not resolve here.
+            /** @var array<array-key, array{columns?: list<string>, fields?: list<string>}> $indexes */
             $indexes = [...$tableMetadata->table['indexes'] ?? [], ...$tableMetadata->table['uniqueConstraints'] ?? []];
             foreach ($indexes as $name => $index) {
                 if (false === is_string($name)) {
