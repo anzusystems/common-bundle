@@ -49,8 +49,9 @@ final class McpToolSchemaCompilerPass implements CompilerPassInterface
         $signatureResolver = new McpToolSignatureResolver();
         $builder = $container->getDefinition($builderId);
         $methodCalls = $builder->getMethodCalls();
-        $rateLimiters = $this->resolveRateLimiters($container);
-        $directWriteToolNames = $this->resolveDirectWriteToolNames($container);
+        $toolDefinitions = $this->resolveToolDefinitions($container);
+        $rateLimiters = $this->resolveRateLimiters($toolDefinitions);
+        $directWriteToolNames = $this->resolveDirectWriteToolNames($toolDefinitions);
         foreach ($methodCalls as $index => [$method, $arguments]) {
             if (self::ADD_TOOL_METHOD !== $method) {
                 continue;
@@ -82,20 +83,28 @@ final class McpToolSchemaCompilerPass implements CompilerPassInterface
     }
 
     /**
-     * McpToolDefinitionsCompilerPass collected the limiters, and McpWriteRateLimiter names the tools of a limiter from
-     * the same definitions, so the description and the error of the limit list the same tools.
-     *
-     * @return array<string, string> tool name => rate limiter name
+     * @return array<string, Definition> tool name => tool definition
      */
-    private function resolveRateLimiters(ContainerBuilder $container): array
+    private function resolveToolDefinitions(ContainerBuilder $container): array
     {
         if (false === $container->hasDefinition(McpToolDefinitions::class)) {
             return [];
         }
-        /** @var array<string, Definition> $definitions */
-        $definitions = $container->getDefinition(McpToolDefinitions::class)
-            ->getArgument(McpToolDefinitionsCompilerPass::DEFINITIONS_ARGUMENT);
 
+        return $container->getDefinition(McpToolDefinitions::class)
+            ->getArgument(McpToolDefinitionsCompilerPass::DEFINITIONS_ARGUMENT);
+    }
+
+    /**
+     * McpToolDefinitionsCompilerPass collected the limiters, and McpWriteRateLimiter names the tools of a limiter from
+     * the same definitions, so the description and the error of the limit list the same tools.
+     *
+     * @param array<string, Definition> $definitions
+     *
+     * @return array<string, string> tool name => rate limiter name
+     */
+    private function resolveRateLimiters(array $definitions): array
+    {
         return array_map(
             static fn (Definition $definition): ?string => $definition->getArgument(McpToolDefinitionsCompilerPass::RATE_LIMITER_ARGUMENT),
             $definitions,
@@ -103,17 +112,12 @@ final class McpToolSchemaCompilerPass implements CompilerPassInterface
     }
 
     /**
+     * @param array<string, Definition> $definitions
+     *
      * @return list<string>
      */
-    private function resolveDirectWriteToolNames(ContainerBuilder $container): array
+    private function resolveDirectWriteToolNames(array $definitions): array
     {
-        if (false === $container->hasDefinition(McpToolDefinitions::class)) {
-            return [];
-        }
-        /** @var array<string, Definition> $definitions */
-        $definitions = $container->getDefinition(McpToolDefinitions::class)
-            ->getArgument(McpToolDefinitionsCompilerPass::DEFINITIONS_ARGUMENT);
-
         return array_filter(
             $definitions,
             static fn (Definition $definition): bool => true === $definition->getArgument(McpToolDefinitionsCompilerPass::DIRECT_WRITE_ARGUMENT),
