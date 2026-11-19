@@ -7,6 +7,8 @@
 * `McpToolDefinitionsCompilerPass` fails the container compilation with a `McpConfigurationException` when a direct write tool is `readOnly`, does not declare `destructive: false` and `idempotent: true`, names no `rateLimiter`, has a preview, or takes an input that implements `McpPreviewHashAwareInterface`.
 * `McpToolDefinition::$directWrite` carries the flag, so a host can mark such tools where a token is created.
 * The description of a direct write tool says that it has no preview and asks for no confirmation.
+
+### Changes
 * An `OptimisticLockException` of a write tool without a preview, a direct write tool or a plain `#[McpTool]` write tool, answers `McpWriteRejectedException::createRecordChanged()` instead of `createPreviewStale()` with an empty tool name.
 
 ## [12.1.0](https://github.com/anzusystems/common-bundle/compare/12.0.1...12.1.0) (2026-11-16)

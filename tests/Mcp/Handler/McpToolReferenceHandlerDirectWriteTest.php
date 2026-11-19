@@ -120,7 +120,7 @@ final class McpToolReferenceHandlerDirectWriteTest extends AbstractMcpToolRefere
         self::assertNull($this->insertedDocuments[0][McpLogger::FIELD_ERROR]);
     }
 
-    public function testFailedCallIsExcludedFromTheAuditLogAndKeepsItsToken(): void
+    public function testFailedCallIsExcludedFromTheAuditLogAndTakesAToken(): void
     {
         $request = new Request();
         AuditLogResourceHelper::excludeFromAuditLogs($request);
