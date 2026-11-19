@@ -9,7 +9,7 @@
 * The description of a direct write tool says that it has no preview and asks for no confirmation.
 
 ### Changes
-* An `OptimisticLockException` of a write tool without a preview, a direct write tool or a plain `#[McpTool]` write tool, answers `McpWriteRejectedException::createRecordChanged()` instead of `createPreviewStale()` with an empty tool name.
+* An `OptimisticLockException` of a direct write tool, the only write tool without a preview, answers `McpWriteRejectedException::createRecordChanged()` instead of `createPreviewStale()` with an empty tool name.
 
 ## [12.1.0](https://github.com/anzusystems/common-bundle/compare/12.0.1...12.1.0) (2026-11-16)
 
