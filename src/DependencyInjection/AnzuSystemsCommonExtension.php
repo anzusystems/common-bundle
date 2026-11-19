@@ -733,7 +733,8 @@ final class AnzuSystemsCommonExtension extends Extension implements PrependExten
 
         $container
             ->getDefinition(McpWriteConfirmation::class)
-            ->replaceArgument('$fallbackLocale', $mcp['confirmation_fallback_locale']);
+            ->replaceArgument('$fallbackLocale', $mcp['confirmation_fallback_locale'])
+            ->replaceArgument('$enabled', $mcp['write_confirmation']);
 
         $container
             ->getDefinition(McpToolErrorResolver::class)

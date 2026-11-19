@@ -32,6 +32,7 @@ infrastructure after a bundle upgrade.
            instructions_file: '%kernel.project_dir%/config/mcp/instructions.md'
            allowed_hosts: '%env(csv:ANZU_MCP_ALLOWED_HOSTS)%'
            pod: '%env(bool:ANZU_MCP_POD)%'
+           write_confirmation: false
            confirmation_fallback_locale: 'sk'
            log_tools_permission: app_log_read
            tool_error_exceptions:
@@ -53,6 +54,7 @@ infrastructure after a bundle upgrade.
    ```
    `instructions_file` is a Markdown file that `McpCompilerPass` reads into the server instructions; it is a container
    resource, so an edit rebuilds the container in dev.
+   `write_confirmation` turns on the question before a write (see "Write confirmation" below), default `false`.
    `confirmation_fallback_locale` is the language of the write confirmation for a user without `AnzuUser::getLocale()`;
    the default `null` uses the default locale of the translator. Set it when `framework.default_locale` is not the
    language of the users: a host that keeps `en` there for its API messages still asks its users in their language.
@@ -92,8 +94,8 @@ infrastructure after a bundle upgrade.
   and configured `tool_error_exceptions` into `CallToolResult`s with `isError: true` (any other exception into one that
   names the `contextId` of the request, logged with the exception), refuses write tools in read-only
   mode, includes a successful write tool call in the audit log, logs every call (with the serialized input as
-  `params`) to the monolog `mcp` channel and to the `mcpLogs` capped collection (see below). It asks the user to confirm
-  a write when the client can answer, see "Write confirmation" below. The tool itself stays a plain invokable service
+  `params`) to the monolog `mcp` channel and to the `mcpLogs` capped collection (see below). With `write_confirmation` it
+  asks the user to confirm a write when the client can answer, see "Write confirmation" below. The tool itself stays a plain invokable service
   with only its own dependencies.
 * `McpWriteToolGuard` — the write grant, read-only mode and one write per request.
 * `McpWriteConfirmation` — when a write asks the user to confirm, how it reads the answer and what the question looks
@@ -486,7 +488,11 @@ added `#[Serialize]` field.
 
 ### Write confirmation
 
-A write tool asks the user to confirm when the client declares form elicitation on revision 2026-07-28
+It is off by default, `write_confirmation: true` turns it on. The Code tab of Claude Desktop declares form elicitation
+on revision 2026-07-28 but never shows the form, so with the question on, none of its writes goes through. Off, every
+client takes the path of a client that is not asked, below.
+
+With `write_confirmation: true` a write tool asks the user to confirm when the client declares form elicitation on revision 2026-07-28
 (`RequestContext::getClientCapabilities()?->elicitationForm`). `McpToolReferenceHandler` does it after the access checks
 and the validation of the input, so a call without the right to write asks nothing:
 

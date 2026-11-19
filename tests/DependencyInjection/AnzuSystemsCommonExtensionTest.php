@@ -118,6 +118,32 @@ final class AnzuSystemsCommonExtensionTest extends TestCase
         ];
     }
 
+    /**
+     * @dataProvider writeConfirmationProvider
+     *
+     * @param array<string, bool> $mcp
+     */
+    public function testWriteConfirmationReachesTheWriteConfirmation(array $mcp, bool $expectedEnabled): void
+    {
+        $container = $this->buildContainer(mcp: $mcp);
+
+        self::assertSame(
+            $expectedEnabled,
+            $container->getDefinition(McpWriteConfirmation::class)->getArgument('$enabled'),
+        );
+    }
+
+    /**
+     * @return array<string, array{array<string, bool>, bool}>
+     */
+    public static function writeConfirmationProvider(): array
+    {
+        return [
+            'off by default' => [[], false],
+            'enabled' => [['write_confirmation' => true], true],
+        ];
+    }
+
     public function testPreviewHashReservationUsesTheCachePoolOfTheRateLimiter(): void
     {
         $container = $this->buildContainer(rateLimiter: ['cache_pool' => self::CACHE_POOL_ID]);

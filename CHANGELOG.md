@@ -1,4 +1,9 @@
-## Unreleased
+## [12.1.1](https://github.com/anzusystems/common-bundle/compare/12.1.0...12.1.1) (2026-11-19)
+
+### Changes
+* The MCP write confirmation is off by default; `anzu_systems_common.mcp.write_confirmation: true` turns it on. The Code tab of Claude Desktop declares form elicitation but never shows the form, so every write of it was refused. Without the question a write still needs the `previewHash` of its preview. A host that relies on the question sets `write_confirmation: true`.
+
+## [12.1.0](https://github.com/anzusystems/common-bundle/compare/12.0.1...12.1.0) (2026-11-16)
 
 ### Features
 * `McpToolAccessChecker::getPermittedToolNamesForUser()` returns the tools whose permission a given user holds, whoever is logged in, also in a console command.
