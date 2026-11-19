@@ -226,6 +226,18 @@ final class McpToolReferenceHandlerConfirmationTest extends AbstractMcpToolRefer
         ];
     }
 
+    public function testDisabledConfirmationIsNeverAsked(): void
+    {
+        $handler = $this->createWriteHandler(writeConfirmation: false);
+
+        $result = $this->callWriteTool($handler, $this->createModernArguments());
+
+        self::assertInstanceOf(CallToolResult::class, $result);
+        self::assertFalse($result->isError);
+        self::assertSame(1, $this->writeRuns);
+        self::assertSame(1, $this->previewRuns);
+    }
+
     public function testHandshakeClientIsNeverAsked(): void
     {
         $handler = $this->createWriteHandler();
