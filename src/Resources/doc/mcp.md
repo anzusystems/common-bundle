@@ -389,8 +389,8 @@ and fails the container compilation with a `LogicException` when
 * a direct write tool has a preview (`McpConfigurationException::createPreviewOfDirectWrite()`);
 * the response class of a preview does not implement `McpWritePreviewInterface`
   (`McpConfigurationException::createPreviewResponseWithoutConfirmation()`);
-* the input class of a write tool does not implement `McpPreviewHashAwareInterface` or does not extend the input class
-  of its preview (`McpConfigurationException::createWriteInputNotPreviewInput()`).
+* the input class of a write tool with a preview does not implement `McpPreviewHashAwareInterface` or does not extend
+  the input class of its preview (`McpConfigurationException::createWriteInputNotPreviewInput()`).
 
 A tool that is not declared by `#[McpTool]` on a tagged `mcp.tool` service (e.g. one registered by an McpBundle app)
 is unknown to these checks. It has no permission and neither has a plain `#[McpTool]`, so `tools/list` hides both and

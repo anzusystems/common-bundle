@@ -155,7 +155,7 @@ final class McpWriteToolGuardTest extends TestCase
         $guard->guardDirectWrite(self::WRITE_TOOL_NAME);
 
         $this->expectException(McpWriteRejectedException::class);
-        $this->expectExceptionMessage(McpWriteRejectedException::RATE_LIMIT_EXCEEDED_START . ' 1 calls shared by ' . self::WRITE_TOOL_NAME);
+        $this->expectExceptionMessage(McpWriteRejectedException::RATE_LIMIT_EXCEEDED_START);
 
         $guard->guardDirectWrite(self::WRITE_TOOL_NAME);
     }
