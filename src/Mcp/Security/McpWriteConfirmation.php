@@ -30,12 +30,13 @@ final readonly class McpWriteConfirmation
         private TranslatorInterface $translator,
         private CurrentAnzuUserProvider $currentUserProvider,
         private ?string $fallbackLocale = null,
+        private bool $enabled = false,
     ) {
     }
 
     public function isSupportedBy(RequestContext $context): bool
     {
-        return true === $context->getClientCapabilities()?->elicitationForm;
+        return $this->enabled && true === $context->getClientCapabilities()?->elicitationForm;
     }
 
     public function isAnswered(RequestContext $context, McpPreviewHashAwareInterface $input): bool

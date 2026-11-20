@@ -227,6 +227,7 @@ abstract class AbstractMcpToolReferenceHandlerTestCase extends TestCase
         ?string $userLocale = null,
         ?string $fallbackLocale = null,
         LoggerInterface $logger = new NullLogger(),
+        bool $writeConfirmation = true,
     ): McpToolReferenceHandler {
         return $this->createHandler(
             tool: new ExampleWriteTool(function (): McpLogsByContextResponse {
@@ -253,6 +254,7 @@ abstract class AbstractMcpToolReferenceHandlerTestCase extends TestCase
             userLocale: $userLocale,
             fallbackLocale: $fallbackLocale,
             logger: $logger,
+            writeConfirmation: $writeConfirmation,
         );
     }
 
@@ -363,6 +365,7 @@ abstract class AbstractMcpToolReferenceHandlerTestCase extends TestCase
         LoggerInterface $logger = new NullLogger(),
         bool $directWrite = false,
         ?RateLimiterFactoryInterface $rateLimiter = null,
+        bool $writeConfirmation = true,
     ): McpToolReferenceHandler {
         $this->insertedDocuments = [];
 
@@ -439,6 +442,7 @@ abstract class AbstractMcpToolReferenceHandlerTestCase extends TestCase
                     translator: $this->createTranslator(),
                     currentUserProvider: $currentUserProvider,
                     fallbackLocale: $fallbackLocale,
+                    enabled: $writeConfirmation,
                 ),
                 writeRateLimiter: new McpWriteRateLimiter(rateLimiters: new ServiceLocator($rateLimiters), toolDefinitions: $toolDefinitions, currentUserProvider: $currentUserProvider),
                 previewHashReservation: new McpPreviewHashReservation(new ArrayAdapter(), $currentUserProvider),

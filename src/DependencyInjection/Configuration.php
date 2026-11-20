@@ -350,6 +350,8 @@ final class Configuration implements ConfigurationInterface
                 ->variableNode('allowed_hosts')->defaultValue([])->end()
                 // prepend() processes this config before env placeholders exist, so a booleanNode refuses %env(bool:…)%.
                 ->scalarNode('pod')->defaultFalse()->end()
+                // Off by default: the Code tab of Claude Desktop declares form elicitation but never shows the form.
+                ->booleanNode('write_confirmation')->defaultFalse()->end()
                 ->scalarNode('confirmation_fallback_locale')->defaultNull()->end()
                 ->arrayNode('tool_error_exceptions')
                     ->useAttributeAsKey('name')

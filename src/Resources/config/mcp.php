@@ -142,6 +142,7 @@ return static function (ContainerConfigurator $configurator): void {
         ->arg('$translator', service(TranslatorInterface::class))
         ->arg('$currentUserProvider', service(CurrentAnzuUserProvider::class))
         ->arg('$fallbackLocale', null)
+        ->arg('$enabled', false)
     ;
 
     $services->set(McpPreviewHashFactory::class)
