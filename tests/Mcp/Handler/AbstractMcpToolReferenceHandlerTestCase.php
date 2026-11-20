@@ -24,6 +24,7 @@ use AnzuSystems\CommonBundle\Tests\Data\Mcp\McpToolDefinitionsFactory;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Model\Request\ExampleWritePreviewRequest;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Model\Response\ExampleWritePreviewResponse;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Security\StaticMcpToolScopeProvider;
+use AnzuSystems\CommonBundle\Tests\Data\Mcp\Tool\DirectWriteExampleTool;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Tool\ExampleContextTool;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Tool\ExampleErrorResultTool;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Tool\ExampleErrorResultWithoutKeyTool;
@@ -61,6 +62,7 @@ use Symfony\Bundle\SecurityBundle\Security;
 use Symfony\Component\Cache\Adapter\ArrayAdapter;
 use Symfony\Component\DependencyInjection\ServiceLocator;
 use Symfony\Component\HttpFoundation\RequestStack;
+use Symfony\Component\RateLimiter\RateLimiterFactoryInterface;
 use Symfony\Component\Validator\Validation;
 use Symfony\Contracts\Translation\TranslatorInterface;
 use Throwable;
@@ -94,6 +96,7 @@ abstract class AbstractMcpToolReferenceHandlerTestCase extends TestCase
     protected const string SESSION_ARGUMENT = '_session';
     protected const string REQUEST_ARGUMENT = '_request';
     protected const string LOCALE_SEPARATOR = '|';
+    protected const string RATE_LIMITER = 'example_write';
     protected const array WRITE_ARGUMENTS = [
         self::TITLE_FIELD => self::TITLE,
         self::HASH_FIELD => self::PREVIEW_HASH,
@@ -107,6 +110,7 @@ abstract class AbstractMcpToolReferenceHandlerTestCase extends TestCase
         ExampleResultWriteTool::NAME,
         ExampleWriteTool::NAME,
         UnserializableResponseWriteTool::NAME,
+        DirectWriteExampleTool::NAME,
     ];
 
     protected array $insertedDocuments = [];
@@ -359,6 +363,8 @@ abstract class AbstractMcpToolReferenceHandlerTestCase extends TestCase
         ?string $userLocale = null,
         ?string $fallbackLocale = null,
         LoggerInterface $logger = new NullLogger(),
+        bool $directWrite = false,
+        ?RateLimiterFactoryInterface $rateLimiter = null,
         bool $writeConfirmation = true,
     ): McpToolReferenceHandler {
         $this->insertedDocuments = [];
@@ -404,11 +410,19 @@ abstract class AbstractMcpToolReferenceHandlerTestCase extends TestCase
             $services[$previewTool::class] = static fn (): object => $previewTool;
             $toolSignatures[$previewTool::NAME] = new McpToolSignatureResolver()->resolve($previewTool::class);
         }
+        $rateLimiters = [];
+        $toolRateLimiters = [];
+        if ($rateLimiter instanceof RateLimiterFactoryInterface) {
+            $rateLimiters[self::RATE_LIMITER] = static fn (): RateLimiterFactoryInterface => $rateLimiter;
+            $toolRateLimiters[$tool::NAME] = self::RATE_LIMITER;
+        }
         $toolDefinitions = McpToolDefinitionsFactory::create(
             toolPermissions: $toolPermissions,
             readOnlyToolNames: $readOnlyToolNames,
             writeToolNamesByPreview: $writeToolNamesByPreview,
+            toolRateLimiters: $toolRateLimiters,
             toolSignatures: array_filter($toolSignatures),
+            directWriteToolNames: $directWrite ? [$tool::NAME] : [],
         );
         $toolAccessChecker = new McpToolAccessChecker(
             toolDefinitions: $toolDefinitions,
@@ -430,7 +444,7 @@ abstract class AbstractMcpToolReferenceHandlerTestCase extends TestCase
                     fallbackLocale: $fallbackLocale,
                     enabled: $writeConfirmation,
                 ),
-                writeRateLimiter: new McpWriteRateLimiter(rateLimiters: new ServiceLocator([]), toolDefinitions: $toolDefinitions, currentUserProvider: $currentUserProvider),
+                writeRateLimiter: new McpWriteRateLimiter(rateLimiters: new ServiceLocator($rateLimiters), toolDefinitions: $toolDefinitions, currentUserProvider: $currentUserProvider),
                 previewHashReservation: new McpPreviewHashReservation(new ArrayAdapter(), $currentUserProvider),
             ),
             toolDefinitions: $toolDefinitions,

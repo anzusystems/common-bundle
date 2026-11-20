@@ -1,3 +1,16 @@
+## Unreleased
+
+### Features
+* `#[AsMcpTool(directWrite: true)]` declares a write tool for a small, idempotent and reversible change of state, e.g. taking or releasing a short-lived edit lock: it has no preview, no `previewHash` and asks for no confirmation, one call does it.
+* A direct write tool stays a write tool: a token gets it only by name, read-only mode refuses it, it counts as the one write of an HTTP request, and a successful call reaches the audit log.
+* A direct write tool takes one token of its `rateLimiter` before it runs, also when the tool then refuses the call.
+* `McpToolDefinitionsCompilerPass` fails the container compilation with a `McpConfigurationException` when a direct write tool is `readOnly`, does not declare `destructive: false` and `idempotent: true`, names no `rateLimiter`, has a preview, or takes an input that implements `McpPreviewHashAwareInterface`.
+* `McpToolDefinition::$directWrite` carries the flag, so a host can mark such tools where a token is created.
+* The description of a direct write tool says that it has no preview and asks for no confirmation.
+
+### Changes
+* An `OptimisticLockException` of a direct write tool, the only write tool without a preview, answers `McpWriteRejectedException::createRecordChanged()` instead of `createPreviewStale()` with an empty tool name.
+
 ## [12.1.1](https://github.com/anzusystems/common-bundle/compare/12.1.0...12.1.1) (2026-11-19)
 
 ### Changes

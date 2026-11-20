@@ -18,6 +18,7 @@ final class McpToolDefinitionsFactory
      * @param array<string, string> $toolRateLimiters
      * @param array<string, McpToolSignature> $toolSignatures
      * @param list<string> $explicitGrantToolNames
+     * @param list<string> $directWriteToolNames
      */
     public static function create(
         array $toolPermissions = [],
@@ -27,6 +28,7 @@ final class McpToolDefinitionsFactory
         array $toolRateLimiters = [],
         array $toolSignatures = [],
         array $explicitGrantToolNames = [],
+        array $directWriteToolNames = [],
     ): McpToolDefinitions {
         $previewToolNames = array_flip($writeToolNamesByPreview);
         $toolNames = array_unique([
@@ -48,6 +50,7 @@ final class McpToolDefinitionsFactory
                 rateLimiter: $toolRateLimiters[$toolName] ?? null,
                 signature: $toolSignatures[$toolName] ?? null,
                 explicitGrant: in_array(needle: $toolName, haystack: $explicitGrantToolNames, strict: true),
+                directWrite: in_array(needle: $toolName, haystack: $directWriteToolNames, strict: true),
             );
         }
 

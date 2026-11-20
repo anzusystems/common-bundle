@@ -80,6 +80,11 @@ final readonly class McpWriteToolGuard
         return null;
     }
 
+    public function guardDirectWrite(string $toolName): void
+    {
+        $this->writeRateLimiter->consume($toolName);
+    }
+
     public function releasePreviewHash(McpPreviewHashAwareInterface $input): void
     {
         $this->previewHashReservation->release($input);
