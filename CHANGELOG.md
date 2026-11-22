@@ -1,3 +1,8 @@
+## [12.1.2](https://github.com/anzusystems/common-bundle/compare/12.1.1...12.1.2) (2026-11-22)
+
+### Changes
+* `ResourceLocker::lock()` returns at once for a name this process still holds. Before, a second lock of the same name in one process waited for its own TTL (60 s by default). One `unLock()` releases the name for every caller in the process.
+
 ## [12.1.1](https://github.com/anzusystems/common-bundle/compare/12.1.0...12.1.1) (2026-11-19)
 
 ### Changes
