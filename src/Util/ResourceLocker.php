@@ -31,12 +31,15 @@ final class ResourceLocker
     }
 
     /**
-     * A name this process still holds is not locked again, because a second lock would wait for its own TTL. One
-     * unLock() then releases it for every caller in this process.
+     * A name this process still holds is not locked again, because a second lock would wait for its own TTL; its TTL
+     * is set to $ttl again instead. One unLock() then releases it for every caller in this process.
      */
     public function lock(BaseIdentifiableInterface|string $resource, bool $blocking = true, float $ttl = self::DEFAULT_TTL): bool
     {
-        if (true === ($this->locks[$this->getLockName($resource)] ?? null)?->isAcquired()) {
+        $held = $this->locks[$this->getLockName($resource)] ?? null;
+        if (true === $held?->isAcquired()) {
+            $held->refresh($ttl);
+
             return true;
         }
 

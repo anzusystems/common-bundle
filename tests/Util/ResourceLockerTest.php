@@ -52,6 +52,15 @@ final class ResourceLockerTest extends AnzuKernelTestCase
         self::assertSame(0, $this->redis->exists(ResourceLocker::REDIS_LOCK_PREFIX . self::RESOURCE));
     }
 
+    public function testLockOfANameThisProcessHoldsSetsTheGivenTtlAgain(): void
+    {
+        $this->resourceLocker->lock(self::RESOURCE, blocking: false);
+
+        $this->resourceLocker->lock(resource: self::RESOURCE, blocking: false, ttl: self::GIVEN_TTL);
+
+        $this->assertRemainingTtl(self::GIVEN_TTL);
+    }
+
     private function assertRemainingTtl(float $ttl): void
     {
         $remaining = $this->redis->pttl(ResourceLocker::REDIS_LOCK_PREFIX . self::RESOURCE);
