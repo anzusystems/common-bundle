@@ -61,6 +61,15 @@ final class ResourceLockerTest extends AnzuKernelTestCase
         $this->assertRemainingTtl(self::GIVEN_TTL);
     }
 
+    public function testLockOfANameWhoseHeldLockExpiredMeanwhileTakesItAgain(): void
+    {
+        $this->resourceLocker->lock(self::RESOURCE, blocking: false);
+        $this->redis->del(ResourceLocker::REDIS_LOCK_PREFIX . self::RESOURCE);
+
+        self::assertTrue($this->resourceLocker->lock(self::RESOURCE, blocking: false));
+        $this->assertRemainingTtl(ResourceLocker::DEFAULT_TTL);
+    }
+
     private function assertRemainingTtl(float $ttl): void
     {
         $remaining = $this->redis->pttl(ResourceLocker::REDIS_LOCK_PREFIX . self::RESOURCE);

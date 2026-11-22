@@ -8,6 +8,7 @@ use AnzuSystems\Contracts\Entity\Interfaces\BaseIdentifiableInterface;
 use Doctrine\ORM\EntityManagerInterface;
 use Redis;
 use RuntimeException;
+use Symfony\Component\Lock\Exception\LockConflictedException;
 use Symfony\Component\Lock\LockFactory;
 use Symfony\Component\Lock\LockInterface;
 use Symfony\Component\Lock\Store\RedisStore;
@@ -36,11 +37,16 @@ final class ResourceLocker
      */
     public function lock(BaseIdentifiableInterface|string $resource, bool $blocking = true, float $ttl = self::DEFAULT_TTL): bool
     {
-        $held = $this->locks[$this->getLockName($resource)] ?? null;
-        if (true === $held?->isAcquired()) {
-            $held->refresh($ttl);
+        $lockName = $this->getLockName($resource);
+        $held = $this->locks[$lockName] ?? null;
+        if (null !== $held) {
+            try {
+                $held->refresh($ttl);
 
-            return true;
+                return true;
+            } catch (LockConflictedException) {
+                unset($this->locks[$lockName]);
+            }
         }
 
         $lock = $this->createLock($resource, $ttl);
@@ -56,7 +62,7 @@ final class ResourceLocker
         if ($resourceDirty && $resource instanceof BaseIdentifiableInterface) {
             $this->entityManager->refresh($resource);
         }
-        $this->locks[$this->getLockName($resource)] = $lock;
+        $this->locks[$lockName] = $lock;
 
         return $acquired;
     }
