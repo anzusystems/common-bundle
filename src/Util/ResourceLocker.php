@@ -8,6 +8,7 @@ use AnzuSystems\Contracts\Entity\Interfaces\BaseIdentifiableInterface;
 use Doctrine\ORM\EntityManagerInterface;
 use Redis;
 use RuntimeException;
+use Symfony\Component\Lock\Exception\LockConflictedException;
 use Symfony\Component\Lock\LockFactory;
 use Symfony\Component\Lock\LockInterface;
 use Symfony\Component\Lock\Store\RedisStore;
@@ -30,8 +31,24 @@ final class ResourceLocker
     ) {
     }
 
+    /**
+     * A name this process still holds is not locked again, because a second lock would wait for its own TTL; its TTL
+     * is set to $ttl again instead. One unLock() then releases it for every caller in this process.
+     */
     public function lock(BaseIdentifiableInterface|string $resource, bool $blocking = true, float $ttl = self::DEFAULT_TTL): bool
     {
+        $lockName = $this->getLockName($resource);
+        $held = $this->locks[$lockName] ?? null;
+        if (null !== $held) {
+            try {
+                $held->refresh($ttl);
+
+                return true;
+            } catch (LockConflictedException) {
+                unset($this->locks[$lockName]);
+            }
+        }
+
         $lock = $this->createLock($resource, $ttl);
         $acquired = $lock->acquire();
         $resourceDirty = false;
@@ -45,7 +62,7 @@ final class ResourceLocker
         if ($resourceDirty && $resource instanceof BaseIdentifiableInterface) {
             $this->entityManager->refresh($resource);
         }
-        $this->locks[$this->getLockName($resource)] = $lock;
+        $this->locks[$lockName] = $lock;
 
         return $acquired;
     }
