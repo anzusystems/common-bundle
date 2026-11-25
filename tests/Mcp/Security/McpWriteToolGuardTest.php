@@ -149,6 +149,17 @@ final class McpWriteToolGuardTest extends TestCase
         $this->addToAssertionCount(1);
     }
 
+    public function testDirectWriteTakesATokenOfTheWriteLimit(): void
+    {
+        $guard = $this->createGuard(writeLimit: 1);
+        $guard->guardDirectWrite(self::WRITE_TOOL_NAME);
+
+        $this->expectException(McpWriteRejectedException::class);
+        $this->expectExceptionMessage(McpWriteRejectedException::RATE_LIMIT_EXCEEDED_START);
+
+        $guard->guardDirectWrite(self::WRITE_TOOL_NAME);
+    }
+
     private function guardPreview(McpWriteToolGuard $guard, string $previewHash): ?InputRequiredResult
     {
         $preview = new ExampleWritePreviewResponse(self::PREVIEW_TITLE);

@@ -15,6 +15,7 @@ final readonly class McpToolDefinition
         public ?string $rateLimiter = null,
         public ?McpToolSignature $signature = null,
         public bool $explicitGrant = false,
+        public bool $directWrite = false,
     ) {
     }
 }

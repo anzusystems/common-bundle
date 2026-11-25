@@ -17,6 +17,9 @@ use AnzuSystems\CommonBundle\Mcp\Model\Response\McpAppLogSearchResponse;
 use AnzuSystems\CommonBundle\Mcp\Tool\SearchAppLogsTool;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Model\Request\ExtraFieldExampleWriteRequest;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Tool\ConflictingExampleTool;
+use AnzuSystems\CommonBundle\Tests\Data\Mcp\Tool\DestructiveDirectWriteExampleTool;
+use AnzuSystems\CommonBundle\Tests\Data\Mcp\Tool\DirectWriteExamplePreviewTool;
+use AnzuSystems\CommonBundle\Tests\Data\Mcp\Tool\DirectWriteExampleTool;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Tool\ExamplePermissionTool;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Tool\ExamplePreviewTool;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Tool\ExampleSearchTool;
@@ -28,11 +31,13 @@ use AnzuSystems\CommonBundle\Tests\Data\Mcp\Tool\ExampleWriteTool;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Tool\ExplicitGrantExampleTool;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Tool\ExtraFieldExamplePreviewTool;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Tool\ExtraFieldExampleTool;
+use AnzuSystems\CommonBundle\Tests\Data\Mcp\Tool\HashInputDirectWriteExampleTool;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Tool\InvalidCategoryExampleTool;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Tool\InvalidNameExampleTool;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Tool\NoHashInputExamplePreviewTool;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Tool\NoHashInputExampleTool;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Tool\NoInputExamplePreviewTool;
+use AnzuSystems\CommonBundle\Tests\Data\Mcp\Tool\NotIdempotentDirectWriteExampleTool;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Tool\OtherCategoryExamplePreviewTool;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Tool\OtherInputExamplePreviewTool;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Tool\PermissionExamplePreviewTool;
@@ -41,9 +46,11 @@ use AnzuSystems\CommonBundle\Tests\Data\Mcp\Tool\PlainWriteExampleTool;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Tool\RateLimitedExamplePreviewTool;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Tool\RateLimitedExampleTool;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Tool\RateLimitedReadExampleTool;
+use AnzuSystems\CommonBundle\Tests\Data\Mcp\Tool\ReadOnlyDirectWriteExampleTool;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Tool\ReadToolPreviewExampleTool;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Tool\ResultExamplePreviewTool;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Tool\SecondExamplePreviewTool;
+use AnzuSystems\CommonBundle\Tests\Data\Mcp\Tool\UnlimitedDirectWriteExampleTool;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Tool\WithoutInputWriteExamplePreviewTool;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Tool\WritablePreviewExampleTool;
 use LogicException;
@@ -63,6 +70,7 @@ final class McpToolDefinitionsCompilerPassTest extends TestCase
     private const string RATE_LIMITER_ARGUMENT = '$rateLimiter';
     private const string SIGNATURE_ARGUMENT = '$signature';
     private const string EXPLICIT_GRANT_ARGUMENT = '$explicitGrant';
+    private const string DIRECT_WRITE_ARGUMENT = '$directWrite';
     private const string TOOL_PERMISSION = 'app_log_read';
     private const string RATE_LIMITER_ID = 'limiter.example_write';
     private const string TOOL_TAG_METHOD = 'method';
@@ -159,6 +167,22 @@ final class McpToolDefinitionsCompilerPassTest extends TestCase
             [ExamplePermissionTool::NAME => false, ExplicitGrantExampleTool::NAME => true],
             $this->getDefinitionField($container, self::EXPLICIT_GRANT_ARGUMENT),
         );
+    }
+
+    public function testDirectWriteReachesItsDefinition(): void
+    {
+        $container = $this->createMcpContainer();
+        $container->register(self::RATE_LIMITER_ID);
+        $this->registerTools($container, [ExamplePermissionTool::class, DirectWriteExampleTool::class]);
+
+        new McpToolDefinitionsCompilerPass()
+            ->process($container);
+
+        self::assertSame(
+            [ExamplePermissionTool::NAME => false, DirectWriteExampleTool::NAME => true],
+            $this->getDefinitionField($container, self::DIRECT_WRITE_ARGUMENT),
+        );
+        self::assertNull($this->getDefinitionField($container, self::PREVIEW_TOOL_ARGUMENT)[DirectWriteExampleTool::NAME]);
     }
 
     public function testSignatureOfAnAsMcpToolReachesItsDefinition(): void
@@ -346,6 +370,30 @@ final class McpToolDefinitionsCompilerPassTest extends TestCase
                     previewToolName: ExtraFieldExamplePreviewTool::NAME,
                     fields: [ExtraFieldExampleWriteRequest::EXTRA_FIELD],
                 )->getMessage(),
+            ],
+            'direct write that is read only' => [
+                [ReadOnlyDirectWriteExampleTool::class],
+                McpConfigurationException::createDirectWriteReadTool(ReadOnlyDirectWriteExampleTool::NAME)->getMessage(),
+            ],
+            'direct write that is destructive' => [
+                [DestructiveDirectWriteExampleTool::class],
+                McpConfigurationException::createDirectWriteNotSafe(DestructiveDirectWriteExampleTool::NAME)->getMessage(),
+            ],
+            'direct write that is not idempotent' => [
+                [NotIdempotentDirectWriteExampleTool::class],
+                McpConfigurationException::createDirectWriteNotSafe(NotIdempotentDirectWriteExampleTool::NAME)->getMessage(),
+            ],
+            'direct write without a rate limiter' => [
+                [UnlimitedDirectWriteExampleTool::class],
+                McpConfigurationException::createDirectWriteWithoutRateLimiter(UnlimitedDirectWriteExampleTool::NAME)->getMessage(),
+            ],
+            'direct write with a previewHash input' => [
+                [HashInputDirectWriteExampleTool::class],
+                McpConfigurationException::createDirectWriteWithPreviewHash(HashInputDirectWriteExampleTool::NAME)->getMessage(),
+            ],
+            'preview of a direct write' => [
+                [DirectWriteExampleTool::class, DirectWriteExamplePreviewTool::class],
+                McpConfigurationException::createPreviewOfDirectWrite(DirectWriteExamplePreviewTool::NAME, DirectWriteExampleTool::NAME)->getMessage(),
             ],
         ];
     }

@@ -53,4 +53,9 @@ final class McpWriteRejectedException extends McpToolCallRejectedException
     {
         return new self(sprintf('The arguments or the saved data differ from what %1$s returned this previewHash for: call %1$s again, show the user the result and get their consent again before you retry with the new previewHash.', $previewToolName));
     }
+
+    public static function createRecordChanged(string $toolName): self
+    {
+        return new self(sprintf('The record changed while "%s" ran, so nothing changed: call it again.', $toolName));
+    }
 }

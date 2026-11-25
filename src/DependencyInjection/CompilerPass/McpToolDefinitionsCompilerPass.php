@@ -34,6 +34,7 @@ final class McpToolDefinitionsCompilerPass implements CompilerPassInterface
     public const string CATEGORY_PATTERN = '/^[a-z][a-zA-Z0-9]*$/';
     public const string DEFINITIONS_ARGUMENT = '$definitions';
     public const string RATE_LIMITER_ARGUMENT = '$rateLimiter';
+    public const string DIRECT_WRITE_ARGUMENT = '$directWrite';
 
     private const string RATE_LIMITER_ID_FORMAT = 'limiter.%s';
 
@@ -56,6 +57,7 @@ final class McpToolDefinitionsCompilerPass implements CompilerPassInterface
             writeToolNamesByPreview: $writeToolNamesByPreview,
         );
         $this->assertToolsHavePermission($toolsByName, $toolPermissions);
+        $this->assertDirectWriteTools($toolsByName, $readOnlyToolNames);
         $toolRateLimiters = $this->configureWriteRateLimiter(container: $container, toolsByName: $toolsByName, readOnlyToolNames: $readOnlyToolNames);
         $container
             ->getDefinition(McpToolDefinitions::class)
@@ -97,6 +99,7 @@ final class McpToolDefinitionsCompilerPass implements CompilerPassInterface
                 self::RATE_LIMITER_ARGUMENT => $toolRateLimiters[$toolName] ?? null,
                 '$signature' => $tool instanceof AsMcpTool ? $this->createSignatureDefinition($tools) : null,
                 '$explicitGrant' => $tool instanceof AsMcpTool && $tool->explicitGrant,
+                self::DIRECT_WRITE_ARGUMENT => $tool instanceof AsMcpTool && $tool->directWrite,
             ]);
         }
 
@@ -307,6 +310,9 @@ final class McpToolDefinitionsCompilerPass implements CompilerPassInterface
         if (false === $writeTool instanceof AsMcpTool || in_array(needle: $writeToolName, haystack: $readOnlyToolNames, strict: true)) {
             throw McpConfigurationException::createPreviewOfReadTool($previewName, $writeToolName);
         }
+        if ($writeTool->directWrite) {
+            throw McpConfigurationException::createPreviewOfDirectWrite($previewName, $writeToolName);
+        }
         if (false === in_array(needle: $previewName, haystack: $readOnlyToolNames, strict: true)) {
             throw McpConfigurationException::createWritablePreview($previewName, $writeToolName);
         }
@@ -326,7 +332,12 @@ final class McpToolDefinitionsCompilerPass implements CompilerPassInterface
     private function assertWriteTools(array $toolsByName, array $readOnlyToolNames, array $writeToolNamesByPreview): void
     {
         foreach ($toolsByName as $toolName => $tools) {
-            if (false === array_first($tools) instanceof AsMcpTool || in_array(needle: $toolName, haystack: $readOnlyToolNames, strict: true)) {
+            $tool = array_first($tools);
+            if (
+                false === $tool instanceof AsMcpTool
+                || $tool->directWrite
+                || in_array(needle: $toolName, haystack: $readOnlyToolNames, strict: true)
+            ) {
                 continue;
             }
             $previewName = array_search(needle: $toolName, haystack: $writeToolNamesByPreview, strict: true);
@@ -339,6 +350,34 @@ final class McpToolDefinitionsCompilerPass implements CompilerPassInterface
                 signature: $this->resolveToolSignature($tools),
                 previewSignature: $this->resolveToolSignature($toolsByName[$previewName]),
             );
+        }
+    }
+
+    /**
+     * @param array<string, array<string, McpTool>> $toolsByName
+     * @param list<string> $readOnlyToolNames
+     */
+    private function assertDirectWriteTools(array $toolsByName, array $readOnlyToolNames): void
+    {
+        foreach ($toolsByName as $toolName => $tools) {
+            $tool = array_first($tools);
+            if (false === $tool instanceof AsMcpTool || false === $tool->directWrite) {
+                continue;
+            }
+            if (in_array(needle: $toolName, haystack: $readOnlyToolNames, strict: true)) {
+                throw McpConfigurationException::createDirectWriteReadTool($toolName);
+            }
+            if (false !== $tool->annotations?->destructiveHint || true !== $tool->annotations->idempotentHint) {
+                throw McpConfigurationException::createDirectWriteNotSafe($toolName);
+            }
+            if (null === $tool->rateLimiter) {
+                throw McpConfigurationException::createDirectWriteWithoutRateLimiter($toolName);
+            }
+            $inputClass = $this->resolveToolSignature($tools)
+                ->inputClass;
+            if (is_string($inputClass) && is_a(object_or_class: $inputClass, class: McpPreviewHashAwareInterface::class, allow_string: true)) {
+                throw McpConfigurationException::createDirectWriteWithPreviewHash($toolName);
+            }
         }
     }
 

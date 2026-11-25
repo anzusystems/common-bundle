@@ -16,6 +16,7 @@ use AnzuSystems\CommonBundle\Mcp\Model\McpToolDefinition;
 use AnzuSystems\CommonBundle\Mcp\Model\Request\SearchAppLogsRequest;
 use AnzuSystems\CommonBundle\Mcp\Model\Response\McpLogsByContextResponse;
 use AnzuSystems\CommonBundle\Mcp\Resolver\McpToolSignatureResolver;
+use AnzuSystems\CommonBundle\Tests\Data\Mcp\Tool\DirectWriteExampleTool;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Tool\ExampleContextTool;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Tool\ExampleSearchTool;
 use AnzuSystems\CommonBundle\Tests\Data\Mcp\Tool\ExampleWithoutInputTool;
@@ -48,6 +49,8 @@ final class McpToolSchemaCompilerPassTest extends TestCase
     ];
     private const int DESCRIPTION_ARGUMENT = 3;
     private const int INPUT_SCHEMA_ARGUMENT = 5;
+    private const string WRITE_LIMIT_SENTENCE = 'Writes through this tool have a limit per user.';
+    private const string DIRECT_WRITE_SENTENCE = 'It changes the state at once: it has no preview and asks for no confirmation.';
 
     /**
      * @dataProvider validSignatureProvider
@@ -101,9 +104,47 @@ final class McpToolSchemaCompilerPassTest extends TestCase
             ->process($container);
 
         self::assertStringContainsString(
-            'Writes through this tool have a limit per user.',
+            self::WRITE_LIMIT_SENTENCE,
             $this->getAddToolArguments($container)[self::DESCRIPTION_ARGUMENT],
         );
+    }
+
+    /**
+     * @dataProvider directWriteProvider
+     */
+    public function testDirectWriteIsNamedInTheDescription(bool $directWrite, string $expectedDescription): void
+    {
+        $container = $this->createContainer(DirectWriteExampleTool::class, DirectWriteExampleTool::NAME);
+        $this->registerRateLimitedTools(
+            container: $container,
+            toolNames: [DirectWriteExampleTool::NAME],
+            directWriteToolNames: $directWrite ? [DirectWriteExampleTool::NAME] : [],
+        );
+
+        new McpToolSchemaCompilerPass()
+            ->process($container);
+
+        self::assertStringStartsWith(
+            $expectedDescription,
+            $this->getAddToolArguments($container)[self::DESCRIPTION_ARGUMENT],
+        );
+    }
+
+    /**
+     * @return array<string, array{bool, string}>
+     */
+    public static function directWriteProvider(): array
+    {
+        return [
+            'direct write' => [
+                true,
+                implode(PHP_EOL . PHP_EOL, [self::DESCRIPTION, self::DIRECT_WRITE_SENTENCE, self::WRITE_LIMIT_SENTENCE]) . PHP_EOL . PHP_EOL,
+            ],
+            'write tool that is not a direct write' => [
+                false,
+                implode(PHP_EOL . PHP_EOL, [self::DESCRIPTION, self::WRITE_LIMIT_SENTENCE]) . PHP_EOL . PHP_EOL,
+            ],
+        ];
     }
 
     public function testToolsSharingALimiterNameEachOther(): void
@@ -267,14 +308,19 @@ final class McpToolSchemaCompilerPassTest extends TestCase
 
     /**
      * @param list<string> $toolNames
+     * @param list<string> $directWriteToolNames
      */
-    private function registerRateLimitedTools(ContainerBuilder $container, array $toolNames): void
+    private function registerRateLimitedTools(ContainerBuilder $container, array $toolNames, array $directWriteToolNames = []): void
     {
+        $definitions = [];
+        foreach ($toolNames as $toolName) {
+            $definitions[$toolName] = new Definition(McpToolDefinition::class, [
+                McpToolDefinitionsCompilerPass::RATE_LIMITER_ARGUMENT => RateLimitedExampleTool::RATE_LIMITER,
+                McpToolDefinitionsCompilerPass::DIRECT_WRITE_ARGUMENT => in_array(needle: $toolName, haystack: $directWriteToolNames, strict: true),
+            ]);
+        }
         $container->setDefinition(McpToolDefinitions::class, new Definition(McpToolDefinitions::class, [
-            McpToolDefinitionsCompilerPass::DEFINITIONS_ARGUMENT => array_fill_keys(
-                $toolNames,
-                new Definition(McpToolDefinition::class, [McpToolDefinitionsCompilerPass::RATE_LIMITER_ARGUMENT => RateLimitedExampleTool::RATE_LIMITER]),
-            ),
+            McpToolDefinitionsCompilerPass::DEFINITIONS_ARGUMENT => $definitions,
         ]));
     }
 

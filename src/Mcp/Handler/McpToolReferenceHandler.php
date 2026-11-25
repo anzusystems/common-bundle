@@ -169,6 +169,10 @@ final readonly class McpToolReferenceHandler implements ReferenceHandlerInterfac
     {
         $previewToolName = $this->toolDefinitions->getPreviewToolName($toolName);
         if (null === $previewToolName) {
+            if (true === $this->toolDefinitions->find($toolName)?->directWrite) {
+                $this->writeToolGuard->guardDirectWrite($toolName);
+            }
+
             return null;
         }
         if (false === $input instanceof McpPreviewHashAwareInterface) {
@@ -298,7 +302,11 @@ final readonly class McpToolReferenceHandler implements ReferenceHandlerInterfac
         } catch (Throwable $exception) {
             $this->revertFailedWrite($input);
             if ($exception instanceof OptimisticLockException) {
-                throw McpWriteRejectedException::createPreviewStale((string) $this->toolDefinitions->getPreviewToolName($toolName));
+                $previewToolName = $this->toolDefinitions->getPreviewToolName($toolName);
+
+                throw is_string($previewToolName)
+                    ? McpWriteRejectedException::createPreviewStale($previewToolName)
+                    : McpWriteRejectedException::createRecordChanged($toolName);
             }
 
             throw $exception;
