@@ -10,6 +10,7 @@
 
 ### Changes
 * An `OptimisticLockException` of a direct write tool, the only write tool without a preview, answers `McpWriteRejectedException::createRecordChanged()` instead of `createPreviewStale()` with an empty tool name.
+* `ResourceLocker::lock()` returns at once for a name this process still holds and sets its TTL to the given `$ttl` again. Before, a second lock of the same name in one process waited for its own TTL (60 s by default), and with `blocking: false` it threw `locked_by_another_process`. One `unLock()` releases the name for every caller in the process.
 
 ## [12.1.1](https://github.com/anzusystems/common-bundle/compare/12.1.0...12.1.1) (2026-11-19)
 
