@@ -7,8 +7,10 @@
 * `McpToolDefinitionsCompilerPass` fails the container compilation with a `McpConfigurationException` when a direct write tool is `readOnly`, does not declare `destructive: false` and `idempotent: true`, names no `rateLimiter`, has a preview, or takes an input that implements `McpPreviewHashAwareInterface`.
 * `McpToolDefinition::$directWrite` carries the flag, so a host can mark such tools where a token is created.
 * The description of a direct write tool says that it has no preview and asks for no confirmation.
+* `EditorGrantGuard` keeps a user or permission group write within the editor's own rights. `assertUserWrite()` refuses a change of a super admin, a changed role the editor does not hold, and a raised grant or an added permission group above the editor's own grants. `assertPermissionGroupWrite()` refuses a raised grant above the editor's own. Only changed values count, and a super admin passes. A refusal is an `AccessDeniedException` (403). Call `assertUserWrite()` in the admin create and update of users, before `AbstractUserManager`; see `permissions.md`.
 
 ### Changes
+* BC change: `PermissionGroupFacade::create()` and `update()` refuse a grant above the editor's own (`EditorGrantGuard`), unless the editor is a super admin.
 * An `OptimisticLockException` of a direct write tool, the only write tool without a preview, answers `McpWriteRejectedException::createRecordChanged()` instead of `createPreviewStale()` with an empty tool name.
 * `ResourceLocker::lock()` returns at once for a name this process still holds and sets its TTL to the given `$ttl` again. Before, a second lock of the same name in one process waited for its own TTL (60 s by default), and with `blocking: false` it threw `locked_by_another_process`. One `unLock()` releases the name for every caller in the process.
 

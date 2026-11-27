@@ -33,7 +33,12 @@ class UserManager extends AbstractUserManager
 ```
 
 #### Create controller actions:
+`EditorGrantGuard` keeps the write within the editor's own rights: an editor who is not a super admin cannot change a
+super admin, change a role they do not hold, or raise a grant or add a permission group above their own grants. Call it
+in the admin actions only; a sync of users from another system does not go through it.
+
 ```php
+use AnzuSystems\CommonBundle\Security\EditorGrantGuard;
 use AnzuSystems\Contracts\Model\User\UserDto;
 use AnzuSystems\SerializerBundle\Attributes\SerializeParam;
 use App\Entity\User;
@@ -41,6 +46,8 @@ use App\Entity\User;
     #[Route('', 'create', methods: [Request::METHOD_POST])]
     public function create(#[SerializeParam] UserDto $userDto): JsonResponse
     {
+        $this->editorGrantGuard->assertUserWrite(null, $userDto);
+
         return $this->createdResponse(
             $this->userManager->createAnzuUser($userDto)
         );
@@ -49,11 +56,15 @@ use App\Entity\User;
     #[Route('/{user}', 'update', ['user' => '\d+'], methods: [Request::METHOD_PUT])]
     public function update(User $user, #[SerializeParam] UserDto $userDto): JsonResponse
     {
+        $this->editorGrantGuard->assertUserWrite($user, $userDto);
+
         return $this->okResponse(
             $this->userManager->updateAnzuUser($user, $userDto)
         );
     }
 ```
+
+`PermissionGroupFacade::create()` and `update()` apply the same rule to the grants of a group.
 
 ### Provide PermissionGroup management APIs.
 #### Create PermissionGroup entity:

@@ -24,6 +24,7 @@ use AnzuSystems\CommonBundle\Pagination\Keyset\KeysetPaginator;
 use AnzuSystems\CommonBundle\Repository\JobRepository;
 use AnzuSystems\CommonBundle\Repository\JobUserDataDeleteRepository;
 use AnzuSystems\CommonBundle\Router\AnzuDomainRouteLoader;
+use AnzuSystems\CommonBundle\Security\EditorGrantGuard;
 use AnzuSystems\CommonBundle\Util\ResourceLocker;
 use AnzuSystems\CommonBundle\Validator\Constraints\EntityExistsValidator;
 use AnzuSystems\CommonBundle\Validator\Constraints\McpExistingIdValidator;
@@ -53,6 +54,11 @@ return static function (ContainerConfigurator $configurator): void {
         ->arg('$entityManager', service(EntityManagerInterface::class))
         ->arg('$userEntityClass', null)
         ->tag('kernel.reset', ['method' => 'reset'])
+    ;
+
+    $services->set(EditorGrantGuard::class)
+        ->arg('$security', service('security.helper'))
+        ->arg('$currentAnzuUserProvider', service(CurrentAnzuUserProvider::class))
     ;
 
     $services->set(ResourceLocker::class)

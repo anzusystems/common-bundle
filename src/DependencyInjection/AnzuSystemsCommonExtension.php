@@ -88,6 +88,7 @@ use AnzuSystems\CommonBundle\Messenger\Message\JournalLogMessage;
 use AnzuSystems\CommonBundle\Request\ValueResolver\ApiFilterParamValueResolver;
 use AnzuSystems\CommonBundle\Request\ValueResolver\ArrayStringValueResolver;
 use AnzuSystems\CommonBundle\Request\ValueResolver\ValueObjectValueResolver;
+use AnzuSystems\CommonBundle\Security\EditorGrantGuard;
 use AnzuSystems\CommonBundle\Security\PermissionConfig;
 use AnzuSystems\CommonBundle\Serializer\Exception\SerializerExceptionHandler;
 use AnzuSystems\CommonBundle\Serializer\Handler\Handlers\GeolocationHandler;
@@ -271,6 +272,7 @@ final class AnzuSystemsCommonExtension extends Extension implements PrependExten
             (new Definition(PermissionGroupFacade::class))
                 ->setArgument('$validator', new Reference(Validator::class))
                 ->setArgument('$permissionGroupManager', new Reference(PermissionGroupManager::class))
+                ->setArgument('$editorGrantGuard', new Reference(EditorGrantGuard::class))
         );
 
         $container->setDefinition(
